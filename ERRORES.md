@@ -61,6 +61,13 @@ Cada entrada dice qué pasaba, cómo se detectó, la causa, la corrección y con
 | E26 | El navegador decía qué usuario y sesión guardaban cada carga | Venían en el cuerpo del POST | Los toma el servidor de la sesión | Revisión y recorrido |
 | E27 | Cualquier `/api/…` desconocido se trataba como `/api/resumen` | Faltaba comprobar la ruta | 404 | `curl /api/otra` |
 
+## 0.11.2
+
+| # | Qué pasaba | Causa | Corrección | Comprobación |
+| --- | --- | --- | --- | --- |
+| E28 | El botón Entrar podía no hacer nada sin mostrar error | Si el servidor respondía HTML con 200 (sitio estático), la respuesta se tomaba como éxito vacío | Se exige respuesta JSON; si no, mensaje claro | Playwright con respuesta HTML simulada |
+| E29 | Con la base inaccesible al arrancar, el servidor se caía | Promesa rechazada sin manejar en Node 22 | Se registra el error y el servidor sigue; `/api/salud` lo explica | Servidor con contraseña de base errónea |
+
 ## Abiertos
 
 - **El límite de intentos** vive en la memoria del servidor: se reinicia al reiniciar y no se comparte si hubiera varias instancias.

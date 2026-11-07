@@ -28,9 +28,15 @@ create table if not exists usuarios (
   // cuenta principal (super administrador) desde el entorno: ADMIN_USER (y ADMIN_PASSWORD si hay que crearla)
   .then(async () => {
     // si la cuenta ya existe (creada desde «Crear cuenta») se activa como administradora y conserva su contraseña
-    const { rowCount } = PRINCIPAL ? await db.query('update usuarios set activo = true, admin = true where usuario = $1', [PRINCIPAL]) : { rowCount: 1 };
-    if (!rowCount && process.env.ADMIN_PASSWORD) await db.query(`insert into usuarios (usuario, nombre, clave, activo, admin) values ($1, $1, $2, true, true)`, [PRINCIPAL, await hashPassword(process.env.ADMIN_PASSWORD)]);
+    if (!PRINCIPAL) return console.log('Cuenta principal: falta ADMIN_USER');
+    const { rowCount } = await db.query('update usuarios set activo = true, admin = true where usuario = $1', [PRINCIPAL]);
+    if (rowCount) return console.log(`Cuenta principal: ${PRINCIPAL} activada como administradora (con su propia contraseña)`);
+    if (!process.env.ADMIN_PASSWORD) return console.log(`Cuenta principal: ${PRINCIPAL} no existe; créala desde «Crear cuenta» o pon ADMIN_PASSWORD`);
+    await db.query(`insert into usuarios (usuario, nombre, clave, activo, admin) values ($1, $1, $2, true, true)`, [PRINCIPAL, await hashPassword(process.env.ADMIN_PASSWORD)]);
+    console.log(`Cuenta principal: ${PRINCIPAL} creada con la contraseña de ADMIN_PASSWORD`);
   });
+// sin esto, una base que no responde al arrancar tumba el servidor; así sigue en pie y /api/salud lo explica
+ready?.catch((e) => console.error('No se pudo preparar la base:', e.message));
 // sin SESSION_SECRET (Render la genera) las sesiones duran hasta que se reinicie el servidor
 const SECRET = process.env.SESSION_SECRET || randomBytes(32).toString('hex');
 const SECURE = process.env.NODE_ENV === 'production' || !!process.env.RENDER;
@@ -98,7 +104,21 @@ async function account(req, res, path) {
   return json(res, 200, { nombre: u.nombre, sesion: sid, admin: u.admin });
 }
 
+/** Diagnóstico sin secretos: ¿hay base y cómo está la cuenta principal? (abrir /api/salud en el navegador) */
+async function health(res) {
+  if (!db) return json(res, 200, { servidor: true, base: false, aviso: 'Falta DATABASE_URL en Render' });
+  try {
+    await ready;
+    const { rows: [u] } = PRINCIPAL ? await db.query('select activo, admin from usuarios where usuario = $1', [PRINCIPAL]) : { rows: [] };
+    const principal = !PRINCIPAL ? 'falta ADMIN_USER' : !u ? 'no existe' : u.activo && u.admin ? 'activa' : 'pendiente';
+    return json(res, 200, { servidor: true, base: true, principal, sesionesFijas: !!process.env.SESSION_SECRET });
+  } catch (e) {
+    return json(res, 200, { servidor: true, base: false, aviso: `No se pudo conectar a la base: ${e.code ?? 'error'}` });
+  }
+}
+
 async function api(req, res) {
+  if (req.url === '/api/salud') return health(res);
   if (!db) return json(res, 503, { error: 'Base de datos no configurada (falta DATABASE_URL)' });
   await ready;
   const url = new URL(req.url, 'http://x');
