@@ -41,9 +41,9 @@ export default function Cuentas() {
                     <td>{c.nombre}</td>
                     <td>{shortDate(new Date(c.creado))}</td>
                     <td><Badge tone={c.activo ? 'ok' : 'warn'}>{c.activo ? 'Activa' : 'Pendiente'}</Badge></td>
-                    <td><Badge tone={c.admin ? 'info' : 'neutral'}>{c.admin ? 'Administrador' : 'Usuario'}</Badge></td>
+                    <td><Badge tone={c.principal ? 'ok' : c.admin ? 'info' : 'neutral'}>{c.principal ? 'Principal' : c.admin ? 'Administrador' : 'Usuario'}</Badge></td>
                     <td className="app-actions">
-                      {self ? <span className="app-muted">Tu cuenta</span> : (
+                      {self || c.principal ? <span className="app-muted">{self ? 'Tu cuenta' : 'Se cambia desde Render'}</span> : (
                         <>
                           <Button variant={c.activo ? 'quiet' : 'primary'} onClick={() => change(c, { activo: !c.activo }, c.activo ? 'desactivada' : 'activada')}>
                             {c.activo ? 'Desactivar' : 'Activar'}

@@ -24,7 +24,7 @@ export const apiSignup = (usuario: string, clave: string) => post<{ pendiente: b
 export const apiLogout = () => post('/api/logout', {});
 export const apiMe = () => call<Sesion>('/api/me');
 
-export interface Cuenta { id: number; usuario: string; nombre: string; activo: boolean; admin: boolean; creado: string }
+export interface Cuenta { id: number; usuario: string; nombre: string; activo: boolean; admin: boolean; creado: string; principal: boolean }
 export const loadCuentas = () => call<{ usuarios: Cuenta[] }>('/api/usuarios').then((b) => b.usuarios);
 export const setCuenta = (id: number, cambio: { activo?: boolean; admin?: boolean }) => post('/api/usuarios', { id, ...cambio });
 

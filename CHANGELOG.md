@@ -8,6 +8,11 @@ Un cambio de componente se publica primero en el artefacto y después se copia a
 
 Los errores encontrados y cómo se corrigieron están en [ERRORES.md](ERRORES.md); las mejoras y cómo se hicieron, en [MEJORAS.md](MEJORAS.md).
 
+## [0.11.1] — 2026-11-08
+
+### Cambiado
+- **Cuenta principal (super administrador):** la de `ADMIN_USER`. Si ya existe (creada desde «Crear cuenta»), al arrancar queda activa y administradora con su propia contraseña; si no, se crea con `ADMIN_PASSWORD`. Ningún otro administrador puede desactivarla ni quitarle el rol; en Cuentas aparece como «Principal».
+
 ## [0.11.0] — 2026-11-08
 
 ### Agregado

@@ -25,15 +25,18 @@ create table if not exists yield_cargas (
 create table if not exists usuarios (
   id serial primary key, usuario text not null unique, nombre text not null, clave text not null,
   activo boolean not null default false, admin boolean not null default false, creado timestamptz not null default now())`)
-  // primer administrador desde el entorno (ADMIN_USER / ADMIN_PASSWORD); las demás cuentas las activa él
+  // cuenta principal (super administrador) desde el entorno: ADMIN_USER (y ADMIN_PASSWORD si hay que crearla)
   .then(async () => {
-    const { ADMIN_USER: u, ADMIN_PASSWORD: p } = process.env;
-    if (u && p) await db.query(`insert into usuarios (usuario, nombre, clave, activo, admin) values ($1, $1, $2, true, true) on conflict (usuario) do nothing`, [u.toLowerCase(), await hashPassword(p)]);
+    // si la cuenta ya existe (creada desde «Crear cuenta») se activa como administradora y conserva su contraseña
+    const { rowCount } = PRINCIPAL ? await db.query('update usuarios set activo = true, admin = true where usuario = $1', [PRINCIPAL]) : { rowCount: 1 };
+    if (!rowCount && process.env.ADMIN_PASSWORD) await db.query(`insert into usuarios (usuario, nombre, clave, activo, admin) values ($1, $1, $2, true, true)`, [PRINCIPAL, await hashPassword(process.env.ADMIN_PASSWORD)]);
   });
 // sin SESSION_SECRET (Render la genera) las sesiones duran hasta que se reinicie el servidor
 const SECRET = process.env.SESSION_SECRET || randomBytes(32).toString('hex');
 const SECURE = process.env.NODE_ENV === 'production' || !!process.env.RENDER;
 const cookie = (value, maxAge) => `yc_sesion=${value}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${maxAge}${SECURE ? '; Secure' : ''}`;
+/** La cuenta principal solo se cambia desde Render: ningún otro administrador puede desactivarla ni quitarle el rol. */
+const PRINCIPAL = process.env.ADMIN_USER?.trim().toLowerCase() || null;
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 
 const json = (res, code, body) => { res.writeHead(code, { 'content-type': 'application/json' }); res.end(JSON.stringify(body)); };
@@ -57,13 +60,15 @@ async function current(req) {
 async function accounts(req, res, me) {
   if (!me.admin) return json(res, 403, { error: 'Solo para administradores' });
   if (req.method === 'GET') {
-    const { rows } = await db.query('select id, usuario, nombre, activo, admin, creado from usuarios order by activo, creado desc');
+    const { rows } = await db.query('select id, usuario, nombre, activo, admin, creado, usuario = $1 as principal from usuarios order by activo, creado desc', [PRINCIPAL]);
     return json(res, 200, { usuarios: rows });
   }
   const b = await body(req), id = Number(b.id);
   if (!Number.isInteger(id) || (typeof b.activo !== 'boolean' && typeof b.admin !== 'boolean')) return json(res, 400, { error: 'Se esperaba { id, activo? , admin? }' });
   // nadie se quita a sí mismo el acceso ni el rol: evita quedarse sin administradores
   if (id === me.uid) return json(res, 400, { error: 'No puedes cambiar tu propia cuenta' });
+  const { rows: [t] } = await db.query('select usuario from usuarios where id = $1', [id]);
+  if (t && t.usuario === PRINCIPAL) return json(res, 403, { error: 'La cuenta principal solo se cambia desde Render (ADMIN_USER)' });
   const { rowCount } = await db.query('update usuarios set activo = coalesce($2, activo), admin = coalesce($3, admin) where id = $1', [id, b.activo ?? null, b.admin ?? null]);
   return rowCount ? json(res, 200, {}) : json(res, 404, { error: 'Cuenta no encontrada' });
 }
