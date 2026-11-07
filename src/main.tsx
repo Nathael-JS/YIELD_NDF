@@ -10,6 +10,7 @@ import './styles/tokens.css';
 import './styles/yc.css';
 import './styles/app.css';
 import Carga from './pages/Carga.tsx';
+import Cuentas from './pages/Cuentas.tsx';
 import Graficos from './pages/Graficos.tsx';
 import Historial from './pages/Historial.tsx';
 import Inicio from './pages/Inicio.tsx';
@@ -29,6 +30,7 @@ const router = createBrowserRouter([
       { path: '/yield', element: <Yield /> },
       { path: '/graficos', element: <Graficos /> },
       { path: '/historial', element: <Historial /> },
+      { path: '/cuentas', element: <Cuentas /> },
       { path: '*', element: <Navigate to="/" replace /> },
     ],
   },

@@ -15,3 +15,11 @@ services:
       # cadena de conexión de Neon (Dashboard → Connection string). Se escribe en Render, nunca en el repositorio.
       - key: DATABASE_URL
         sync: false
+      # firma las sesiones; Render la genera y no se ve en el repositorio
+      - key: SESSION_SECRET
+        generateValue: true
+      # primer administrador (se crea al arrancar si no existe); las demás cuentas se piden desde el login
+      - key: ADMIN_USER
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false

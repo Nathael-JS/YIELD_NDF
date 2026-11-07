@@ -19,8 +19,19 @@ const SCRIPT = `(() => {
     dots.forEach((d, j) => { d.classList.toggle('is-on', j === i); d.setAttribute('aria-current', j === i ? 'true' : 'false'); });
     kind.textContent = slides[i].dataset.kind; title.textContent = slides[i].dataset.title; count.textContent = (i + 1) + ' / ' + slides.length;
   }
-  document.querySelector('[data-prev]').onclick = () => show(i - 1);
-  document.querySelector('[data-next]').onclick = () => show(i + 1);
+  // como en la app: arrastrar más de 60 px cambia de gráfica; un clic sin arrastrar avanza o retrocede según el lado
+  const track = document.querySelector('.yc-carousel-track');
+  let from = null;
+  const drag = (x) => { const s = slides[i]; s.classList.toggle('is-dragging', !!x); s.style.transform = x ? 'translateX(' + x + 'px)' : ''; };
+  track.onpointerdown = (e) => { from = e.clientX; track.setPointerCapture(e.pointerId); };
+  track.onpointermove = (e) => { if (from != null) drag(e.clientX - from); };
+  track.onpointerup = (e) => {
+    if (from == null) return;
+    const d = e.clientX - from, box = track.getBoundingClientRect();
+    from = null; drag(0);
+    if (Math.abs(d) > 60) show(d < 0 ? i + 1 : i - 1);
+    else if (Math.abs(d) < 6) show(e.clientX > box.left + box.width / 2 ? i + 1 : i - 1);
+  };
   dots.forEach((d, j) => d.onclick = () => show(j));
   document.querySelector('.yc-carousel').onkeydown = (e) => { if (e.key === 'ArrowRight') show(i + 1); if (e.key === 'ArrowLeft') show(i - 1); };
   // sin distinguir mayúsculas ni acentos: «critico» encuentra «Crítico»
@@ -36,16 +47,17 @@ export function reportHtml({ title, sub, kpis, slides, table }: { title: string;
     <main className="app-main">
       <header className="app-head"><div><span className="app-eyebrow">Yield Control · reporte</span><h1>{title}</h1><p>{sub}</p></div></header>
       <div className="yc-grid-kpi">{kpis}</div>
-      <section className="yc-carousel" aria-roledescription="carrusel" aria-label="Gráficas">
+      <section className="yc-carousel" aria-roledescription="carrusel" aria-label="Gráficas: arrastra, haz clic a un lado o usa ← →" tabIndex={0}>
         <header className="yc-carousel-head">
           <div><span className="yc-carousel-kind" data-show-kind>{slides[0]?.kind}</span><h3 className="yc-carousel-title" data-show-title>{slides[0]?.title}</h3></div>
           <div className="yc-carousel-ctrl">
-            <button type="button" className="yc-icon-btn" aria-label="Gráfica anterior" data-prev>‹</button>
+            <span className="yc-carousel-hint" aria-hidden>Arrastra o haz clic a un lado</span>
             <span className="yc-carousel-count" aria-live="polite" data-count>1 / {slides.length}</span>
-            <button type="button" className="yc-icon-btn" aria-label="Gráfica siguiente" data-next>›</button>
           </div>
         </header>
-        {slides.map((s, k) => <div key={s.id} className="yc-carousel-body" data-slide data-kind={s.kind} data-title={s.title} hidden={k > 0}>{s.content}</div>)}
+        <div className="yc-carousel-track">
+          {slides.map((s, k) => <div key={s.id} className="yc-carousel-body" data-slide data-kind={s.kind} data-title={s.title} hidden={k > 0}>{s.content}</div>)}
+        </div>
         <div className="yc-carousel-dots">
           {slides.map((s, k) => <button key={s.id} type="button" className={`yc-dot${k ? '' : ' is-on'}`} aria-label={s.title} data-dot />)}
         </div>

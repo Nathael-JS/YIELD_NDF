@@ -1,9 +1,10 @@
 // Estado de la app. Sesión e historial en localStorage; el último archivo de cada tipo en IndexedDB (lib/saved.ts).
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { HistoryItem, Period } from './components/ui.tsx';
+import type { Period, Tone } from './components/ui.tsx';
 import { useMemo } from 'react';
 import type { ParsedFile } from './lib/files.ts';
+import { apiLogout, apiMe, setOnExpired } from './lib/db.ts';
 import { dropAll, dropFile, loadFiles, saveFile } from './lib/saved.ts';
 import { modelKey, modelsFrom, readTcqs } from './lib/tcqs.ts';
 
@@ -13,22 +14,26 @@ export type FileType = (typeof FILE_TYPES)[number];
 
 export interface LoadedFile extends ParsedFile { name: string; loadedAt: string }
 
-// shortcut: usuario de prueba fijo y sin backend; cambiar por la autenticación real cuando exista servidor.
-export const TEST_USER = { user: 'demo', password: 'yield2026', name: 'Usuario de prueba' };
 
 interface State {
   user: string | null;
   period: Period;
-  history: HistoryItem[];
-  requests: string[];
+  /** Una por inicio de sesión: agrupa las cargas del historial en Neon. */
+  session: string;
+  /** Última carga ya guardada en Neon (archivo + hora), para no guardarla dos veces. */
+  savedKey: string;
+  db: [Tone, string] | null;
   files: Partial<Record<FileType, LoadedFile>>;
   errors: Partial<Record<FileType, string>>;
-  login: (user: string, password: string) => boolean;
+  /** Con la respuesta del servidor (POST /api/login). */
+  login: (nombre: string, sesion: string, admin: boolean) => void;
+  /** Solo decide qué se muestra; los permisos los revisa el servidor en cada llamada. */
+  admin: boolean;
   logout: () => void;
-  requestAccount: (user: string) => void;
   setPeriod: (p: Period) => void;
   setFile: (t: FileType, f: LoadedFile) => void;
   setError: (t: FileType, msg: string) => void;
+  setDb: (db: [Tone, string] | null, savedKey?: string) => void;
 }
 
 export const shortDate = (d: Date) =>
@@ -36,33 +41,34 @@ export const shortDate = (d: Date) =>
 
 export const useApp = create<State>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       user: null,
       period: 'semana',
-      history: [],
-      requests: [],
+      session: '',
+      savedKey: '',
+      db: null,
       files: {},
       errors: {},
-      login: (user, password) => {
-        const ok = user.trim().toLowerCase() === TEST_USER.user && password === TEST_USER.password;
-        if (ok) set({ user: TEST_USER.name });
-        return ok;
-      },
+      admin: false,
+      login: (user, session, admin) => set({ user, session, admin, db: null }),
       // al salir se borran también los archivos guardados: el equipo puede ser compartido
-      logout: () => { dropAll().catch(() => {}); set({ user: null, files: {}, errors: {} }); },
-      requestAccount: (user) => set({ requests: [...get().requests, user.trim()] }),
+      logout: () => { apiLogout().catch(() => {}); dropAll().catch(() => {}); set({ user: null, admin: false, files: {}, errors: {}, savedKey: '' }); },
       setPeriod: (period) => set({ period }),
       setFile: (t, f) => { saveFile(t, f).catch(() => {}); set((s) => ({
         files: { ...s.files, [t]: f },
         errors: { ...s.errors, [t]: undefined },
-        history: [{ type: t, name: f.name, period: `${f.rows.length.toLocaleString('es-MX')} filas`, date: f.loadedAt }, ...s.history],
       })); },
       // un archivo con error reemplaza al anterior: no comparar con datos viejos sin avisar
+      setDb: (db, savedKey) => set((s) => ({ db, savedKey: savedKey ?? s.savedKey })),
       setError: (t, msg) => { dropFile(t).catch(() => {}); set((s) => ({ errors: { ...s.errors, [t]: msg }, files: { ...s.files, [t]: undefined } })); },
     }),
-    { name: 'yield-control', partialize: ({ user, period, history, requests }) => ({ user, period, history, requests }) },
+    { name: 'yield-control', partialize: ({ user, admin, period, session, savedKey }) => ({ user, admin, period, session, savedKey }) },
   ),
 );
+
+// La sesión de verdad la tiene el servidor: si venció (o la cookie no está), se vuelve al login.
+setOnExpired(() => { if (useApp.getState().user) useApp.getState().logout(); });
+if (useApp.getState().user) apiMe().then((s) => useApp.setState({ user: s.nombre, session: s.sesion, admin: s.admin })).catch(() => {});
 
 // Recupera los archivos guardados al abrir la app (sin pisar uno que se haya cargado mientras tanto).
 // Fallar aquí solo significa volver a cargarlos.

@@ -13,5 +13,5 @@ export function validate(b) {
       && f.primer_pase + f.primera_falla === f.entradas;
     if (!ok) return { error: `Fila ${i + 1} inválida` };
   }
-  return { archivo: b.archivo.trim().slice(0, 200), filas: b.filas };
+  return { archivo: b.archivo.trim().slice(0, 200), sesion: b.sesion, usuario: b.usuario, filas: b.filas };
 }
