@@ -60,7 +60,7 @@ export default function Login() {
           try {
             if (mode === 'signup') { await apiSignup(u, p); setSent(u.trim()); return; }
             const s = await apiLogin(u, p);
-            login(s.nombre, s.sesion);
+            login(s.nombre, s.sesion, s.admin);
           } catch (e) {
             setError(e instanceof Error ? e.message : 'No se pudo conectar con el servidor');
           }

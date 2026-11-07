@@ -7,10 +7,10 @@ import { useApp, useData } from '../store.ts';
 
 const STEPS = ['Carga de datos', 'Validación', 'Yield'];
 export const STEP_PATHS = ['/carga', '/validacion', '/yield'];
-const EXTRA: Record<string, string> = { Inicio: '/', Gráficos: '/graficos', Historial: '/historial' };
+const EXTRA: Record<string, string> = { Inicio: '/', Gráficos: '/graficos', Historial: '/historial', Cuentas: '/cuentas' };
 
 export default function Layout() {
-  const user = useApp((s) => s.user), logout = useApp((s) => s.logout);
+  const user = useApp((s) => s.user), logout = useApp((s) => s.logout), admin = useApp((s) => s.admin);
   const { pathname } = useLocation();
   const go = useNavigate();
   const { read, records } = useData();
@@ -23,7 +23,7 @@ export default function Layout() {
         current={STEP_PATHS.indexOf(pathname)}
         done={[!!read, records.length > 0]} // Carga: TCQS leído · Validación: hay filas válidas de Juliet
         active={Object.keys(EXTRA).find((k) => EXTRA[k] === pathname) ?? null}
-        extra={Object.keys(EXTRA)}
+        extra={Object.keys(EXTRA).filter((k) => admin || k !== 'Cuentas')}
         onSelect={(t) => go(typeof t === 'number' ? (t < 0 ? '/' : STEP_PATHS[t]) : EXTRA[t])}
       >
         <span className="app-user" title={user}>

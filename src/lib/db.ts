@@ -18,11 +18,15 @@ async function call<T>(path: string, init?: RequestInit): Promise<T> {
 
 const post = <T>(path: string, data: unknown) => call<T>(path, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(data) });
 
-export interface Sesion { nombre: string; sesion: string }
+export interface Sesion { nombre: string; sesion: string; admin: boolean }
 export const apiLogin = (usuario: string, clave: string) => post<Sesion>('/api/login', { usuario, clave });
 export const apiSignup = (usuario: string, clave: string) => post<{ pendiente: boolean }>('/api/signup', { usuario, clave });
 export const apiLogout = () => post('/api/logout', {});
 export const apiMe = () => call<Sesion>('/api/me');
+
+export interface Cuenta { id: number; usuario: string; nombre: string; activo: boolean; admin: boolean; creado: string }
+export const loadCuentas = () => call<{ usuarios: Cuenta[] }>('/api/usuarios').then((b) => b.usuarios);
+export const setCuenta = (id: number, cambio: { activo?: boolean; admin?: boolean }) => post('/api/usuarios', { id, ...cambio });
 
 // quién guarda y en qué sesión lo pone el servidor a partir de la cookie
 export const saveSummary = (archivo: string, filas: DbRow[]) => post<{ guardadas: number }>('/api/resumen', { archivo, filas });

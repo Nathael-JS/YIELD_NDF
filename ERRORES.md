@@ -63,9 +63,8 @@ Cada entrada dice qué pasaba, cómo se detectó, la causa, la corrección y con
 
 ## Abiertos
 
-- **Activar cuentas** se hace con SQL en Neon (`update usuarios set activo = true where usuario = '…'`); no hay pantalla de administración todavía.
 - **El límite de intentos** vive en la memoria del servidor: se reinicia al reiniciar y no se comparte si hubiera varias instancias.
-- **Cerrar sesión** borra la cookie del navegador, pero una cookie copiada sigue valiendo hasta que vence (12 h).
+- **Cerrar sesión** borra la cookie del navegador, pero una cookie copiada sigue valiendo hasta que vence (12 h), salvo que se desactive la cuenta (desde 0.11.0 corta el acceso al instante).
 
 - **Lo abierto desde Neon no trae testers** (se guarda día × modelo × estación): faltan el Pareto 2do nivel y el histograma por tester (5 gráficas en vez de 6).
 

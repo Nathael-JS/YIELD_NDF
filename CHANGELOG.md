@@ -8,6 +8,15 @@ Un cambio de componente se publica primero en el artefacto y después se copia a
 
 Los errores encontrados y cómo se corrigieron están en [ERRORES.md](ERRORES.md); las mejoras y cómo se hicieron, en [MEJORAS.md](MEJORAS.md).
 
+## [0.11.0] — 2026-11-08
+
+### Agregado
+- **Pantallas · Cuentas** (solo administradores): activar o desactivar cuentas y dar o quitar el rol de administrador. Hecha con `yc-table`, `Badge` y `Button`, sin componentes nuevos.
+- **Servidor:** `GET/POST /api/usuarios` solo para administradores; nadie cambia su propia cuenta (evita quedarse sin administradores).
+
+### Cambiado
+- **Servidor:** cada llamada protegida revisa en la base que la cuenta siga activa y su rol: desactivar o quitar el rol vale al instante, aunque la cookie siga vigente.
+
 ## [0.10.0] — 2026-11-08
 
 ### Agregado

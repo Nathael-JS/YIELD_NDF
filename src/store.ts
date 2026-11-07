@@ -26,7 +26,9 @@ interface State {
   files: Partial<Record<FileType, LoadedFile>>;
   errors: Partial<Record<FileType, string>>;
   /** Con la respuesta del servidor (POST /api/login). */
-  login: (nombre: string, sesion: string) => void;
+  login: (nombre: string, sesion: string, admin: boolean) => void;
+  /** Solo decide qué se muestra; los permisos los revisa el servidor en cada llamada. */
+  admin: boolean;
   logout: () => void;
   setPeriod: (p: Period) => void;
   setFile: (t: FileType, f: LoadedFile) => void;
@@ -47,9 +49,10 @@ export const useApp = create<State>()(
       db: null,
       files: {},
       errors: {},
-      login: (user, session) => set({ user, session, db: null }),
+      admin: false,
+      login: (user, session, admin) => set({ user, session, admin, db: null }),
       // al salir se borran también los archivos guardados: el equipo puede ser compartido
-      logout: () => { apiLogout().catch(() => {}); dropAll().catch(() => {}); set({ user: null, files: {}, errors: {}, savedKey: '' }); },
+      logout: () => { apiLogout().catch(() => {}); dropAll().catch(() => {}); set({ user: null, admin: false, files: {}, errors: {}, savedKey: '' }); },
       setPeriod: (period) => set({ period }),
       setFile: (t, f) => { saveFile(t, f).catch(() => {}); set((s) => ({
         files: { ...s.files, [t]: f },
@@ -59,13 +62,13 @@ export const useApp = create<State>()(
       setDb: (db, savedKey) => set((s) => ({ db, savedKey: savedKey ?? s.savedKey })),
       setError: (t, msg) => { dropFile(t).catch(() => {}); set((s) => ({ errors: { ...s.errors, [t]: msg }, files: { ...s.files, [t]: undefined } })); },
     }),
-    { name: 'yield-control', partialize: ({ user, period, session, savedKey }) => ({ user, period, session, savedKey }) },
+    { name: 'yield-control', partialize: ({ user, admin, period, session, savedKey }) => ({ user, admin, period, session, savedKey }) },
   ),
 );
 
 // La sesión de verdad la tiene el servidor: si venció (o la cookie no está), se vuelve al login.
 setOnExpired(() => { if (useApp.getState().user) useApp.getState().logout(); });
-if (useApp.getState().user) apiMe().then((s) => useApp.setState({ user: s.nombre, session: s.sesion })).catch(() => {});
+if (useApp.getState().user) apiMe().then((s) => useApp.setState({ user: s.nombre, session: s.sesion, admin: s.admin })).catch(() => {});
 
 // Recupera los archivos guardados al abrir la app (sin pisar uno que se haya cargado mientras tanto).
 // Fallar aquí solo significa volver a cargarlos.

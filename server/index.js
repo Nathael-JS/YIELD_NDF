@@ -46,11 +46,33 @@ async function body(req) {
 
 const NOPE = 'Usuario o contraseña incorrectos'; // nunca decir cuál de los dos falló
 
+/** Sesión válida de una cuenta que sigue activa (se mira en la base cada vez: desactivar o quitar el rol vale al instante). */
+async function current(req) {
+  const s = verify(cookieOf(req, 'yc_sesion'), SECRET);
+  if (!s) return null;
+  const { rows: [u] } = await db.query('select activo, admin from usuarios where id = $1', [s.uid]);
+  return u?.activo ? { ...s, admin: u.admin } : null;
+}
+
+async function accounts(req, res, me) {
+  if (!me.admin) return json(res, 403, { error: 'Solo para administradores' });
+  if (req.method === 'GET') {
+    const { rows } = await db.query('select id, usuario, nombre, activo, admin, creado from usuarios order by activo, creado desc');
+    return json(res, 200, { usuarios: rows });
+  }
+  const b = await body(req), id = Number(b.id);
+  if (!Number.isInteger(id) || (typeof b.activo !== 'boolean' && typeof b.admin !== 'boolean')) return json(res, 400, { error: 'Se esperaba { id, activo? , admin? }' });
+  // nadie se quita a sí mismo el acceso ni el rol: evita quedarse sin administradores
+  if (id === me.uid) return json(res, 400, { error: 'No puedes cambiar tu propia cuenta' });
+  const { rowCount } = await db.query('update usuarios set activo = coalesce($2, activo), admin = coalesce($3, admin) where id = $1', [id, b.activo ?? null, b.admin ?? null]);
+  return rowCount ? json(res, 200, {}) : json(res, 404, { error: 'Cuenta no encontrada' });
+}
+
 async function account(req, res, path) {
   if (path === '/api/logout') { res.setHeader('set-cookie', cookie('', 0)); return json(res, 200, {}); }
   if (path === '/api/me') {
-    const s = verify(cookieOf(req, 'yc_sesion'), SECRET);
-    return s ? json(res, 200, { nombre: s.nombre, sesion: s.sid }) : json(res, 401, { error: 'Sesión vencida' });
+    const s = await current(req);
+    return s ? json(res, 200, { nombre: s.nombre, sesion: s.sid, admin: s.admin }) : json(res, 401, { error: 'Sesión vencida' });
   }
   const b = await body(req), usuario = String(b.usuario ?? '').trim().toLowerCase(), clave = String(b.clave ?? '');
   if (path === '/api/signup') {
@@ -63,12 +85,12 @@ async function account(req, res, path) {
   // login
   const ip = req.headers['x-forwarded-for']?.split(',')[0].trim() || req.socket.remoteAddress;
   if (limited(ip)) return json(res, 429, { error: 'Demasiados intentos. Espera 15 minutos.' });
-  const { rows: [u] } = await db.query('select id, nombre, clave, activo from usuarios where usuario = $1', [usuario]);
+  const { rows: [u] } = await db.query('select id, nombre, clave, activo, admin from usuarios where usuario = $1', [usuario]);
   if (!u || !(await checkPassword(clave, u.clave))) { failed(ip); return json(res, 401, { error: NOPE }); }
   if (!u.activo) return json(res, 403, { error: 'Tu cuenta está pendiente: el encargado debe activarla.' });
   const sid = randomUUID();
   res.setHeader('set-cookie', cookie(sign({ uid: u.id, nombre: u.nombre, sid }, SECRET), HOURS * 3600));
-  return json(res, 200, { nombre: u.nombre, sesion: sid });
+  return json(res, 200, { nombre: u.nombre, sesion: sid, admin: u.admin });
 }
 
 async function api(req, res) {
@@ -81,8 +103,9 @@ async function api(req, res) {
     if (url.pathname !== '/api/me' && req.method !== 'POST') return json(res, 405, { error: 'Método no permitido' });
     return account(req, res, url.pathname);
   }
-  const s = verify(cookieOf(req, 'yc_sesion'), SECRET);
+  const s = await current(req);
   if (!s) return json(res, 401, { error: 'Inicia sesión' });
+  if (url.pathname === '/api/usuarios') return accounts(req, res, s);
   if (req.method === 'GET' && url.pathname === '/api/cargas') {
     const { rows } = await db.query(`select id, sesion, usuario, archivo, filas, entradas, primer_pase, primera_falla, segundo_pase,
       to_char(desde, 'YYYY-MM-DD') desde, to_char(hasta, 'YYYY-MM-DD') hasta, guardado_en from yield_cargas order by guardado_en desc limit 200`);
