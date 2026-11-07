@@ -1,16 +1,17 @@
-# Render Blueprint: sitio estático. Los archivos se siguen leyendo en el navegador; Render solo sirve la app.
+# Render Blueprint: un servicio Node que sirve la app (dist/) y la API del resumen en Neon (server/index.js).
+# Los archivos se siguen leyendo en el navegador; al servidor solo llega el resumen día × modelo × estación.
 services:
   - type: web
     name: yield-control
-    runtime: static
+    runtime: node
+    plan: free
     buildCommand: npm ci && npm run build
-    staticPublishPath: ./dist
+    startCommand: npm start
+    healthCheckPath: /
     pullRequestPreviewsEnabled: true
     envVars:
       - key: NODE_VERSION
         value: "22"
-    routes:
-      # rutas de React Router (/carga, /historial…) al recargar la página
-      - type: rewrite
-        source: /*
-        destination: /index.html
+      # cadena de conexión de Neon (Dashboard → Connection string). Se escribe en Render, nunca en el repositorio.
+      - key: DATABASE_URL
+        sync: false

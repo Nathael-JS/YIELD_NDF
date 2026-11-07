@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { by, change, diagnose, modelKey, modelsFrom, periodOf, periodsOf, readTcqs, rty, totals } from './tcqs.ts';
+import { by, change, daily, fromDb, diagnose, modelKey, modelsFrom, periodOf, periodsOf, readTcqs, rty, totals } from './tcqs.ts';
 
 const H = ['WORK_DATE', 'MODEL_NAME', 'SAP_MODEL_NAME', 'MO_NUMBER', 'GROUP_NAME', 'STATION_NAME', 'INPUT_QTY', 'FIRST_PASS_QTY', 'FIRST_FAIL_QTY', 'SECOND_PASS_QTY'];
 // filas con la forma del TCQS real (cantidades como texto, como las deja el lector de CSV)
@@ -78,4 +78,11 @@ test('periodsOf y change: cambio contra el periodo anterior solo con muestra suf
   assert.equal(change(w45, undefined, 'fpy'), undefined);
   assert.equal(change(totals([rec('x', 5, 5)]), w44, 'fpy'), undefined); // 5 entradas: no se compara
   assert.equal(change({ input: 20, rty: 50 }, { input: 30, rty: 62.3 }, 'rty'), -12.3); // también RTY
+});
+
+test('daily y fromDb: el histórico de Neon da los mismos totales que el TCQS', () => {
+  const rs = readTcqs(tcqs).records;
+  const rows = daily(rs);
+  assert.equal(rows.length, 2); // FT del 3 nov (dos testers juntos) y J_TAG del 4 nov
+  assert.deepEqual(totals(readTcqs(fromDb(rows)).records), totals(rs));
 });

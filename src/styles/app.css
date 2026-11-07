@@ -67,3 +67,7 @@ button.yc-nav-mark { border: 0; background: none; padding: 0; color: var(--ink);
 /* Estación que llega desde «Dónde mirar primero» */
 .yc-table tr.is-focus td { background: var(--brand-tint); }
 .yc-table tr.is-focus td:first-child { font-weight: 600; }
+
+/* Historial: tarjeta de la base de datos */
+.app-db { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: var(--space-4); }
+.app-db p { margin: var(--space-1) 0 0; max-width: 60ch; }

@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { saveSummary } from '../lib/db.ts';
 import { Badge, Button, KpiTile, type Tone } from '../components/ui.tsx';
-import { by, modelKey } from '../lib/tcqs.ts';
-import { useData } from '../store.ts';
+import { by, daily, modelKey } from '../lib/tcqs.ts';
+import { useApp, useData } from '../store.ts';
 import { NeedTcqs, PageHead } from './Layout.tsx';
 
 const n = (v: number) => v.toLocaleString('es-MX');
@@ -10,6 +12,8 @@ const CHECK: Partial<Record<Tone, string>> = { ok: 'OK', warn: 'Revisar', info: 
 export default function Validacion() {
   const { read, bom, models, all, records } = useData();
   const go = useNavigate();
+  const name = useApp((s) => s.files.TCQS?.name);
+  const [db, setDb] = useState<[Tone, string]>();
   if (!read) return <><PageHead title="Validación" /><NeedTcqs /></>;
   if (read.missing.length) return (
     <>
@@ -17,6 +21,16 @@ export default function Validacion() {
       <p className="yc-card app-empty"><Badge tone="bad">Faltan columnas</Badge> El TCQS no trae <span className="app-mono">{read.missing.join(', ')}</span>. Revisa que sea el reporte de yield por estación.</p>
     </>
   );
+  // guarda el resumen día × modelo × estación de las filas de Juliet; la carga más reciente de cada día lo reemplaza
+  const save = async () => {
+    setDb(['info', 'Guardando…']);
+    try {
+      const r = await saveSummary(name ?? 'TCQS', daily(records));
+      setDb(['ok', `${r.guardadas} filas guardadas en Neon (día × modelo × estación).`]);
+    } catch (e) {
+      setDb(['bad', `No se guardó: ${e instanceof Error ? e.message : e}`]);
+    }
+  };
   const byModel = by(all, (r) => r.model).sort((a, b) => b.input - a.input);
   const noInput = records.filter((r) => r.input === 0).length;
   // por estación, que es como se leen las tablas: en el periodo completo se compensan
@@ -33,8 +47,10 @@ export default function Validacion() {
   return (
     <>
       <PageHead title="Validación" sub="Qué filas del TCQS se pueden usar y qué modelos son del proyecto Juliet.">
+        <Button disabled={!records.length || db?.[0] === 'info'} onClick={save}>Guardar en Neon</Button>
         <Button variant="primary" disabled={!records.length} onClick={() => go('/yield')}>Ver yield</Button>
       </PageHead>
+      {db && <p className="app-muted" role="status"><Badge tone={db[0]}>Neon</Badge> {db[1]}</p>}
       <div className="yc-grid-kpi">
         <KpiTile label="Filas del TCQS" value={n(all.length + read.bad.length)} />
         <KpiTile label="Modelos en el BOM" value={models ? n(models.size) : '—'} />

@@ -132,3 +132,24 @@ export function toWatch<T extends Totals>(stations: T[]) {
   return stations.filter((s) => s.input > 0).map((s) => ({ ...s, dx: diagnose(s) })).filter((s) => s.dx[1] === 'bad' || s.dx[1] === 'warn')
     .sort((a, b) => (a.dx[1] === b.dx[1] ? byFpy(a, b) : a.dx[1] === 'bad' ? -1 : 1)).slice(0, 3);
 }
+
+/** Fila de la tabla yield_resumen en Neon: conteos por día × modelo × estación (los % se calculan al leer). */
+export interface DbRow { fecha: string; modelo: string; estacion: string; entradas: number; primer_pase: number; primera_falla: number; segundo_pase: number }
+
+export function daily(rs: Rec[]): DbRow[] {
+  const m = new Map<string, DbRow>();
+  for (const r of rs) {
+    const k = `${r.date}|${r.model}|${r.group}`;
+    const d = m.get(k) ?? m.set(k, { fecha: r.date, modelo: r.model, estacion: r.group, entradas: 0, primer_pase: 0, primera_falla: 0, segundo_pase: 0 }).get(k)!;
+    d.entradas += r.input; d.primer_pase += r.fp; d.primera_falla += r.ff; d.segundo_pase += r.sp;
+  }
+  return [...m.values()];
+}
+
+/** El histórico de Neon con forma de TCQS, para que todas las pantallas lo lean igual. */
+export function fromDb(rows: DbRow[]): ParsedFile {
+  return {
+    headers: [...REQUIRED],
+    rows: rows.map((r) => [r.fecha, r.modelo, '', r.estacion, '', r.entradas, r.primer_pase, r.primera_falla, r.segundo_pase]),
+  };
+}
