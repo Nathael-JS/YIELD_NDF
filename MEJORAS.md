@@ -8,6 +8,12 @@ Qué se mejoró, cómo se hizo y qué se usó; después, lo pendiente y lo que n
 
 | Versión | Mejora | Cómo se hizo | Qué se usó |
 | --- | --- | --- | --- |
+| 0.8.0 | **Barras horizontales** | `BarChart horizontal`: una fila por estación, nombre completo a la izquierda (se corta con «…» solo si no cabe) | Componente nuevo en la app y en el artefacto (v20) |
+| 0.8.0 | **▲/▼ de RTY y recuperado** | `change()` genérico: RTY del periodo anterior se calcula con sus estaciones | `src/lib/tcqs.ts` con prueba |
+| 0.8.0 | **Carrusel animado** | La gráfica entra del lado al que se navega, barras que crecen y líneas que se dibujan (CSS, `pathLength`); ← →; nada con movimiento reducido | `ChartCarousel`; dirección de diseño con *creative* |
+| 0.8.0 | **Reporte HTML** | `renderToStaticMarkup` de los mismos componentes + CSS incluido + ~20 líneas de JS para carrusel y buscador; se carga al pedirlo | `react-dom/server`, CSS `?inline` de Vite |
+| 0.8.0 | **Reporte PDF** | Documento A4 con primitivas de react-pdf (barras, Pareto, tendencia, tabla) y colores de los tokens; se carga al pedirlo (1.2 MB) | `@react-pdf/renderer` |
+| 0.8.0 | **Seguimiento en Neon** | Servidor `node:http` + `pg` (sin framework) que sirve la app y la API; la conexión solo en `DATABASE_URL`; validación de cada fila; upsert en una consulta con `unnest`. El histórico entra como un TCQS | `pg`, Postgres local para probar, Render |
 | 0.7.0 | **▲/▼ contra el periodo anterior** en Yield | Selector *Periodo* (último día/semana/mes o todo el rango). `change()` resta el valor del periodo anterior a un decimal y no compara si alguno tiene menos de 10 entradas (regla 1 de la guía). El retest que sube cuenta como malo | `KpiTile` (`delta`, `good`), `Select`, `periodsOf`/`change` en `src/lib/tcqs.ts` con prueba |
 | 0.7.0 | **Archivos guardados** entre recargas | El último archivo de cada tipo, ya leído, se guarda en IndexedDB y se recupera al abrir. Al salir se borra todo (el equipo puede ser compartido). Si el navegador no lo permite, la app sigue en memoria | IndexedDB del navegador (`src/lib/saved.ts`, ~25 líneas, sin dependencias); no localStorage: tiene límite de ~5 MB y pierde las fechas de Excel |
 | 0.6.0 | **Dónde mirar primero → estación en Yield** | El enlace lleva la estación en el `#` de la dirección; Yield resalta la fila y la desplaza a la vista | React Router (`hash`), `scrollIntoView`, `aria-current` |
@@ -23,10 +29,10 @@ Qué se mejoró, cómo se hizo y qué se usó; después, lo pendiente y lo que n
 ## Pendientes (en orden)
 
 1. **Confirmar con el piso:** meta FPY (95 %) y mínimo de muestra (10 entradas).
-2. **Barras horizontales** para estaciones con nombre largo (hoy el eje muestra una de cada n etiquetas; la tabla las lista todas). Va primero al sistema de diseño.
-3. **Delta del RTY** y de «Recuperado en retest» (hoy solo entradas, FPY, Final y retest).
-4. **DATA ANALYSIS y QM:** validación y match por serial + estación; Pareto 2do nivel por código de error.
-5. **Cuentas reales** y el código de 6 dígitos (`LoginPanel defaultMode="code"`) cuando haya servidor.
+2. **Cuentas reales** (ya hay servidor): proteger `/api/resumen` y usar el código de 6 dígitos (`LoginPanel defaultMode="code"`).
+3. **DATA ANALYSIS y QM:** validación y match por serial + estación; Pareto 2do nivel por código de error.
+4. **PDF:** anexo con validación y fórmulas, si se pide.
+5. **Etiquetas de git** por versión (`v0.1.0`…`v0.8.0`).
 
 ## No relevante por ahora
 

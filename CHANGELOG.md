@@ -8,6 +8,22 @@ Un cambio de componente se publica primero en el artefacto y después se copia a
 
 Los errores encontrados y cómo se corrigieron están en [ERRORES.md](ERRORES.md); las mejoras y cómo se hicieron, en [MEJORAS.md](MEJORAS.md).
 
+## [0.8.0] — 2026-11-07 · sistema de diseño v20
+
+### Agregado
+- **Componentes · `BarChart`:** prop `horizontal`, una fila por estación con el nombre completo. Se usa en «FPY y Final Yield por estación».
+- **Componentes · `ChartCarousel`:** la gráfica entra del lado al que se navega, las barras crecen y las líneas se dibujan; flechas ← → del teclado. Nada con `prefers-reduced-motion`.
+- **Pantallas · Yield:** ▲/▼ también en RTY y «Recuperado en retest» (`change()` genérico).
+- **Pantallas · Yield:** *Descargar reporte HTML*: un solo archivo con estilos, indicadores, carrusel de gráficas y buscador de estaciones; funciona sin internet.
+- **Pantallas · Yield:** *Descargar PDF* (react-pdf): A4 de 2 páginas con resumen, estaciones a revisar, gráficas y tabla. Se carga solo al pedirlo.
+- **Servidor (`server/`):** sirve la app y `/api/resumen` con Postgres/Neon (`pg`). Tabla `yield_resumen`: conteos por día × modelo × estación; la carga más reciente de cada combinación reemplaza a la anterior.
+- **Pantallas · Validación:** *Guardar en Neon*. **Historial:** *Cargar histórico*, que entra como un TCQS y lo leen todas las pantallas.
+- **Cálculo:** `daily()`, `fromDb()` y `toWatch()` en `src/lib/tcqs.ts`, con prueba de ida y vuelta.
+
+### Cambiado
+- **Render:** el sitio estático pasa a un servicio Node (`npm start`) con la variable `DATABASE_URL`.
+- **Componentes · gráficas:** miden su ancho con `useEffect`, para poder dibujarse también a HTML estático.
+
 ## [0.7.0] — 2026-11-07
 
 ### Agregado

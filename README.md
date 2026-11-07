@@ -34,6 +34,26 @@ src/
   store.ts               sesión, archivos e historial
 ```
 
+## Neon y Render
+
+1. En [Neon](https://neon.tech) crea un proyecto y copia su *connection string* (`postgres://…`).
+2. En Render: **New → Blueprint** con este repositorio. Lee `render.yaml` y crea el servicio `yield-control`; en **Environment** pega la cadena en `DATABASE_URL`.
+3. La tabla `yield_resumen` se crea sola al arrancar. Sin `DATABASE_URL` la app funciona igual y los botones de Neon avisan que falta.
+
+En local, con un Postgres o la misma cadena de Neon:
+
+```bash
+DATABASE_URL=postgres://… npm start
+```
+
+```bash
+npm run dev
+```
+
+`npm run dev` reenvía `/api` al servidor del puerto 3000.
+
+## Documentos
+
 - Plan de trabajo y fórmulas: [PLAN.md](PLAN.md)
 - Versiones: [CHANGELOG.md](CHANGELOG.md)
 - Errores encontrados y cómo se corrigieron: [ERRORES.md](ERRORES.md)

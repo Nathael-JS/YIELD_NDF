@@ -36,7 +36,20 @@ Cada entrada dice qué pasaba, cómo se detectó, la causa, la corrección y con
 | E16 | 0.1.0 | `npm install` fallaba con vitest 4 (`Cannot read properties of null (reading 'edgesOut')`) | Error interno de npm al resolver dependencias de vitest | Se quitó vitest y se usa el probador de Node (`node --test`): una dependencia menos |
 | E17 | 0.1.0 | No se pudo instalar SheetJS (`xlsx`) | Su descarga oficial está bloqueada en este entorno y la versión de npm (0.18.5) es vieja y con vulnerabilidades | `read-excel-file` (.xlsx) + `papaparse` (.csv), mantenidas y sin vulnerabilidades |
 
+## 0.8.0
+
+| # | Qué pasaba | Causa | Corrección | Comprobación |
+| --- | --- | --- | --- | --- |
+| E18 | En el HTML descargado el título del carrusel y cada gráfica usaban la misma marca `data-title` | Mismo atributo para dos cosas; funcionaba solo por el orden del archivo | Marcas propias `data-show-title`/`data-show-kind` | Playwright sobre el archivo abierto con `file://` |
+| E19 | Aviso de React «useLayoutEffect does nothing on the server» al generar el HTML | Las gráficas medían su ancho con `useLayoutEffect` | `useEffect` (en la app y en el artefacto) | Consola sin errores |
+| E20 | El PDF partía con guion nombres como `WC_WASH_DRAIN_NI-TRO_FILL` | react-pdf separa palabras largas | `Font.registerHyphenationCallback` sin cortes y columna más ancha | PDF convertido a imagen con `pdftoppm` |
+| E21 | El buscador del HTML no encontraba «critico» sin acento | Comparaba el texto tal cual | Compara sin mayúsculas ni acentos | Recorrido del HTML |
+| E22 | `node --test server/` se quedaba colgado | Ejecutaba también `index.js`, que arranca el servidor | `npm test` corre solo `server/*.test.js` | `npm test` |
+
 ## Abiertos
+
+- **La API de Neon no tiene autenticación:** cualquiera con la dirección puede escribir resumen. Solo acepta conteos validados y hace upsert (no borra). Hay que agregar cuentas reales antes de compartir la dirección.
+- **Plan gratis de Render:** el servicio se duerme y el primer acceso tarda cerca de un minuto.
 
 - La regla MA = SA podría confundir dos partes distintas que compartan número. Confirmar con el BOM si aparece un caso.
 - Un enlace guardado `/yield#ESTACIÓN` no resalta nada si la estación cambia de nombre en otro TCQS.
