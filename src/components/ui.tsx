@@ -1,5 +1,5 @@
 // Componentes del sistema de diseño Yield Control (portados de components/bundle.js).
-import { useState, type ButtonHTMLAttributes, type FormEvent, type ReactNode } from 'react';
+import { useState, type KeyboardEvent, type ButtonHTMLAttributes, type FormEvent, type ReactNode } from 'react';
 
 const cx = (...c: unknown[]) => c.filter(Boolean).join(' ');
 
@@ -136,12 +136,14 @@ export function KpiTile({ label, value, unit, delta, deltaUnit = '', good = true
 export interface CarouselSlide { kind: string; title: string; content: ReactNode }
 export function ChartCarousel({ slides, label = 'Gráficas' }: { slides: CarouselSlide[]; label?: string }) {
   const [idx, setIdx] = useState(0);
+  const [dir, setDir] = useState<'next' | 'prev'>('next'); // de qué lado entra la gráfica nueva
   const n = slides.length;
   if (!n) return null;
   const i = Math.min(idx, n - 1);
-  const go = (k: number) => setIdx((k + n) % n);
+  const go = (k: number) => { setDir(k < i ? 'prev' : 'next'); setIdx((k + n) % n); };
+  const keys = (e: KeyboardEvent) => { if (e.key === 'ArrowRight') go(i + 1); if (e.key === 'ArrowLeft') go(i - 1); };
   return (
-    <section className="yc-carousel" aria-roledescription="carrusel" aria-label={label}>
+    <section className="yc-carousel" aria-roledescription="carrusel" aria-label={label} onKeyDown={keys}>
       <header className="yc-carousel-head">
         <div>
           <span className="yc-carousel-kind">{slides[i].kind}</span>
@@ -153,7 +155,7 @@ export function ChartCarousel({ slides, label = 'Gráficas' }: { slides: Carouse
           <button type="button" className="yc-icon-btn" aria-label="Gráfica siguiente" onClick={() => go(i + 1)}>›</button>
         </div>
       </header>
-      <div className="yc-carousel-body">{slides[i].content}</div>
+      <div key={i} className={`yc-carousel-body is-${dir}`}>{slides[i].content}</div>
       <div className="yc-carousel-dots">
         {slides.map((s, k) => (
           <button key={k} type="button" aria-label={s.title} aria-current={k === i ? 'true' : undefined} className={cx('yc-dot', k === i && 'is-on')} onClick={() => go(k)} />

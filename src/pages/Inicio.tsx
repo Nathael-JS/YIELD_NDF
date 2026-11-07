@@ -1,12 +1,11 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { Badge, Button, ChartCarousel, KpiTile } from '../components/ui.tsx';
-import { by, byFpy, diagnose, pctText, rty, shortDay, totals } from '../lib/tcqs.ts';
+import { ACTION, by, pctText, rty, shortDay, toWatch, totals } from '../lib/tcqs.ts';
 import { useData } from '../store.ts';
 import { PageHead } from './Layout.tsx';
 import { slides } from './slides.tsx';
 
 const n = (v: number) => v.toLocaleString('es-MX');
-const ACTION = { bad: 'Falla real del proceso: revisar la estación.', warn: 'Se recupera en retest sin reparar: revisar fixture, puntas o tester.' };
 
 export default function Inicio() {
   const { records, models, from, to } = useData();
@@ -27,9 +26,7 @@ export default function Inicio() {
   );
   const t = totals(records);
   const st = by(records, (r) => r.group).filter((s) => s.input > 0);
-  // primero lo crítico, luego las posibles falsas fallas; dentro, peor FPY primero
-  const watch = st.map((s) => ({ ...s, dx: diagnose(s) })).filter((s) => s.dx[1] === 'bad' || s.dx[1] === 'warn')
-    .sort((a, b) => (a.dx[1] === b.dx[1] ? byFpy(a, b) : a.dx[1] === 'bad' ? -1 : 1)).slice(0, 3);
+  const watch = toWatch(st);
   return (
     <>
       <section className="app-hero">

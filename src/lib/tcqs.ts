@@ -118,8 +118,17 @@ export function periodsOf(rs: Rec[], g: Grain) {
 
 /** Cambio contra el periodo anterior, a un decimal; sin cambio si falta dato o alguno de los dos
  * periodos tiene muy pocas entradas (guía, regla 1: con poco volumen el porcentaje no es estable). */
-export function change(cur: Totals, prev: Totals | undefined, key: 'input' | 'fpy' | 'final' | 'retest') {
+type WithInput<K extends string> = { input: number } & Record<K, number>;
+export function change<K extends string>(cur: WithInput<K>, prev: WithInput<K> | undefined, key: K) {
   if (!prev || cur.input < MIN_SAMPLE || prev.input < MIN_SAMPLE) return undefined;
   const d = cur[key] - prev[key];
   return Number.isFinite(d) ? Math.round(d * 10) / 10 : undefined;
+}
+
+export const ACTION = { bad: 'Falla real del proceso: revisar la estación.', warn: 'Se recupera en retest sin reparar: revisar fixture, puntas o tester.' };
+
+/** Hasta 3 estaciones a revisar: primero las críticas, luego las posibles falsas fallas; dentro, peor FPY primero. */
+export function toWatch<T extends Totals>(stations: T[]) {
+  return stations.filter((s) => s.input > 0).map((s) => ({ ...s, dx: diagnose(s) })).filter((s) => s.dx[1] === 'bad' || s.dx[1] === 'warn')
+    .sort((a, b) => (a.dx[1] === b.dx[1] ? byFpy(a, b) : a.dx[1] === 'bad' ? -1 : 1)).slice(0, 3);
 }

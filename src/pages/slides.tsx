@@ -23,7 +23,7 @@ export function slides(rs: Rec[], grain: Grain, scope: string): Slide[] {
     testers.length > 0 && { id: 'pareto2', kind: 'Líneas y barras', title: `Pareto 2do nivel · ${top}`,
       content: <ParetoChart title={`Primeras fallas por tester en ${top}`} level={2} subtitle="2do nivel · el TCQS no trae error codes; se abre por tester" data={testers} /> },
     { id: 'estaciones', kind: 'Barras', title: 'FPY y Final Yield por estación',
-      content: <BarChart title="FPY y Final Yield por estación" subtitle={`${scope} · de peor a mejor FPY`} yLabel="%" categories={st.map((s) => s.name)} targets={meta}
+      content: <BarChart horizontal title="FPY y Final Yield por estación" subtitle={`${scope} · de peor a mejor FPY`} yLabel="%" categories={st.map((s) => s.name)} targets={meta}
         series={[{ name: 'FPY', tone: 'pass', values: st.map((s) => r1(s.fpy)) }, { name: 'Final Yield', tone: 'second', values: st.map((s) => r1(s.final)) }]} /> },
     periods.length > 1 && { id: 'tendencia', kind: 'Líneas y barras', title: 'Evolución del yield',
       content: <TrendChart title="Evolución del yield" subtitle={scope} yLabel="%" categories={periods.map((p) => labels.get(p.name)!)} targets={meta}

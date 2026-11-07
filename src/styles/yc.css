@@ -179,3 +179,19 @@ body { margin: 0; background: var(--surface-100); color: var(--ink); font: 400 1
   .yc-steps { flex-wrap: nowrap; order: 3; width: 100%; overflow-x: auto; scrollbar-width: none; }
   .yc-step button { white-space: nowrap; }
 }
+
+/* ChartCarousel: la gráfica entra del lado al que se navega, las barras crecen y las líneas se dibujan */
+@media (prefers-reduced-motion: no-preference) {
+  .yc-carousel-body.is-next { animation: yc-in-next .28s cubic-bezier(.2, .7, .2, 1) both; }
+  .yc-carousel-body.is-prev { animation: yc-in-prev .28s cubic-bezier(.2, .7, .2, 1) both; }
+  .yc-carousel-body :is(.yc-bar, .yc-pareto-bar) { transform-box: fill-box; transform-origin: bottom; animation: yc-grow-y .45s .08s cubic-bezier(.2, .7, .2, 1) both; }
+  .yc-carousel-body .yc-bar-h { transform-origin: left; animation-name: yc-grow-x; }
+  .yc-carousel-body [role="img"] polyline { stroke-dasharray: 1; stroke-dashoffset: 1; animation: yc-draw .6s .2s ease-out forwards; }
+  .yc-carousel-body [role="img"] :is(.yc-pareto-dot, .yc-line-dot, .yc-mark) { animation: yc-fade .3s .5s both; }
+}
+@keyframes yc-in-next { from { opacity: 0; transform: translateX(24px); } }
+@keyframes yc-in-prev { from { opacity: 0; transform: translateX(-24px); } }
+@keyframes yc-grow-y { from { transform: scaleY(0); } }
+@keyframes yc-grow-x { from { transform: scaleX(0); } }
+@keyframes yc-draw { to { stroke-dashoffset: 0; } }
+@keyframes yc-fade { from { opacity: 0; } }

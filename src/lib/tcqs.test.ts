@@ -77,4 +77,5 @@ test('periodsOf y change: cambio contra el periodo anterior solo con muestra suf
   assert.equal(change(w45, w44, 'input'), 5);
   assert.equal(change(w45, undefined, 'fpy'), undefined);
   assert.equal(change(totals([rec('x', 5, 5)]), w44, 'fpy'), undefined); // 5 entradas: no se compara
+  assert.equal(change({ input: 20, rty: 50 }, { input: 30, rty: 62.3 }, 'rty'), -12.3); // también RTY
 });
