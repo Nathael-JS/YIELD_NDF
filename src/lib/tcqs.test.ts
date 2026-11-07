@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { by, diagnose, modelsFrom, periodOf, readTcqs, rty, totals } from './tcqs.ts';
+import { by, diagnose, modelKey, modelsFrom, periodOf, readTcqs, rty, totals } from './tcqs.ts';
 
 const H = ['WORK_DATE', 'MODEL_NAME', 'SAP_MODEL_NAME', 'MO_NUMBER', 'GROUP_NAME', 'STATION_NAME', 'INPUT_QTY', 'FIRST_PASS_QTY', 'FIRST_FAIL_QTY', 'SECOND_PASS_QTY'];
 // filas con la forma del TCQS real (cantidades como texto, como las deja el lector de CSV)
@@ -10,32 +10,41 @@ const tcqs = { headers: H, rows: [
   ['20261104', 'SA029400', 'SA029400', '125307', 'J_TAG', 'corelis48200', '4', '4', '0', '0'],
   ['20261104', 'SA029400', 'SA029400', '125307', 'J_TAG', 'corelis48181', '-1', '0', '0', '0'],
   ['', 'SA029400', 'SA029400', '125307', 'FT', 'x', '1', '1', '0', '0'],
+  ['20261104', 'SA029400', 'SA029400', '125307', 'FT', 'x', '3', '1', '1', '0'], // 1 + 1 ≠ 3
 ] };
 
 test('readTcqs separa filas válidas de las inválidas y avisa columnas faltantes', () => {
   const r = readTcqs(tcqs);
   assert.equal(r.records.length, 3);
-  assert.deepEqual(r.bad, [5, 6]);
+  assert.deepEqual(r.bad, [5, 6, 7]);
   assert.equal(r.records[0].date, '2026-11-03');
   assert.deepEqual(readTcqs({ headers: ['WORK_DATE'], rows: [] }).missing.length, 8);
 });
 
-test('totals usa las fórmulas del TCQS: FPY, Final Yield (tope 100 %), retest, NDF', () => {
+test('totals sigue la guía: FPY, retest ponderado, Final = FPY + Retest, recuperación', () => {
   const ft = totals(readTcqs(tcqs).records.filter((r) => r.group === 'FT'));
   assert.equal(ft.input, 8);
   assert.equal(ft.fpy, 75); // 6/8
-  assert.equal(ft.final, 87.5); // (6+1)/8
   assert.equal(ft.retest, 12.5); // 1/8
-  assert.equal(ft.ndf, 50); // 1 de 2 primeras fallas pasó en retest
-  assert.equal(totals([{ date: 'x', model: 'm', mo: '', group: 'g', tester: '', input: 2, fp: 2, ff: 0, sp: 3 }]).final, 100);
-  assert.equal(totals([]).fpy, 0);
+  assert.equal(ft.final, 87.5); // (6+1)/8 = 75 + 12.5
+  assert.equal(ft.recovered, 50); // 1 de 2 primeras fallas pasó al re-probarla
+  const rec = (input: number, fp: number, ff: number, sp: number) => ({ date: 'x', model: 'm', mo: '', group: 'g', tester: '', input, fp, ff, sp });
+  // retest de una entrada fuera del rango: no infla el yield (guía, caso SA016491 y fórmula 10)
+  const day = totals([rec(3, 3, 0, 0), rec(1, 1, 0, 0), rec(1, 0, 1, 1), rec(0, 0, 0, 1), rec(1, 1, 0, 0)]);
+  assert.equal(day.retest.toFixed(1), '16.7'); // 1 ÷ 6, no 2 ÷ 6
+  assert.equal(day.extra, 1);
+  const over = totals([rec(2, 2, 0, 3)]);
+  assert.equal(over.final, 100);
+  assert.equal(over.fpy + over.retest, over.final);
+  assert.ok(Number.isNaN(totals([rec(0, 0, 0, 1)]).fpy)); // entradas 0 = sin dato
 });
 
 test('by, rty y diagnose', () => {
   const st = by(readTcqs(tcqs).records, (r) => r.group);
   assert.deepEqual(st.map((s) => s.name), ['FT', 'J_TAG']);
   assert.equal(rty(st), 75); // 75 % × 100 %
-  assert.equal(diagnose(st[0])[1], 'neutral'); // 8 entradas: muestra insuficiente
+  assert.equal(diagnose(st[0])[0], 'Muestra insuficiente'); // 8 entradas
+  assert.equal(diagnose(totals([]))[0], 'Sin dato');
   assert.equal(diagnose({ ...st[0], input: 20, fpy: 80, final: 96 })[1], 'warn');
   assert.equal(diagnose({ ...st[0], input: 20, fpy: 80, final: 90 })[1], 'bad');
 });
@@ -51,4 +60,10 @@ test('periodOf agrupa por día, semana ISO y mes', () => {
   assert.deepEqual(periodOf('2026-11-01', 'semana'), ['2026-W44', 'Sem 44']); // domingo
   assert.deepEqual(periodOf('2027-01-01', 'semana'), ['2026-W53', 'Sem 53']);
   assert.deepEqual(periodOf('2026-10-31', 'mes'), ['2026-10', 'oct 2026']);
+});
+
+test('modelKey iguala MA y SA del mismo número de parte', () => {
+  assert.equal(modelKey('MA016491'), modelKey(' sa016491'));
+  assert.equal(modelKey('920-9K33R-00MV-GS0'), '920-9K33R-00MV-GS0');
+  assert.notEqual(modelKey('MA0164912'), 'SA0164912');
 });

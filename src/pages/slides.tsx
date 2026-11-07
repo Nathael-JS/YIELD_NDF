@@ -1,7 +1,7 @@
 // Gráficas del TCQS; las usan Inicio (carrusel), Gráficos (cuadrícula) y Yield.
 import { BarChart, Histogram, ParetoChart, ScatterPlot, TrendChart } from '../components/charts.tsx';
 import type { CarouselSlide } from '../components/ui.tsx';
-import { by, META_FPY, periodOf, type Grain, type Rec } from '../lib/tcqs.ts';
+import { by, byFpy, META_FPY, periodOf, type Grain, type Rec } from '../lib/tcqs.ts';
 
 const r1 = (n: number) => Math.round(n * 10) / 10;
 const meta = [{ value: META_FPY, label: `Meta FPY ${META_FPY} %` }];
@@ -9,12 +9,13 @@ const meta = [{ value: META_FPY, label: `Meta FPY ${META_FPY} %` }];
 export type Slide = CarouselSlide & { id: string };
 
 export function slides(rs: Rec[], grain: Grain, scope: string): Slide[] {
-  const st = by(rs, (r) => r.group).sort((a, b) => a.fpy - b.fpy); // peor estación primero
+  // solo grupos con entradas: entradas 0 es «sin dato», no 0 % (guía, regla 2)
+  const st = by(rs, (r) => r.group).filter((s) => s.input > 0).sort(byFpy); // peor estación primero
   const fails = st.filter((s) => s.ff > 0).map((s) => ({ label: s.name, value: s.ff }));
   const top = [...fails].sort((a, b) => b.value - a.value)[0]?.label;
   const testers = top ? by(rs.filter((r) => r.group === top), (r) => r.tester).filter((t) => t.ff > 0).map((t) => ({ label: t.name, value: t.ff })) : [];
   const labels = new Map(rs.map((r) => periodOf(r.date, grain)));
-  const periods = by(rs, (r) => periodOf(r.date, grain)[0]).sort((a, b) => (a.name < b.name ? -1 : 1));
+  const periods = by(rs, (r) => periodOf(r.date, grain)[0]).filter((p) => p.input > 0).sort((a, b) => (a.name < b.name ? -1 : 1));
   const testerFpy = by(rs, (r) => r.tester).filter((t) => t.input > 0).map((t) => r1(t.fpy));
   const out: (Slide | false)[] = [
     fails.length > 0 && { id: 'pareto', kind: 'Líneas y barras', title: 'Pareto 1er nivel',

@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { Badge, KpiTile, PeriodTabs, Select } from '../components/ui.tsx';
-import { by, diagnose, rty, shortDay, totals } from '../lib/tcqs.ts';
+import { by, byFpy, diagnose, pctText, rty, shortDay, totals } from '../lib/tcqs.ts';
 import { useApp, useData } from '../store.ts';
 import { NeedTcqs, PageHead } from './Layout.tsx';
 import { slides } from './slides.tsx';
 
 const ALL = 'Todos los modelos';
-const p1 = (n: number) => `${n.toFixed(1)} %`;
+const p1 = (n: number) => (Number.isFinite(n) ? `${n.toFixed(1)} %` : '—');
 const GRAINS = [
   { id: 'dia' as const, label: 'Día', hint: 'Un punto por día' },
   { id: 'semana' as const, label: 'Semana', hint: 'Lunes a domingo' },
@@ -20,7 +20,7 @@ export default function Yield() {
   if (!records.length) return <><PageHead title="Yield" /><NeedTcqs /></>;
 
   const rs = model === ALL ? records : records.filter((r) => r.model === model);
-  const t = totals(rs), st = by(rs, (r) => r.group).sort((a, b) => a.fpy - b.fpy);
+  const t = totals(rs), st = by(rs, (r) => r.group).sort(byFpy);
   const sl = slides(rs, period, model === ALL ? 'todas las estaciones' : model);
   const chart = (id: string) => sl.find((s) => s.id === id)?.content;
   return (
@@ -31,11 +31,11 @@ export default function Yield() {
       </PageHead>
       <div className="yc-grid-kpi">
         <KpiTile label="Entradas" value={t.input.toLocaleString('es-MX')} />
-        <KpiTile label="FPY" value={t.fpy.toFixed(1)} unit="%" />
-        <KpiTile label="Final Yield" value={t.final.toFixed(1)} unit="%" />
-        <KpiTile label="A retest" value={t.retest.toFixed(1)} unit="%" />
-        <KpiTile label="NDF" value={t.ndf.toFixed(1)} unit="%" />
-        <KpiTile label="RTY" value={rty(st).toFixed(1)} unit="%" />
+        <KpiTile label="FPY" value={pctText(t.fpy)} unit="%" />
+        <KpiTile label="Final Yield" value={pctText(t.final)} unit="%" />
+        <KpiTile label="A retest" value={pctText(t.retest)} unit="%" />
+        <KpiTile label="Recuperado en retest" value={pctText(t.recovered)} unit="%" />
+        <KpiTile label="RTY" value={pctText(rty(st))} unit="%" />
       </div>
       {chart('estaciones')}
       <div className="yc-table-wrap">

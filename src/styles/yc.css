@@ -28,7 +28,7 @@ body { margin: 0; background: var(--surface-100); color: var(--ink); font: 400 1
 .yc-badge-neutral { background: var(--surface-200); color: var(--ink-muted); }
 
 /* PipelineNav */
-.yc-nav { display: flex; align-items: center; gap: var(--space-6); padding: 0 var(--space-6); min-height: 56px; background: var(--surface-000); border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.yc-nav { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: var(--space-6); padding: 0 var(--space-6); min-height: 56px; background: var(--surface-000); border-bottom: 1px solid var(--line); flex-wrap: wrap; }
 .yc-nav-mark { font-weight: 600; letter-spacing: -.2px; white-space: nowrap; }
 .yc-nav-mark::before { content: ""; display: inline-block; width: 10px; height: 10px; margin-right: var(--space-2); background: var(--brand); border-radius: 2px; }
 .yc-steps { display: flex; align-items: center; gap: var(--space-1); list-style: none; margin: 0; padding: 0; flex-wrap: wrap; }
@@ -129,7 +129,8 @@ body { margin: 0; background: var(--surface-100); color: var(--ink); font: 400 1
 .yc-login-panel h2 { margin: var(--space-6) 0 var(--space-3); font-size: 20px; line-height: 28px; }
 .yc-login-panel ul { margin: 0; padding-left: 18px; display: grid; gap: var(--space-2); }
 .yc-login.is-open .yc-login-panel { transform: none; visibility: visible; transition: transform .35s cubic-bezier(.2, .7, .2, 1); }
-.yc-login-main { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-4); padding: var(--space-8) var(--space-4); transition: padding-left .35s cubic-bezier(.2, .7, .2, 1); }
+.yc-login-backdrop { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.yc-login-main { position: relative; flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-4); padding: var(--space-8) var(--space-4); transition: padding-left .35s cubic-bezier(.2, .7, .2, 1); }
 .yc-login.is-open .yc-login-main { padding-left: min(392px, 90%); }
 .yc-login-toggle { position: absolute; top: var(--space-4); left: var(--space-4); z-index: 2; height: 32px; padding: 0 var(--space-3); border: 1px solid var(--line-strong); border-radius: var(--radius-md); background: var(--surface-000); color: var(--ink); cursor: pointer; }
 .yc-login.is-open .yc-login-toggle { left: auto; right: var(--space-4); }
@@ -140,7 +141,7 @@ body { margin: 0; background: var(--surface-100); color: var(--ink); font: 400 1
 .yc-input { height: 36px; padding: 0 var(--space-3); border: 1px solid var(--line-strong); border-radius: var(--radius-md); background: var(--surface-000); color: var(--ink); font-size: 14px; }
 .yc-login-note { display: flex; gap: var(--space-2); align-items: flex-start; margin: 0; font-size: 12px; line-height: 18px; color: var(--ink-muted); }
 .yc-login-form .yc-btn-primary { justify-content: center; }
-.yc-login-hint { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: var(--space-2); width: min(320px, 100%); margin: 0; font-size: 12px; line-height: 18px; color: var(--ink-muted); }
+.yc-login-hint { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: var(--space-2); width: min(320px, 100%); margin: 0; padding: var(--space-1) var(--space-2); background: var(--surface-100); border-radius: var(--radius-md); font-size: 12px; line-height: 18px; color: var(--ink-muted); }
 .yc-link { justify-self: center; border: 0; background: none; color: var(--brand); text-decoration: underline; cursor: pointer; font-size: 13px; }
 @media (max-width: 640px) { .yc-login.is-open .yc-login-main { padding-left: var(--space-4); } .yc-login.is-open::after { content: ""; position: absolute; inset: 0; background: var(--overlay); } }
 @media (prefers-reduced-motion: reduce) { .yc-login-panel, .yc-login-main, .yc-login.is-open .yc-login-panel { transition: none; } }
@@ -173,4 +174,8 @@ body { margin: 0; background: var(--surface-100); color: var(--ink); font: 400 1
 .yc-table .num { text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 .yc-table .code { font-family: var(--font-mono); }
 .yc-table th.num { font-family: var(--font-sans); }
-@media (max-width: 640px) { .yc-step + .yc-step::before { display: none; } }
+@media (max-width: 640px) {
+  .yc-nav { gap: var(--space-2) var(--space-4); padding: var(--space-2) var(--space-4); }
+  .yc-steps { flex-wrap: nowrap; order: 3; width: 100%; overflow-x: auto; scrollbar-width: none; }
+  .yc-step button { white-space: nowrap; }
+}

@@ -4,7 +4,7 @@ import { persist } from 'zustand/middleware';
 import type { HistoryItem, Period } from './components/ui.tsx';
 import { useMemo } from 'react';
 import type { ParsedFile } from './lib/files.ts';
-import { modelsFrom, readTcqs } from './lib/tcqs.ts';
+import { modelKey, modelsFrom, readTcqs } from './lib/tcqs.ts';
 
 // MODELOS = Excel del proyecto (BOM) con los números de modelo válidos. DATA ANALYSIS y QM: pendientes.
 export const FILE_TYPES = ['TCQS', 'MODELOS'] as const;
@@ -68,10 +68,11 @@ export function useData() {
   const { TCQS, MODELOS } = useApp((s) => s.files);
   return useMemo(() => {
     const read = TCQS ? readTcqs(TCQS) : null;
-    const models = MODELOS ? new Set(modelsFrom(MODELOS)) : null;
+    const bom = MODELOS ? modelsFrom(MODELOS) : [];
+    const models = MODELOS ? new Set(bom.map(modelKey)) : null;
     const all = read?.records ?? [];
-    const records = models ? all.filter((r) => models.has(r.model.toUpperCase())) : all;
+    const records = models ? all.filter((r) => models.has(modelKey(r.model))) : all;
     const dates = records.map((r) => r.date).sort();
-    return { read, models, all, records, from: dates[0], to: dates.at(-1) };
+    return { read, bom, models, all, records, from: dates[0], to: dates.at(-1) };
   }, [TCQS, MODELOS]);
 }

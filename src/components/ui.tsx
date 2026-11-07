@@ -188,11 +188,13 @@ export function HistoryList({ items, title = 'Historial de la sesión', onBackup
 }
 
 export type LoginMode = 'login' | 'signup' | 'code';
-export function LoginPanel({ defaultOpen = false, defaultMode = 'login', signup = true, error, title = 'Yield Control', onSubmit, children }: {
+export function LoginPanel({ defaultOpen = false, defaultMode = 'login', signup = true, error, title = 'Yield Control', onSubmit, children, backdrop }: {
   defaultOpen?: boolean; defaultMode?: LoginMode; signup?: boolean; error?: string; title?: string;
   onSubmit?: (mode: LoginMode, data: FormData) => void;
   /** Avisos debajo del formulario, en `.yc-login-hint`. */
   children?: ReactNode;
+  /** Ilustración decorativa detrás del formulario (oculta a lectores de pantalla). */
+  backdrop?: ReactNode;
 }) {
   const [open, setOpen] = useState(defaultOpen);
   const [mode, setMode] = useState<LoginMode>(defaultMode);
@@ -200,6 +202,7 @@ export function LoginPanel({ defaultOpen = false, defaultMode = 'login', signup 
   const submit = (e: FormEvent<HTMLFormElement>) => { e.preventDefault(); onSubmit?.(mode, new FormData(e.currentTarget)); };
   return (
     <div className={cx('yc-login', open && 'is-open')}>
+      {backdrop && <div className="yc-login-backdrop" aria-hidden>{backdrop}</div>}
       <aside className="yc-login-panel" id="yc-login-about" aria-hidden={!open}>
         <span className="yc-nav-mark">{title}</span>
         <h2>Qué hace la aplicación</h2>
