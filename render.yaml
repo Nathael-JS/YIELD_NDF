@@ -1,0 +1,16 @@
+# Render Blueprint: sitio estático. Los archivos se siguen leyendo en el navegador; Render solo sirve la app.
+services:
+  - type: web
+    name: yield-control
+    runtime: static
+    buildCommand: npm ci && npm run build
+    staticPublishPath: ./dist
+    pullRequestPreviewsEnabled: true
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+    routes:
+      # rutas de React Router (/carga, /historial…) al recargar la página
+      - type: rewrite
+        source: /*
+        destination: /index.html

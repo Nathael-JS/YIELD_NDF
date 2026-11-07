@@ -19,7 +19,7 @@ export default function Login() {
           if (!login(u, String(data.get('password') ?? ''))) setError('Usuario o contraseña incorrectos');
         }}
       >
-        <p className="app-login-hint">
+        <p className="yc-login-hint">
         {sent
           ? <><Badge tone="info">Pendiente</Badge> Solicitud de <span className="app-mono">{sent}</span> enviada al encargado.</>
           : <><Badge tone="neutral">Prueba</Badge> Usuario <span className="app-mono">{TEST_USER.user}</span> · contraseña <span className="app-mono">{TEST_USER.password}</span></>}

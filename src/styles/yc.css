@@ -67,6 +67,10 @@ body { margin: 0; background: var(--surface-100); color: var(--ink); font: 400 1
 .yc-file-type { font: 500 13px/20px var(--font-mono); }
 .yc-file .yc-badge { grid-row: span 2; }
 .yc-file-meta { font-size: 12px; line-height: 18px; color: var(--ink-muted); }
+.yc-file-label { display: block; border-radius: var(--radius-lg); cursor: pointer; }
+.yc-file-label:focus-within { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.yc-file-drop:hover, .yc-file-drop.is-over { border-color: var(--brand); background: var(--brand-tint); }
+.yc-sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 /* KpiTile */
 .yc-kpi { display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-4); background: var(--surface-000); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow-card); }
@@ -136,6 +140,7 @@ body { margin: 0; background: var(--surface-100); color: var(--ink); font: 400 1
 .yc-input { height: 36px; padding: 0 var(--space-3); border: 1px solid var(--line-strong); border-radius: var(--radius-md); background: var(--surface-000); color: var(--ink); font-size: 14px; }
 .yc-login-note { display: flex; gap: var(--space-2); align-items: flex-start; margin: 0; font-size: 12px; line-height: 18px; color: var(--ink-muted); }
 .yc-login-form .yc-btn-primary { justify-content: center; }
+.yc-login-hint { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: var(--space-2); width: min(320px, 100%); margin: 0; font-size: 12px; line-height: 18px; color: var(--ink-muted); }
 .yc-link { justify-self: center; border: 0; background: none; color: var(--brand); text-decoration: underline; cursor: pointer; font-size: 13px; }
 @media (max-width: 640px) { .yc-login.is-open .yc-login-main { padding-left: var(--space-4); } .yc-login.is-open::after { content: ""; position: absolute; inset: 0; background: var(--overlay); } }
 @media (prefers-reduced-motion: reduce) { .yc-login-panel, .yc-login-main, .yc-login.is-open .yc-login-panel { transition: none; } }

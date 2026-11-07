@@ -39,8 +39,7 @@ Basado en el sistema de diseño **Yield Control** (artefacto `RqMowPxsmEFcuTiJy8
 
 ## Para el sistema de diseño
 
-- `LoginPanel` recibe `children` (avisos debajo del formulario). Se usó para la ayuda del usuario de prueba y el aviso de solicitud enviada. Propuesta: subirlo al artefacto.
-- `FileChip` es solo visual; la app lo envuelve en un `<label>` con `<input type=file>` y arrastrar-soltar. Propuesta: variante interactiva en el sistema.
+- `LoginPanel` con `children` (avisos en `.yc-login-hint`) y `FileChip` como zona de carga (`onFile`, `accept`, arrastrar y soltar): **subidos al artefacto** (versión 14) y usados tal cual por la app.
 - La marca del menú (`yc-nav-mark`) es un botón que lleva a Inicio.
 - Sin selector de tema: se sigue el del sistema operativo (`prefers-color-scheme`); `data-theme` en `<html>` lo fuerza.
 

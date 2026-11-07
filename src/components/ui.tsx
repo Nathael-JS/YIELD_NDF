@@ -91,14 +91,27 @@ export type FileStatus = 'empty' | 'loaded' | 'comparing' | 'error';
 const FILE_STATUS: Record<FileStatus, [string, Tone]> = {
   empty: ['Sin cargar', 'neutral'], loaded: ['Cargado', 'ok'], comparing: ['En comparación', 'info'], error: ['Error', 'bad'],
 };
-export function FileChip({ type, status = 'empty', meta }: { type: string; status?: FileStatus; meta?: string }) {
+/** Con onFile es la zona de carga (clic o arrastrar y soltar). Sin onFile solo muestra el estado. */
+export function FileChip({ type, status = 'empty', meta, onFile, accept }: {
+  type: string; status?: FileStatus; meta?: string; onFile?: (file: File) => void; accept?: string;
+}) {
+  const [over, setOver] = useState(false);
   const [text, tone] = FILE_STATUS[status];
-  return (
-    <div className={`yc-file yc-file-${status}`}>
+  const chip = (
+    <div className={cx('yc-file', `yc-file-${status}`, onFile && 'yc-file-drop', over && 'is-over')}>
       <span className="yc-file-type">{type}</span>
       <Badge tone={tone}>{text}</Badge>
       <span className="yc-file-meta">{meta || 'Arrastra el archivo o haz clic para cargar'}</span>
     </div>
+  );
+  if (!onFile) return chip;
+  const take = (list: FileList | null) => { if (list?.[0]) onFile(list[0]); };
+  return (
+    <label className="yc-file-label" onDragOver={(e) => { e.preventDefault(); setOver(true); }} onDragLeave={() => setOver(false)}
+      onDrop={(e) => { e.preventDefault(); setOver(false); take(e.dataTransfer.files); }}>
+      <input type="file" className="yc-sr-only" accept={accept} aria-label={`Cargar ${type}`} onChange={(e) => { take(e.target.files); e.target.value = ''; }} />
+      {chip}
+    </label>
   );
 }
 
@@ -178,7 +191,7 @@ export type LoginMode = 'login' | 'signup' | 'code';
 export function LoginPanel({ defaultOpen = false, defaultMode = 'login', signup = true, error, title = 'Yield Control', onSubmit, children }: {
   defaultOpen?: boolean; defaultMode?: LoginMode; signup?: boolean; error?: string; title?: string;
   onSubmit?: (mode: LoginMode, data: FormData) => void;
-  /** Contenido debajo del formulario (avisos). Propuesta para el sistema de diseño. */
+  /** Avisos debajo del formulario, en `.yc-login-hint`. */
   children?: ReactNode;
 }) {
   const [open, setOpen] = useState(defaultOpen);

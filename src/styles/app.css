@@ -10,23 +10,18 @@
 .app-empty a, .app-main a { color: var(--brand); }
 .app-charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(480px, 100%), 1fr)); gap: var(--space-6); }
 
-/* Archivos: FileChip como zona de carga */
+/* Archivos */
 .app-files { display: flex; gap: var(--space-3); flex-wrap: wrap; }
 .app-files > * { flex: 1 1 240px; }
 .app-files-lg .yc-file { min-height: 96px; }
 .app-file-link { color: inherit; text-decoration: none; border-radius: var(--radius-lg); }
 .app-file-link:hover .yc-file { border-color: var(--line-strong); }
-.app-drop { display: block; cursor: pointer; border-radius: var(--radius-lg); }
-.app-drop:hover .yc-file, .app-drop.is-over .yc-file { border-color: var(--brand); background: var(--brand-tint); }
-.app-drop:focus-within { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
-.app-visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 /* Marca del menú como botón a Inicio */
 button.yc-nav-mark { border: 0; background: none; padding: 0; color: var(--ink); font: 600 14px/21px var(--font-sans); cursor: pointer; }
 
-/* Login a pantalla completa con la ayuda del usuario de prueba */
+/* Login a pantalla completa; usuario en el menú */
 .app-login .yc-login { min-height: 100vh; }
-.app-login-hint { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: var(--space-2); width: min(320px, 100%); margin: 0; font-size: 12px; line-height: 18px; color: var(--ink-muted); }
 .app-user { font-size: 12px; color: var(--ink-muted); white-space: nowrap; align-self: center; }
 
 @media (max-width: 640px) { .app-main { padding: var(--space-6) var(--space-4) var(--space-8); } }

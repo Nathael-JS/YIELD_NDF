@@ -1,4 +1,4 @@
-import { useState, type DragEvent } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button, FileChip, PeriodTabs } from '../components/ui.tsx';
 import { parseFile } from '../lib/files.ts';
@@ -10,11 +10,9 @@ const plural = (n: number, w: string) => `${n.toLocaleString('es-MX')} ${w}${n =
 function Drop({ type }: { type: FileType }) {
   const { files, errors, setFile, setError } = useApp();
   const [busy, setBusy] = useState(false);
-  const [over, setOver] = useState(false);
   const f = files[type], err = errors[type];
 
-  async function load(file?: File) {
-    if (!file) return;
+  async function load(file: File) {
     setBusy(true);
     try {
       setFile(type, { ...(await parseFile(file)), name: file.name, loadedAt: shortDate(new Date()) });
@@ -24,17 +22,15 @@ function Drop({ type }: { type: FileType }) {
       setBusy(false);
     }
   }
-  const drop = (e: DragEvent) => { e.preventDefault(); setOver(false); load(e.dataTransfer.files[0]); };
 
   return (
-    <label className={`app-drop${over ? ' is-over' : ''}`} onDragOver={(e) => { e.preventDefault(); setOver(true); }} onDragLeave={() => setOver(false)} onDrop={drop}>
-      <input type="file" accept=".xlsx,.csv,.txt" className="app-visually-hidden" onChange={(e) => { load(e.target.files?.[0]); e.target.value = ''; }} />
-      <FileChip
-        type={type}
-        status={err ? 'error' : busy ? 'comparing' : f ? 'loaded' : 'empty'}
-        meta={err ?? (busy ? 'Leyendo…' : f ? `${f.name} · ${plural(f.rows.length, 'fila')} · ${plural(f.headers.length, 'columna')}` : undefined)}
-      />
-    </label>
+    <FileChip
+      type={type}
+      accept=".xlsx,.csv,.txt"
+      onFile={load}
+      status={err ? 'error' : busy ? 'comparing' : f ? 'loaded' : 'empty'}
+      meta={err ?? (busy ? 'Leyendo…' : f ? `${f.name} · ${plural(f.rows.length, 'fila')} · ${plural(f.headers.length, 'columna')}` : undefined)}
+    />
   );
 }
 
