@@ -8,6 +8,19 @@ Un cambio de componente se publica primero en el artefacto y después se copia a
 
 Los errores encontrados y cómo se corrigieron están en [ERRORES.md](ERRORES.md); las mejoras y cómo se hicieron, en [MEJORAS.md](MEJORAS.md).
 
+## [0.10.0] — 2026-11-08
+
+### Agregado
+- **Servidor · cuentas reales:** tabla `usuarios`; contraseñas con `scrypt` y sal; sesión en cookie firmada (HMAC) `HttpOnly`, `SameSite=Strict`, `Secure` en Render, 12 h. `POST /api/login`, `/api/logout`, `/api/signup`, `GET /api/me`.
+- **Servidor:** toda la API de datos exige sesión; el usuario y la sesión de cada carga los pone el servidor (ya no el navegador).
+- **Servidor:** 5 intentos fallidos por dirección en 15 min bloquean el login; los POST solo aceptan JSON (junto con `SameSite`, frena CSRF); `/api/…` desconocido da 404.
+- **Servidor:** cabeceras de seguridad: CSP, `X-Frame-Options`, `nosniff`, `Referrer-Policy`, HSTS en Render.
+- **Primer administrador** desde `ADMIN_USER` / `ADMIN_PASSWORD`; «Crear cuenta» deja la cuenta pendiente hasta que la active el encargado.
+- **Pantallas · Login:** entra contra el servidor; al vencer la sesión la app vuelve al login.
+
+### Quitado
+- Usuario de prueba (`demo` / `yield2026`) y la lista local de solicitudes.
+
 ## [0.9.0] — 2026-11-08 · sistema de diseño v21
 
 ### Agregado

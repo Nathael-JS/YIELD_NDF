@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { Badge, FileChip, KpiTile, LoginPanel } from '../components/ui.tsx';
 import { META_FPY } from '../lib/tcqs.ts';
-import { TEST_USER, useApp } from '../store.ts';
+import { apiLogin, apiSignup } from '../lib/db.ts';
+import { useApp } from '../store.ts';
 
 // Ilustración del login: barras que crecen y siguen moviéndose como si llegaran datos, la línea de FPY que las
 // acompaña y los archivos que «se cargan». Decorativa: no muestra datos reales (solo la meta, que sí lo es).
@@ -44,7 +45,7 @@ function LoginArt() {
 }
 
 export default function Login() {
-  const user = useApp((s) => s.user), login = useApp((s) => s.login), requestAccount = useApp((s) => s.requestAccount);
+  const user = useApp((s) => s.user), login = useApp((s) => s.login);
   const [error, setError] = useState<string>();
   const [sent, setSent] = useState<string>();
   if (user) return <Navigate to="/" replace />;
@@ -53,18 +54,19 @@ export default function Login() {
       <LoginPanel
         backdrop={<LoginArt />}
         error={error}
-        onSubmit={(mode, data) => {
-          const u = String(data.get('user') ?? '');
-          if (mode === 'signup') { requestAccount(u); setError(undefined); setSent(u); return; }
-          // nunca decir cuál de los dos falló
-          if (!login(u, String(data.get('password') ?? ''))) setError('Usuario o contraseña incorrectos');
+        onSubmit={async (mode, data) => {
+          const u = String(data.get('user') ?? ''), p = String(data.get('password') ?? '');
+          setError(undefined);
+          try {
+            if (mode === 'signup') { await apiSignup(u, p); setSent(u.trim()); return; }
+            const s = await apiLogin(u, p);
+            login(s.nombre, s.sesion);
+          } catch (e) {
+            setError(e instanceof Error ? e.message : 'No se pudo conectar con el servidor');
+          }
         }}
       >
-        <p className="yc-login-hint">
-        {sent
-          ? <><Badge tone="info">Pendiente</Badge> Solicitud de <span className="app-mono">{sent}</span> enviada al encargado.</>
-          : <><Badge tone="neutral">Prueba</Badge> Usuario <span className="app-mono">{TEST_USER.user}</span> · contraseña <span className="app-mono">{TEST_USER.password}</span></>}
-        </p>
+        {sent && <p className="yc-login-hint"><Badge tone="info">Pendiente</Badge> Solicitud de <span className="app-mono">{sent}</span> enviada: el encargado debe activarla.</p>}
       </LoginPanel>
     </div>
   );

@@ -12,7 +12,7 @@ npm install
 npm run dev
 ```
 
-Abre http://localhost:5173, entra con el usuario de prueba **demo** / **yield2026** y carga el TCQS (.csv o .xlsx) y el Excel del build con el BOM de Juliet.
+Abre http://localhost:5173 (con `npm start` corriendo), entra con tu cuenta y carga el TCQS (.csv o .xlsx) y el Excel del build con el BOM de Juliet.
 
 ```bash
 npm test
@@ -37,13 +37,19 @@ src/
 ## Neon y Render
 
 1. En [Neon](https://neon.tech) crea un proyecto y copia su *connection string* (`postgres://…`).
-2. En Render: **New → Blueprint** con este repositorio. Lee `render.yaml` y crea el servicio `yield-control`; en **Environment** pega la cadena en `DATABASE_URL`.
+2. En Render: **New → Blueprint** con este repositorio. Lee `render.yaml` y crea el servicio `yield-control`. En **Environment** pon `DATABASE_URL` (la cadena de Neon), `ADMIN_USER` y `ADMIN_PASSWORD` (el primer administrador; mínimo 10 caracteres). `SESSION_SECRET` la genera Render.
+
+**Cuentas:** «Crear cuenta» en el login deja la cuenta pendiente. Para activarla, en el editor SQL de Neon:
+
+```sql
+update usuarios set activo = true where usuario = 'nombre.de.usuario';
+```
 3. La tabla `yield_resumen` se crea sola al arrancar. Sin `DATABASE_URL` la app funciona igual y los botones de Neon avisan que falta.
 
 En local, con un Postgres o la misma cadena de Neon:
 
 ```bash
-DATABASE_URL=postgres://… npm start
+DATABASE_URL=postgres://… ADMIN_USER=admin ADMIN_PASSWORD=una-clave-larga npm start
 ```
 
 ```bash

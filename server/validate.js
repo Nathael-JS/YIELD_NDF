@@ -6,7 +6,6 @@ const entero = (v) => Number.isInteger(v) && v >= 0 && v <= 1e6;
 export function validate(b) {
   if (!b || typeof b !== 'object' || !Array.isArray(b.filas)) return { error: 'Se esperaba { archivo, filas: [...] }' };
   if (typeof b.archivo !== 'string' || b.archivo.length > 200) return { error: 'Nombre de archivo inválido' };
-  if (!texto(b.sesion) || !texto(b.usuario)) return { error: 'Falta sesión o usuario' };
   if (!b.filas.length || b.filas.length > MAX_FILAS) return { error: `Entre 1 y ${MAX_FILAS} filas` };
   for (const [i, f] of b.filas.entries()) {
     const ok = f && /^\d{4}-\d{2}-\d{2}$/.test(f.fecha) && !Number.isNaN(Date.parse(f.fecha)) && texto(f.modelo) && texto(f.estacion)
@@ -14,5 +13,5 @@ export function validate(b) {
       && f.primer_pase + f.primera_falla === f.entradas;
     if (!ok) return { error: `Fila ${i + 1} inválida` };
   }
-  return { archivo: b.archivo.trim().slice(0, 200), sesion: b.sesion.trim(), usuario: b.usuario.trim(), filas: b.filas };
+  return { archivo: b.archivo.trim().slice(0, 200), sesion: b.sesion, usuario: b.usuario, filas: b.filas };
 }

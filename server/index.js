@@ -1,9 +1,11 @@
-// Servidor de Yield Control en Render: sirve la app (dist/) y la API del resumen en Neon.
-// La conexión vive solo aquí (DATABASE_URL en Render), nunca en el navegador.
+// Servidor de Yield Control en Render: sirve la app (dist/), las cuentas y la API del resumen en Neon.
+// La conexión vive solo aquí (DATABASE_URL en Render), nunca en el navegador. Toda la API de datos exige sesión.
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { extname, join, normalize, resolve } from 'node:path';
 import pg from 'pg';
+import { randomBytes, randomUUID } from 'node:crypto';
+import { checkPassword, cookieOf, failed, hashPassword, HOURS, limited, sign, verify } from './auth.js';
 import { validate } from './validate.js';
 
 const DIST = resolve('dist');
@@ -19,7 +21,19 @@ const ready = db?.query(`create table if not exists yield_resumen (
 create table if not exists yield_cargas (
   id serial primary key, sesion text not null, usuario text not null, archivo text not null,
   filas int not null, entradas int not null, primer_pase int not null, primera_falla int not null, segundo_pase int not null,
-  desde date not null, hasta date not null, guardado_en timestamptz not null default now())`);
+  desde date not null, hasta date not null, guardado_en timestamptz not null default now());
+create table if not exists usuarios (
+  id serial primary key, usuario text not null unique, nombre text not null, clave text not null,
+  activo boolean not null default false, admin boolean not null default false, creado timestamptz not null default now())`)
+  // primer administrador desde el entorno (ADMIN_USER / ADMIN_PASSWORD); las demás cuentas las activa él
+  .then(async () => {
+    const { ADMIN_USER: u, ADMIN_PASSWORD: p } = process.env;
+    if (u && p) await db.query(`insert into usuarios (usuario, nombre, clave, activo, admin) values ($1, $1, $2, true, true) on conflict (usuario) do nothing`, [u.toLowerCase(), await hashPassword(p)]);
+  });
+// sin SESSION_SECRET (Render la genera) las sesiones duran hasta que se reinicie el servidor
+const SECRET = process.env.SESSION_SECRET || randomBytes(32).toString('hex');
+const SECURE = process.env.NODE_ENV === 'production' || !!process.env.RENDER;
+const cookie = (value, maxAge) => `yc_sesion=${value}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${maxAge}${SECURE ? '; Secure' : ''}`;
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 
 const json = (res, code, body) => { res.writeHead(code, { 'content-type': 'application/json' }); res.end(JSON.stringify(body)); };
@@ -30,15 +44,51 @@ async function body(req) {
   return JSON.parse(Buffer.concat(parts).toString('utf8'));
 }
 
+const NOPE = 'Usuario o contraseña incorrectos'; // nunca decir cuál de los dos falló
+
+async function account(req, res, path) {
+  if (path === '/api/logout') { res.setHeader('set-cookie', cookie('', 0)); return json(res, 200, {}); }
+  if (path === '/api/me') {
+    const s = verify(cookieOf(req, 'yc_sesion'), SECRET);
+    return s ? json(res, 200, { nombre: s.nombre, sesion: s.sid }) : json(res, 401, { error: 'Sesión vencida' });
+  }
+  const b = await body(req), usuario = String(b.usuario ?? '').trim().toLowerCase(), clave = String(b.clave ?? '');
+  if (path === '/api/signup') {
+    if (!/^[a-z0-9._@-]{3,60}$/.test(usuario)) return json(res, 400, { error: 'Usuario de 3 a 60 caracteres: letras, números, punto, guion o @' });
+    if (clave.length < 10 || clave.length > 200) return json(res, 400, { error: 'La contraseña debe tener al menos 10 caracteres' });
+    await db.query(`insert into usuarios (usuario, nombre, clave) values ($1, $2, $3) on conflict (usuario) do nothing`,
+      [usuario, String(b.nombre ?? usuario).trim().slice(0, 80) || usuario, await hashPassword(clave)]);
+    return json(res, 201, { pendiente: true }); // misma respuesta si ya existía: no revela qué usuarios hay
+  }
+  // login
+  const ip = req.headers['x-forwarded-for']?.split(',')[0].trim() || req.socket.remoteAddress;
+  if (limited(ip)) return json(res, 429, { error: 'Demasiados intentos. Espera 15 minutos.' });
+  const { rows: [u] } = await db.query('select id, nombre, clave, activo from usuarios where usuario = $1', [usuario]);
+  if (!u || !(await checkPassword(clave, u.clave))) { failed(ip); return json(res, 401, { error: NOPE }); }
+  if (!u.activo) return json(res, 403, { error: 'Tu cuenta está pendiente: el encargado debe activarla.' });
+  const sid = randomUUID();
+  res.setHeader('set-cookie', cookie(sign({ uid: u.id, nombre: u.nombre, sid }, SECRET), HOURS * 3600));
+  return json(res, 200, { nombre: u.nombre, sesion: sid });
+}
+
 async function api(req, res) {
   if (!db) return json(res, 503, { error: 'Base de datos no configurada (falta DATABASE_URL)' });
   await ready;
   const url = new URL(req.url, 'http://x');
+  // un POST de otro sitio no puede mandar JSON sin permiso del navegador: junto con SameSite=Strict, frena CSRF
+  if (req.method === 'POST' && !req.headers['content-type']?.startsWith('application/json')) return json(res, 415, { error: 'Se esperaba JSON' });
+  if (['/api/login', '/api/logout', '/api/me', '/api/signup'].includes(url.pathname)) {
+    if (url.pathname !== '/api/me' && req.method !== 'POST') return json(res, 405, { error: 'Método no permitido' });
+    return account(req, res, url.pathname);
+  }
+  const s = verify(cookieOf(req, 'yc_sesion'), SECRET);
+  if (!s) return json(res, 401, { error: 'Inicia sesión' });
   if (req.method === 'GET' && url.pathname === '/api/cargas') {
     const { rows } = await db.query(`select id, sesion, usuario, archivo, filas, entradas, primer_pase, primera_falla, segundo_pase,
       to_char(desde, 'YYYY-MM-DD') desde, to_char(hasta, 'YYYY-MM-DD') hasta, guardado_en from yield_cargas order by guardado_en desc limit 200`);
     return json(res, 200, { cargas: rows });
   }
+  if (url.pathname !== '/api/resumen') return json(res, 404, { error: 'No encontrado' });
   if (req.method === 'GET') {
     // ?desde=&hasta= opcionales (las de una carga del historial)
     const desde = url.searchParams.get('desde') ?? '0001-01-01', hasta = url.searchParams.get('hasta') ?? '9999-12-31';
@@ -48,7 +98,7 @@ async function api(req, res) {
     return json(res, 200, { filas: rows });
   }
   if (req.method === 'POST') {
-    const v = validate(await body(req));
+    const v = validate({ ...(await body(req)), sesion: s.sid, usuario: s.nombre }); // quién y en qué sesión lo pone el servidor
     if (v.error) return json(res, 400, { error: v.error });
     const col = (k) => v.filas.map((f) => f[k]);
     const sum = (k) => v.filas.reduce((t, f) => t + f[k], 0);
@@ -78,6 +128,13 @@ async function api(req, res) {
   json(res, 405, { error: 'Método no permitido' });
 }
 
+// la página solo carga lo suyo, no se puede incrustar en otro sitio y no filtra la dirección al salir
+const HEADERS = {
+  'content-security-policy': "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' blob: data:; worker-src 'self' blob:; frame-ancestors 'none'; base-uri 'none'; form-action 'self'",
+  'x-content-type-options': 'nosniff', 'referrer-policy': 'no-referrer', 'x-frame-options': 'DENY',
+  ...(SECURE ? { 'strict-transport-security': 'max-age=31536000' } : {}),
+};
+
 async function file(req, res) {
   const path = normalize(decodeURIComponent(new URL(req.url, 'http://x').pathname));
   const full = join(DIST, path);
@@ -85,7 +142,7 @@ async function file(req, res) {
   const target = full.startsWith(DIST + '/') && extname(full) ? full : join(DIST, 'index.html');
   try {
     const data = await readFile(target);
-    res.writeHead(200, { 'content-type': TYPES[extname(target)] ?? 'application/octet-stream' });
+    res.writeHead(200, { ...HEADERS, 'content-type': TYPES[extname(target)] ?? 'application/octet-stream' });
     res.end(data);
   } catch {
     res.writeHead(404).end('No encontrado');
@@ -94,7 +151,7 @@ async function file(req, res) {
 
 createServer(async (req, res) => {
   try {
-    if (req.url.startsWith('/api/resumen') || req.url.startsWith('/api/cargas')) await api(req, res);
+    if (req.url.startsWith('/api/')) await api(req, res);
     else await file(req, res);
   } catch (e) {
     json(res, e.code === 413 ? 413 : e instanceof SyntaxError ? 400 : 500, { error: e.code === 413 || e instanceof SyntaxError ? e.message : 'Error del servidor' });

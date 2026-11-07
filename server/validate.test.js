@@ -7,7 +7,6 @@ const fila = { fecha: '2026-11-05', modelo: 'SA029400', estacion: 'FT', entradas
 test('validate acepta un resumen correcto y rechaza lo demás', () => {
   const ok = { archivo: 'tcqs.csv', sesion: 's1', usuario: 'Usuario de prueba' };
   assert.deepEqual(validate({ ...ok, filas: [fila] }).filas, [fila]);
-  assert.match(validate({ archivo: 'x', filas: [fila] }).error, /sesión/);
   assert.match(validate(null).error, /Se esperaba/);
   assert.match(validate({ ...ok, filas: [] }).error, /Entre 1/);
   assert.match(validate({ ...ok, filas: [{ ...fila, fecha: '2026-13-45' }] }).error, /Fila 1/);

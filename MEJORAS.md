@@ -8,6 +8,7 @@ Qué se mejoró, cómo se hizo y qué se usó; después, lo pendiente y lo que n
 
 | Versión | Mejora | Cómo se hizo | Qué se usó |
 | --- | --- | --- | --- |
+| 0.10.0 | **Cuentas reales y API protegida** | `scrypt` con sal para claves; cookie firmada con HMAC (`HttpOnly`, `SameSite=Strict`, `Secure`); la API exige sesión y toma usuario/sesión de ella; límite de intentos; solo JSON en POST; cabeceras CSP y demás | `node:crypto` (sin dependencias), pruebas en `server/auth.test.js` |
 | 0.9.0 | **Neon en directo e historial por sesión** | Guardado automático al tener TCQS + BOM (efecto en `Layout`, una vez por carga con `savedKey`); `yield_cargas` registra cada carga en la misma transacción que el resumen; Historial agrupa por `sesion` (un `crypto.randomUUID()` por inicio de sesión) | `pg`, transacción `begin/commit`, `HistoryList` con `action` |
 | 0.9.0 | **Login con gráficas vivas** | Barras con `transform: scaleY` + `transition`, línea con transición de `d`; cada 3.5 s una oscilación suave (`Math.sin`) sobre la base | CSS y un `setInterval`; nada con movimiento reducido |
 | 0.9.0 | **Carrusel con arrastre y clic** | Eventos de puntero (`setPointerCapture`): la gráfica sigue al puntero; > 60 px cambia; clic sin arrastrar avanza o retrocede según el lado | `ChartCarousel` (app, artefacto v21 y reporte HTML) |
@@ -33,7 +34,13 @@ Qué se mejoró, cómo se hizo y qué se usó; después, lo pendiente y lo que n
 ## Pendientes (en orden)
 
 1. **Confirmar con el piso:** meta FPY (95 %) y mínimo de muestra (10 entradas).
-2. **Cuentas reales** (ya hay servidor): proteger `/api/resumen` y usar el código de 6 dígitos (`LoginPanel defaultMode="code"`).
+2. **Proteger más la información** (en orden):
+   - Pantalla de administración para activar cuentas y roles (hoy con SQL).
+   - Segundo paso con código de 6 dígitos (`LoginPanel defaultMode="code"`, TOTP).
+   - Usuario de Neon con solo los permisos que usa la app (sin `drop`/`alter`) y rama de Neon aparte para pruebas.
+   - Revocar sesiones al cerrar sesión (tabla de sesiones) y límite de intentos en la base.
+   - Respaldos: restauración a un punto en el tiempo de Neon activada y probada.
+   - Retención: cuánto tiempo guardar `yield_cargas` y quién puede verlas.
 3. **DATA ANALYSIS y QM:** validación y match por serial + estación; Pareto 2do nivel por código de error.
 4. **PDF:** anexo con validación y fórmulas, si se pide.
 5. **Etiquetas de git** por versión (`v0.1.0`…`v0.8.0`).
