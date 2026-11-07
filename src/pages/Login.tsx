@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { Badge, FileChip, KpiTile, LoginPanel } from '../components/ui.tsx';
 import { META_FPY } from '../lib/tcqs.ts';
-import { apiLogin, apiSignup } from '../lib/db.ts';
+import { apiLogin } from '../lib/db.ts';
 import { useApp } from '../store.ts';
 
 // Ilustración del login: barras que crecen y siguen moviéndose como si llegaran datos, la línea de FPY que las
@@ -44,29 +44,33 @@ function LoginArt() {
   );
 }
 
+export const DEMO = { user: 'demo', password: 'yield2026', name: 'Usuario de prueba' };
+
 export default function Login() {
   const user = useApp((s) => s.user), login = useApp((s) => s.login);
   const [error, setError] = useState<string>();
-  const [sent, setSent] = useState<string>();
   if (user) return <Navigate to="/" replace />;
   return (
     <div className="app-login">
       <LoginPanel
         backdrop={<LoginArt />}
+        signup={false}
         error={error}
-        onSubmit={async (mode, data) => {
-          const u = String(data.get('user') ?? ''), p = String(data.get('password') ?? '');
+        onSubmit={async (_mode, data) => {
+          const u = String(data.get('user') ?? '').trim().toLowerCase(), p = String(data.get('password') ?? '');
           setError(undefined);
           try {
-            if (mode === 'signup') { await apiSignup(u, p); setSent(u.trim()); return; }
             const s = await apiLogin(u, p);
             login(s.nombre, s.sesion, s.admin);
           } catch (e) {
+            const status = (e as { status?: number }).status;
+            // sin servidor (sitio estático, sin base o sin conexión) la cuenta de prueba entra en modo local, sin Neon
+            if ((status === 0 || status === 503) && u === DEMO.user && p === DEMO.password) return login(DEMO.name, 'local', false);
             setError(e instanceof Error ? e.message : 'No se pudo conectar con el servidor');
           }
         }}
       >
-        {sent && <p className="yc-login-hint"><Badge tone="info">Pendiente</Badge> Solicitud de <span className="app-mono">{sent}</span> enviada: el encargado debe activarla.</p>}
+        <p className="yc-login-hint"><Badge tone="neutral">Prueba</Badge> Usuario <span className="app-mono">{DEMO.user}</span> · contraseña <span className="app-mono">{DEMO.password}</span></p>
       </LoginPanel>
     </div>
   );

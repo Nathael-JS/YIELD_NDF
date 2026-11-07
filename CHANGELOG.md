@@ -8,6 +8,24 @@ Un cambio de componente se publica primero en el artefacto y después se copia a
 
 Los errores encontrados y cómo se corrigieron están en [ERRORES.md](ERRORES.md); las mejoras y cómo se hicieron, en [MEJORAS.md](MEJORAS.md).
 
+## [0.12.0] — 2026-11-08
+
+### Cambiado
+- **Login:** vuelve la cuenta de prueba **demo / yield2026**, siempre activa. Con servidor es una cuenta real (se crea al arrancar) y usa Neon; sin servidor (sitio estático, sin base o sin conexión) entra en modo local, sin Neon.
+
+### Quitado
+- «Crear cuenta» en el login y `POST /api/signup`. Las cuentas se manejan desde Cuentas (administradores) y la cuenta principal desde Render.
+
+## [0.11.2] — 2026-11-08
+
+### Agregado
+- **Servidor · `/api/salud`:** diagnóstico sin secretos (¿hay base?, ¿conecta?, estado de la cuenta principal, ¿`SESSION_SECRET` fija?). Se abre en el navegador.
+- **Servidor:** al arrancar escribe en los logs qué hizo con la cuenta principal (activada, creada o no existe).
+
+### Corregido
+- **Login:** si el servidor responde HTML (sitio estático, página de error) o no hay conexión, la app lo dice en lugar de quedarse sin hacer nada.
+- **Servidor:** una base que no responde al arrancar ya no tumba el proceso.
+
 ## [0.11.1] — 2026-11-08
 
 ### Cambiado

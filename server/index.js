@@ -28,9 +28,17 @@ create table if not exists usuarios (
   // cuenta principal (super administrador) desde el entorno: ADMIN_USER (y ADMIN_PASSWORD si hay que crearla)
   .then(async () => {
     // si la cuenta ya existe (creada desde «Crear cuenta») se activa como administradora y conserva su contraseña
-    const { rowCount } = PRINCIPAL ? await db.query('update usuarios set activo = true, admin = true where usuario = $1', [PRINCIPAL]) : { rowCount: 1 };
-    if (!rowCount && process.env.ADMIN_PASSWORD) await db.query(`insert into usuarios (usuario, nombre, clave, activo, admin) values ($1, $1, $2, true, true)`, [PRINCIPAL, await hashPassword(process.env.ADMIN_PASSWORD)]);
+    // cuenta de prueba siempre activa: demo / yield2026 (pública; quitarla cuando se entregue a producción)
+    await db.query(`insert into usuarios (usuario, nombre, clave, activo) values ('demo', 'Usuario de prueba', $1, true) on conflict (usuario) do update set activo = true`, [await hashPassword('yield2026')]);
+    if (!PRINCIPAL) return console.log('Cuenta principal: falta ADMIN_USER');
+    const { rowCount } = await db.query('update usuarios set activo = true, admin = true where usuario = $1', [PRINCIPAL]);
+    if (rowCount) return console.log(`Cuenta principal: ${PRINCIPAL} activada como administradora (con su propia contraseña)`);
+    if (!process.env.ADMIN_PASSWORD) return console.log(`Cuenta principal: ${PRINCIPAL} no existe; créala desde «Crear cuenta» o pon ADMIN_PASSWORD`);
+    await db.query(`insert into usuarios (usuario, nombre, clave, activo, admin) values ($1, $1, $2, true, true)`, [PRINCIPAL, await hashPassword(process.env.ADMIN_PASSWORD)]);
+    console.log(`Cuenta principal: ${PRINCIPAL} creada con la contraseña de ADMIN_PASSWORD`);
   });
+// sin esto, una base que no responde al arrancar tumba el servidor; así sigue en pie y /api/salud lo explica
+ready?.catch((e) => console.error('No se pudo preparar la base:', e.message));
 // sin SESSION_SECRET (Render la genera) las sesiones duran hasta que se reinicie el servidor
 const SECRET = process.env.SESSION_SECRET || randomBytes(32).toString('hex');
 const SECURE = process.env.NODE_ENV === 'production' || !!process.env.RENDER;
@@ -80,13 +88,6 @@ async function account(req, res, path) {
     return s ? json(res, 200, { nombre: s.nombre, sesion: s.sid, admin: s.admin }) : json(res, 401, { error: 'Sesión vencida' });
   }
   const b = await body(req), usuario = String(b.usuario ?? '').trim().toLowerCase(), clave = String(b.clave ?? '');
-  if (path === '/api/signup') {
-    if (!/^[a-z0-9._@-]{3,60}$/.test(usuario)) return json(res, 400, { error: 'Usuario de 3 a 60 caracteres: letras, números, punto, guion o @' });
-    if (clave.length < 10 || clave.length > 200) return json(res, 400, { error: 'La contraseña debe tener al menos 10 caracteres' });
-    await db.query(`insert into usuarios (usuario, nombre, clave) values ($1, $2, $3) on conflict (usuario) do nothing`,
-      [usuario, String(b.nombre ?? usuario).trim().slice(0, 80) || usuario, await hashPassword(clave)]);
-    return json(res, 201, { pendiente: true }); // misma respuesta si ya existía: no revela qué usuarios hay
-  }
   // login
   const ip = req.headers['x-forwarded-for']?.split(',')[0].trim() || req.socket.remoteAddress;
   if (limited(ip)) return json(res, 429, { error: 'Demasiados intentos. Espera 15 minutos.' });
@@ -98,13 +99,27 @@ async function account(req, res, path) {
   return json(res, 200, { nombre: u.nombre, sesion: sid, admin: u.admin });
 }
 
+/** Diagnóstico sin secretos: ¿hay base y cómo está la cuenta principal? (abrir /api/salud en el navegador) */
+async function health(res) {
+  if (!db) return json(res, 200, { servidor: true, base: false, aviso: 'Falta DATABASE_URL en Render' });
+  try {
+    await ready;
+    const { rows: [u] } = PRINCIPAL ? await db.query('select activo, admin from usuarios where usuario = $1', [PRINCIPAL]) : { rows: [] };
+    const principal = !PRINCIPAL ? 'falta ADMIN_USER' : !u ? 'no existe' : u.activo && u.admin ? 'activa' : 'pendiente';
+    return json(res, 200, { servidor: true, base: true, principal, sesionesFijas: !!process.env.SESSION_SECRET });
+  } catch (e) {
+    return json(res, 200, { servidor: true, base: false, aviso: `No se pudo conectar a la base: ${e.code ?? 'error'}` });
+  }
+}
+
 async function api(req, res) {
+  if (req.url === '/api/salud') return health(res);
   if (!db) return json(res, 503, { error: 'Base de datos no configurada (falta DATABASE_URL)' });
   await ready;
   const url = new URL(req.url, 'http://x');
   // un POST de otro sitio no puede mandar JSON sin permiso del navegador: junto con SameSite=Strict, frena CSRF
   if (req.method === 'POST' && !req.headers['content-type']?.startsWith('application/json')) return json(res, 415, { error: 'Se esperaba JSON' });
-  if (['/api/login', '/api/logout', '/api/me', '/api/signup'].includes(url.pathname)) {
+  if (['/api/login', '/api/logout', '/api/me'].includes(url.pathname)) {
     if (url.pathname !== '/api/me' && req.method !== 'POST') return json(res, 405, { error: 'Método no permitido' });
     return account(req, res, url.pathname);
   }
