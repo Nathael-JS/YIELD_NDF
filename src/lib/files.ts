@@ -22,10 +22,3 @@ export async function parseFile(file: File): Promise<ParsedFile> {
   const [head, ...rows] = table;
   return { headers: head.map((h, i) => (h == null || h === '' ? `Columna ${i + 1}` : String(h).trim())), rows };
 }
-
-/** Columnas con el mismo nombre (sin distinguir mayúsculas) en todos los archivos. */
-export function commonColumns(lists: string[][]) {
-  if (!lists.length) return [];
-  const sets = lists.slice(1).map((l) => new Set(l.map((c) => c.toLowerCase())));
-  return lists[0].filter((c) => sets.every((s) => s.has(c.toLowerCase())));
-}

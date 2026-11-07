@@ -1,5 +1,5 @@
 // Componentes del sistema de diseño Yield Control (portados de components/bundle.js).
-import { useState, type ButtonHTMLAttributes, type FormEvent, type ReactNode } from 'react';
+import { useState, type KeyboardEvent, type ButtonHTMLAttributes, type FormEvent, type ReactNode } from 'react';
 
 const cx = (...c: unknown[]) => c.filter(Boolean).join(' ');
 
@@ -33,8 +33,10 @@ export function Select({ label, options, value, onChange, disabled, name }: {
 }
 
 export const STEPS = ['Carga de datos', 'Comparación', 'Validación', 'Match', 'Muestra'];
-export function PipelineNav({ steps = STEPS, current = 0, extra = ['Gráficos', 'Historial'], active, title = 'Yield Control', onSelect, children }: {
+export function PipelineNav({ steps = STEPS, current = 0, done, extra = ['Gráficos', 'Historial'], active, title = 'Yield Control', onSelect, children }: {
   steps?: string[]; current?: number; extra?: string[]; active?: string | null; title?: string;
+  /** Qué pasos están hechos de verdad (✓). Sin esto, se marcan los anteriores a `current`. */
+  done?: boolean[];
   onSelect?: (target: number | string) => void; children?: ReactNode;
 }) {
   return (
@@ -42,7 +44,7 @@ export function PipelineNav({ steps = STEPS, current = 0, extra = ['Gráficos', 
       <button type="button" className="yc-nav-mark" onClick={() => onSelect?.(-1)}>{title}</button>
       <ol className="yc-steps">
         {steps.map((s, i) => {
-          const st = i < current ? 'done' : i === current ? 'current' : 'todo';
+          const st = i === current ? 'current' : (done ? done[i] : i < current) ? 'done' : 'todo';
           return (
             <li key={s} className={`yc-step yc-step-${st}`}>
               <button type="button" aria-current={st === 'current' ? 'step' : undefined} onClick={() => onSelect?.(i)}>
@@ -91,14 +93,27 @@ export type FileStatus = 'empty' | 'loaded' | 'comparing' | 'error';
 const FILE_STATUS: Record<FileStatus, [string, Tone]> = {
   empty: ['Sin cargar', 'neutral'], loaded: ['Cargado', 'ok'], comparing: ['En comparación', 'info'], error: ['Error', 'bad'],
 };
-export function FileChip({ type, status = 'empty', meta }: { type: string; status?: FileStatus; meta?: string }) {
+/** Con onFile es la zona de carga (clic o arrastrar y soltar). Sin onFile solo muestra el estado. */
+export function FileChip({ type, status = 'empty', meta, onFile, accept }: {
+  type: string; status?: FileStatus; meta?: string; onFile?: (file: File) => void; accept?: string;
+}) {
+  const [over, setOver] = useState(false);
   const [text, tone] = FILE_STATUS[status];
-  return (
-    <div className={`yc-file yc-file-${status}`}>
+  const chip = (
+    <div className={cx('yc-file', `yc-file-${status}`, onFile && 'yc-file-drop', over && 'is-over')}>
       <span className="yc-file-type">{type}</span>
       <Badge tone={tone}>{text}</Badge>
       <span className="yc-file-meta">{meta || 'Arrastra el archivo o haz clic para cargar'}</span>
     </div>
+  );
+  if (!onFile) return chip;
+  const take = (list: FileList | null) => { if (list?.[0]) onFile(list[0]); };
+  return (
+    <label className="yc-file-label" onDragOver={(e) => { e.preventDefault(); setOver(true); }} onDragLeave={() => setOver(false)}
+      onDrop={(e) => { e.preventDefault(); setOver(false); take(e.dataTransfer.files); }}>
+      <input type="file" className="yc-sr-only" accept={accept} aria-label={`Cargar ${type}`} onChange={(e) => { take(e.target.files); e.target.value = ''; }} />
+      {chip}
+    </label>
   );
 }
 
@@ -121,12 +136,14 @@ export function KpiTile({ label, value, unit, delta, deltaUnit = '', good = true
 export interface CarouselSlide { kind: string; title: string; content: ReactNode }
 export function ChartCarousel({ slides, label = 'Gráficas' }: { slides: CarouselSlide[]; label?: string }) {
   const [idx, setIdx] = useState(0);
+  const [dir, setDir] = useState<'next' | 'prev'>('next'); // de qué lado entra la gráfica nueva
   const n = slides.length;
   if (!n) return null;
   const i = Math.min(idx, n - 1);
-  const go = (k: number) => setIdx((k + n) % n);
+  const go = (k: number) => { setDir(k < i ? 'prev' : 'next'); setIdx((k + n) % n); };
+  const keys = (e: KeyboardEvent) => { if (e.key === 'ArrowRight') go(i + 1); if (e.key === 'ArrowLeft') go(i - 1); };
   return (
-    <section className="yc-carousel" aria-roledescription="carrusel" aria-label={label}>
+    <section className="yc-carousel" aria-roledescription="carrusel" aria-label={label} onKeyDown={keys}>
       <header className="yc-carousel-head">
         <div>
           <span className="yc-carousel-kind">{slides[i].kind}</span>
@@ -138,7 +155,7 @@ export function ChartCarousel({ slides, label = 'Gráficas' }: { slides: Carouse
           <button type="button" className="yc-icon-btn" aria-label="Gráfica siguiente" onClick={() => go(i + 1)}>›</button>
         </div>
       </header>
-      <div className="yc-carousel-body">{slides[i].content}</div>
+      <div key={i} className={`yc-carousel-body is-${dir}`}>{slides[i].content}</div>
       <div className="yc-carousel-dots">
         {slides.map((s, k) => (
           <button key={k} type="button" aria-label={s.title} aria-current={k === i ? 'true' : undefined} className={cx('yc-dot', k === i && 'is-on')} onClick={() => go(k)} />
@@ -175,11 +192,13 @@ export function HistoryList({ items, title = 'Historial de la sesión', onBackup
 }
 
 export type LoginMode = 'login' | 'signup' | 'code';
-export function LoginPanel({ defaultOpen = false, defaultMode = 'login', signup = true, error, title = 'Yield Control', onSubmit, children }: {
+export function LoginPanel({ defaultOpen = false, defaultMode = 'login', signup = true, error, title = 'Yield Control', onSubmit, children, backdrop }: {
   defaultOpen?: boolean; defaultMode?: LoginMode; signup?: boolean; error?: string; title?: string;
   onSubmit?: (mode: LoginMode, data: FormData) => void;
-  /** Contenido debajo del formulario (avisos). Propuesta para el sistema de diseño. */
+  /** Avisos debajo del formulario, en `.yc-login-hint`. */
   children?: ReactNode;
+  /** Ilustración decorativa detrás del formulario (oculta a lectores de pantalla). */
+  backdrop?: ReactNode;
 }) {
   const [open, setOpen] = useState(defaultOpen);
   const [mode, setMode] = useState<LoginMode>(defaultMode);
@@ -187,6 +206,7 @@ export function LoginPanel({ defaultOpen = false, defaultMode = 'login', signup 
   const submit = (e: FormEvent<HTMLFormElement>) => { e.preventDefault(); onSubmit?.(mode, new FormData(e.currentTarget)); };
   return (
     <div className={cx('yc-login', open && 'is-open')}>
+      {backdrop && <div className="yc-login-backdrop" aria-hidden>{backdrop}</div>}
       <aside className="yc-login-panel" id="yc-login-about" aria-hidden={!open}>
         <span className="yc-nav-mark">{title}</span>
         <h2>Qué hace la aplicación</h2>

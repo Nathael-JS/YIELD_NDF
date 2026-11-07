@@ -12,7 +12,7 @@ npm install
 npm run dev
 ```
 
-Abre http://localhost:5173 y entra con el usuario de prueba: **demo** / **yield2026**.
+Abre http://localhost:5173, entra con el usuario de prueba **demo** / **yield2026** y carga el TCQS (.csv o .xlsx) y el Excel del build con el BOM de Juliet.
 
 ```bash
 npm test
@@ -29,10 +29,32 @@ src/
   components/ui.tsx      componentes del sistema de diseño (botones, menú, KPIs, login…)
   components/charts.tsx  gráficas SVG (Pareto, barras, tendencia, histograma, dispersión)
   styles/                tokens.css (claro/oscuro), yc.css (componentes), app.css (páginas)
-  lib/                   lectura de archivos y escalas de gráficas, con sus pruebas
+  lib/                   lectura de archivos, cálculos del TCQS y escalas de gráficas, con sus pruebas
   pages/                 una página por ruta
   store.ts               sesión, archivos e historial
-  data/demo.ts           datos de ejemplo hasta definir los cálculos reales
 ```
 
-El plan de trabajo está en [PLAN.md](PLAN.md).
+## Neon y Render
+
+1. En [Neon](https://neon.tech) crea un proyecto y copia su *connection string* (`postgres://…`).
+2. En Render: **New → Blueprint** con este repositorio. Lee `render.yaml` y crea el servicio `yield-control`; en **Environment** pega la cadena en `DATABASE_URL`.
+3. La tabla `yield_resumen` se crea sola al arrancar. Sin `DATABASE_URL` la app funciona igual y los botones de Neon avisan que falta.
+
+En local, con un Postgres o la misma cadena de Neon:
+
+```bash
+DATABASE_URL=postgres://… npm start
+```
+
+```bash
+npm run dev
+```
+
+`npm run dev` reenvía `/api` al servidor del puerto 3000.
+
+## Documentos
+
+- Plan de trabajo y fórmulas: [PLAN.md](PLAN.md)
+- Versiones: [CHANGELOG.md](CHANGELOG.md)
+- Errores encontrados y cómo se corrigieron: [ERRORES.md](ERRORES.md)
+- Mejoras hechas, cómo y con qué; pendientes: [MEJORAS.md](MEJORAS.md)

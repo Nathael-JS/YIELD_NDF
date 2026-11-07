@@ -1,50 +1,65 @@
 # Plan de trabajo — Yield Control
 
-Basado en el sistema de diseño **Yield Control** (artefacto `RqMowPxsmEFcuTiJy8Ntxu`): tokens, 15 componentes `yc-*` y las pantallas de referencia *PantallaPrincipal* y *PantallaYield*. Todo corre en el equipo: sin servidor, los archivos se leen en el navegador.
+Versiones en [CHANGELOG.md](CHANGELOG.md) · errores en [ERRORES.md](ERRORES.md) · mejoras en [MEJORAS.md](MEJORAS.md).
 
-## Stack
+App de yield para el proyecto **Juliet**, basada en el sistema de diseño **Yield Control** (artefacto `RqMowPxsmEFcuTiJy8Ntxu`). Todo corre en el navegador: los archivos no salen del equipo. Publicada en Render como sitio estático (`render.yaml`).
 
-| Pieza | Elección | Por qué |
+## Flujo
+
+```
+Login → Carga de datos → Validación → Yield        (+ Gráficos, Historial)
+         TCQS + Excel BOM  filas y modelos  KPIs, estaciones, tendencia, Pareto
+```
+
+## Archivos
+
+| Archivo | Qué trae | Cómo se usa |
 | --- | --- | --- |
-| Framework | React 18 + Vite 7 + TypeScript | Lo que pide el sistema de diseño (React 18) |
-| Rutas | react-router-dom 7 | Un paso del flujo = una URL |
-| Estado | zustand (persist → localStorage) | Sesión, periodo e historial sobreviven al recargar |
-| Archivos | read-excel-file (.xlsx), papaparse (.csv) | Lectura local, mantenidos y sin vulnerabilidades conocidas |
-| Fuentes | @fontsource IBM Plex Sans/Mono | Sin depender de Google Fonts |
-| Gráficas | SVG propio portado del sistema de diseño | Fiel a los tokens; sin librería de gráficas |
-| Pruebas | `node --test` | Sin dependencia extra |
+| **TCQS** (.csv/.xlsx) | Una fila por fecha × modelo × orden (MO) × estación (`GROUP_NAME`) × tester (`STATION_NAME`) con cantidades | Fuente de todos los cálculos. Columnas obligatorias en `src/lib/tcqs.ts` (`REQUIRED`) |
+| **Modelos · Juliet** (.xlsx del build) | Hoja *BOM and MO* con los números de modelo dentro del texto | Se extraen los modelos (`920-9K33R-00MV-GS0`, `SA029400`…) y el TCQS se filtra a ellos |
+| DATA ANALYSIS, QM | — | **Pendientes.** Se cruzarán con llave **serial + estación** |
 
-## Mapa pantalla → componentes
+## Cálculos
 
-| Ruta | Pantalla | Componentes | Estado |
-| --- | --- | --- | --- |
-| `/login` | Login + usuario de prueba | `LoginPanel`, `Badge` | Hecho |
-| `/` | Inicio (landing) | `PipelineNav`, `KpiTile`, `ChartCarousel`, `ParetoChart`, `BarChart`, `Histogram`, `ScatterPlot`, `FileChip` | Hecho con datos de ejemplo |
-| `/carga` | Carga de datos | `PeriodTabs`, `FileChip` (zona de carga), `Button` | Hecho |
-| `/comparacion` | Comparación | `.yc-table`, `Badge` | Inicial: resumen y columnas en común |
-| `/validacion` | Validación | — | Pendiente (fase 2) |
-| `/match` | Match | — | Pendiente (fase 2) |
-| `/muestra` | Muestra (Yield del periodo) | Ver *PantallaYield* | Pendiente (fase 3) |
-| `/graficos` | Gráficos | Las 5 gráficas + `TrendChart` con meta | Hecho con datos de ejemplo |
-| `/historial` | Historial | `HistoryList` + respaldo JSON | Hecho |
+Verificados contra las tasas del propio TCQS (211/211 filas) y contra la *Guía de interpretación – YieldRateSFC y RetestRate* (el SFC es otro sistema, pero las operaciones aplican). Todo es **ponderado** (Σ ÷ Σ, fórmula 10 de la guía), nunca promedio de porcentajes de filas (fórmula 9, la que usa el SFC en su tendencia y que exagera filas con 1 unidad).
+
+| Métrica | Fórmula | Guía |
+| --- | --- | --- |
+| Entradas | Σ INPUT_QTY; cada fila debe cumplir INPUT = FIRST_PASS + FIRST_FAIL (si no, se aparta) | 1 |
+| FPY | Σ FIRST_PASS ÷ Σ INPUT | 2, 6 |
+| A retest | min(Σ SECOND_PASS, Σ FIRST_FAIL) ÷ Σ INPUT | 3, 10 |
+| Final Yield | FPY + Retest = (Σ FIRST_PASS + retest efectivo) ÷ Σ INPUT | 4 y regla de comprobación |
+| Recuperado en retest | retest efectivo ÷ Σ FIRST_FAIL | 11 |
+| RTY | producto del FPY de cada estación con entradas | — |
+| Diagnóstico | sin entradas: Sin dato · < 10: Muestra insuficiente · FPY ≥ 95: OK · Final ≥ 95: Posible falsa falla · si no: Crítico | — |
+
+Decisiones tomadas a partir de la guía:
+- **Entradas 0 = sin dato** (regla 2): se muestra «—», no 0 %, y no entra a gráficas de porcentaje.
+- **El retest nunca cuenta más que las primeras fallas** del mismo grupo. Así un retest de una unidad que entró antes del corte no infla el yield (caso SA016491 de la guía) y FPY + Retest = Final Yield siempre. Reproduce el ejemplo ponderado de la guía (1 ÷ 6 = 16.7 %).
+- **MA y SA son el mismo número de parte** (MA016491 en el BOM = SA016491 en el TCQS).
+- Pendientes de la guía que el TCQS no permite: horario de corte 08:00 (el TCQS solo trae fecha), Pareto por error code y recuperación por error (no trae códigos), retest en otro tester (no trae seriales).
 
 ## Fases
 
-1. **Base (hecha).** Proyecto, tokens claro/oscuro, componentes portados, login con usuario de prueba, carga local de los 3 archivos, historial con respaldo.
-2. **Reglas de los archivos.** Definir con ejemplos reales las columnas de TCQS, DATA ANALYSIS y QM (serial, estación, resultado, error code, fecha). Con eso: Validación (columnas obligatorias, tipos, duplicados) y Match (cruce por serial + estación, diferencias con `Badge warn`).
-3. **Cálculos.** FPY, Final Yield, RTY por grupo, WIP, NDF y Pareto 1er/2do nivel desde los archivos. Reemplazar `src/data/demo.ts` y quitar el aviso «Datos de ejemplo». Pantalla Muestra según *PantallaYield* (metas con `targets`, tabla con diagnóstico).
-4. **Periodo.** Día / Semana / Mes filtran los datos cargados; delta de KPIs contra el periodo anterior.
-5. **Persistencia de datos.** Guardar las filas en IndexedDB para que el historial pueda reabrir una comparación (hoy solo guarda la lista).
-6. **Cuentas.** Si llega un servidor: autenticación real, validación de cuentas por el encargado y paso de código de 6 dígitos (`LoginPanel defaultMode="code"`).
+1. **Base (hecha).** Proyecto, sistema de diseño, login de prueba, Render.
+2. **Lectura, filtro y cálculos (hecha).** TCQS + BOM, validación de filas y modelos, Yield con KPIs, tabla con diagnóstico, gráficas por día/semana/mes y por modelo.
+3. **Guía SFC, diseño y menú (hecha).** Fórmulas de la guía, MA = SA, login animado, menú fijo, Inicio como landing con «Dónde mirar primero» y carrusel.
+   - Por confirmar: meta (95 %) y mínimo de muestra (10).
+   - Grupos para RTY (inspección, funcionales, liquid cooling) si se quieren por separado.
+4. **Comparación entre periodos (hecha, 0.7.0).** ▲/▼ de entradas, FPY, Final y retest contra el periodo anterior, solo con muestra suficiente.
+5. **Persistencia (hecha, 0.7.0).** El último archivo de cada tipo se guarda en IndexedDB y se borra al salir.
+6. **DATA ANALYSIS y QM.** Validación y match por serial + estación; Pareto 2do nivel por error code (el TCQS no trae error codes; hoy se abre por tester).
+7. **Cuentas reales** si llega un servidor (hoy: usuario de prueba).
 
-## Para el sistema de diseño
+## Sistema de diseño
 
-- `LoginPanel` recibe `children` (avisos debajo del formulario). Se usó para la ayuda del usuario de prueba y el aviso de solicitud enviada. Propuesta: subirlo al artefacto.
-- `FileChip` es solo visual; la app lo envuelve en un `<label>` con `<input type=file>` y arrastrar-soltar. Propuesta: variante interactiva en el sistema.
-- La marca del menú (`yc-nav-mark`) es un botón que lleva a Inicio.
-- Sin selector de tema: se sigue el del sistema operativo (`prefers-color-scheme`); `data-theme` en `<html>` lo fuerza.
+- La app usa solo componentes del sistema (`src/components/`, portados de `bundle.js`) y tokens (`src/styles/tokens.css`).
+- Cambios subidos al artefacto: `FileChip` como zona de carga, `LoginPanel` con avisos y `backdrop` animado, `ParetoChart` con etiquetas sin encimarse, `PipelineNav` fijo y en una fila en móvil.
+- `PipelineNav` con `done`: ✓ por estado real (Carga = TCQS leído; Validación = hay filas válidas de Juliet), no por posición.
+- «Dónde mirar primero» abre `/yield#ESTACIÓN`: la fila se resalta y se lleva a la vista.
+- Mejora candidata: barras horizontales para estaciones con nombres largos (hoy el eje X muestra una de cada n etiquetas; la tabla las lista todas).
 
-## Verificación hecha
+## Verificación
 
-- `npm run build` (tipos + build) y `npm test` (escalas de gráficas, lector de CSV, columnas en común).
-- Flujo en navegador: login con error y correcto, carga de CSV válido e inválido, comparación, respaldo, recarga con sesión, salir, tema oscuro y móvil (390 px sin scroll horizontal), sin errores de consola.
+- `npm test`: lector de CSV, escalas de gráficas, lectura del TCQS, extracción de modelos del BOM, fórmulas, diagnóstico y semanas ISO.
+- Navegador con los archivos reales: 211 filas, 21 modelos, 208 filas de Juliet (con los manifolds); Entradas 755, FPY 91.0 %, Retest 7.3 %, Final Yield 98.3 % (iguales a un cálculo independiente). Login animado y con movimiento reducido; claro, oscuro y móvil sin scroll horizontal.

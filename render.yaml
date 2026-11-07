@@ -1,0 +1,17 @@
+# Render Blueprint: un servicio Node que sirve la app (dist/) y la API del resumen en Neon (server/index.js).
+# Los archivos se siguen leyendo en el navegador; al servidor solo llega el resumen día × modelo × estación.
+services:
+  - type: web
+    name: yield-control
+    runtime: node
+    plan: free
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    healthCheckPath: /
+    pullRequestPreviewsEnabled: true
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      # cadena de conexión de Neon (Dashboard → Connection string). Se escribe en Render, nunca en el repositorio.
+      - key: DATABASE_URL
+        sync: false

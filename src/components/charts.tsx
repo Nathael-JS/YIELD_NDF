@@ -1,5 +1,5 @@
 // Gráficas SVG del sistema de diseño (portadas de components/bundle.js).
-import { Fragment, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
 import { binCounts, fmt, niceRange, sturges } from '../lib/chart.ts';
 
 export type DataTone = 'pass' | 'second' | 'fail' | 'ndf';
@@ -14,7 +14,8 @@ const toneOf = (s: { tone?: DataTone }, j: number) => s.tone ?? TONES[j % TONES.
 function useSvgWidth() {
   const ref = useRef<SVGSVGElement>(null);
   const [w, setW] = useState(800);
-  useLayoutEffect(() => {
+  // useEffect y no useLayoutEffect: también se dibujan a HTML estático (reporte descargable)
+  useEffect(() => {
     const el = ref.current;
     if (!el) return;
     const set = () => { const v = Math.round(el.getBoundingClientRect().width); if (v > 0) setW(v); };
@@ -81,14 +82,14 @@ function Legend({ items }: { items: LegendItem[] }) {
   );
 }
 
-function ChartFrame({ p, legend, aria, m, children }: {
-  p: Frame; legend?: ReactNode; aria: string; m: ReturnType<typeof useSvgWidth>; children: ReactNode;
+function ChartFrame({ p, legend, aria, m, children, h = CH }: {
+  p: Frame; legend?: ReactNode; aria: string; m: ReturnType<typeof useSvgWidth>; children: ReactNode; h?: number;
 }) {
   return (
     <figure className="yc-chart">
       <figcaption className="yc-chart-title">{p.title}{p.subtitle && <span className="yc-chart-sub">{p.subtitle}</span>}</figcaption>
       {legend}
-      <svg ref={m.ref} viewBox={`0 0 ${m.w} ${CH}`} role="img" aria-label={aria}>{children}</svg>
+      <svg ref={m.ref} viewBox={`0 0 ${m.w} ${h}`} role="img" aria-label={aria}>{children}</svg>
     </figure>
   );
 }
@@ -101,7 +102,9 @@ export function ParetoChart({ data, title = 'Pareto', level = 1, subtitle }: {
   const sorted = [...data].sort((a, b) => b.value - a.value);
   const total = sorted.reduce((s, d) => s + d.value, 0) || 1;
   const W = m.w, H = 280, L = 40, R = 44, T = 12, B = 36, iw = W - L - R, ih = H - T - B;
-  const max = sorted[0]?.value || 1, bw = iw / Math.max(sorted.length, 1), every = Math.max(1, Math.ceil(48 / bw));
+  // como en BarChart: cada cuántas etiquetas cabe una, según la más larga (mono 11px ≈ 7px por letra)
+  const lw = Math.max(48, 7 * Math.max(0, ...sorted.map((d) => d.label.length)) + 12);
+  const max = sorted[0]?.value || 1, bw = iw / Math.max(sorted.length, 1), every = Math.max(1, Math.ceil(lw / bw));
   let cum = 0;
   const pts = sorted.map((d, i) => { cum += d.value; return [L + i * bw + bw / 2, T + ih - (cum / total) * ih] as const; });
   const y80 = T + ih * 0.2;
@@ -127,7 +130,7 @@ export function ParetoChart({ data, title = 'Pareto', level = 1, subtitle }: {
             </g>
           );
         })}
-        <polyline className="yc-pareto-line" points={pts.map((q) => q.join(',')).join(' ')} />
+        <polyline className="yc-pareto-line" pathLength={1} points={pts.map((q) => q.join(',')).join(' ')} />
         {pts.map((q, i) => <circle key={i} className="yc-pareto-dot" cx={q[0]} cy={q[1]} r={3} />)}
       </svg>
     </figure>
@@ -141,6 +144,8 @@ export interface BarChartProps extends Frame {
   lines?: Series[];
   /** Metas punteadas (p. ej. FPY 95 %). */
   targets?: ChartTarget[];
+  /** Solo BarChart: una fila por categoría, para nombres largos (estaciones). */
+  horizontal?: boolean;
 }
 function BarsAndLines({ kind, categories: cats, series = [], lines = [], targets = [], ...p }: BarChartProps & { kind: string }) {
   const m = useSvgWidth(), CW = m.w, CIW = CW - CL - CR, ns = Math.max(series.length, 1);
@@ -180,7 +185,7 @@ function BarsAndLines({ kind, categories: cats, series = [], lines = [], targets
         const tone = toneOf(s, series.length + j);
         return (
           <g key={`l${j}`}>
-            <polyline className={`yc-trend-line yc-stroke-${tone}`} points={cats.map((_, i) => `${xc(i)},${yPos(r, s.values[i] || 0)}`).join(' ')} />
+            <polyline className={`yc-trend-line yc-stroke-${tone}`} pathLength={1} points={cats.map((_, i) => `${xc(i)},${yPos(r, s.values[i] || 0)}`).join(' ')} />
             {cats.map((c, i) => (
               <circle key={i} className={`yc-line-dot yc-stroke-${tone}`} cx={xc(i)} cy={yPos(r, s.values[i] || 0)} r={3.5}>
                 <title>{`${c} · ${s.name}: ${fmt(s.values[i] || 0)}`}</title>
@@ -193,7 +198,52 @@ function BarsAndLines({ kind, categories: cats, series = [], lines = [], targets
     </ChartFrame>
   );
 }
-export const BarChart = ({ lines: _omit, ...p }: BarChartProps) => <BarsAndLines kind="Barras" {...p} />;
+export const BarChart = ({ lines: _omit, horizontal, ...p }: BarChartProps) => (horizontal ? <HBars {...p} /> : <BarsAndLines kind="Barras" {...p} />);
+
+/** Barras horizontales: el nombre completo de cada categoría se lee a la izquierda, sin saltarse etiquetas. */
+function HBars({ categories: cats, series = [], targets = [], ...p }: BarChartProps) {
+  const m = useSvgWidth(), W = m.w, ns = Math.max(series.length, 1);
+  const L = Math.min(W * 0.4, 7 * Math.max(0, ...cats.map((c) => c.length)) + 20), R = 24, T = 8, B = 36;
+  const bh = 10, row = ns * bh + 12, H = T + cats.length * row + B;
+  const maxChars = Math.floor((L - 20) / 7);
+  const r = niceRange(0, Math.max(0, ...series.flatMap((s) => s.values), ...targets.map((t) => t.value)));
+  const xp = (v: number) => L + ((v - r.lo) / (r.hi - r.lo)) * (W - L - R);
+  const aria = `${p.title || 'Barras'}: ` + cats.map((c, i) => `${c} ${series.map((s) => `${s.name} ${fmt(s.values[i] || 0)}`).join(', ')}`).join('; ');
+  const legend: LegendItem[] = [
+    ...series.map((s, j) => ({ name: s.name, tone: toneOf(s, j), kind: 1 })),
+    ...targets.map((t) => ({ name: t.label || fmt(t.value), kind: 'target' as const })),
+  ];
+  return (
+    <ChartFrame p={p} legend={<Legend items={legend} />} aria={aria} m={m} h={H}>
+      {Array.from({ length: r.n + 1 }, (_, i) => {
+        const v = r.lo + i * r.step, x = xp(v);
+        return (
+          <Fragment key={i}>
+            <line className={i ? 'yc-chart-grid' : 'yc-chart-axis'} x1={x} x2={x} y1={T} y2={H - B} />
+            <text className="yc-chart-x" x={x} y={H - B + 16} textAnchor="middle">{fmt(v)}</text>
+          </Fragment>
+        );
+      })}
+      {(p.xLabel || p.yLabel) && <text className="yc-chart-label" x={W - R} y={H - 4} textAnchor="end">{p.xLabel || p.yLabel}</text>}
+      {cats.map((c, i) => (
+        <g key={c}>
+          <text className="yc-chart-x" x={L - 8} y={T + i * row + row / 2 + 4} textAnchor="end">
+            {c.length > maxChars ? `${c.slice(0, Math.max(1, maxChars - 1))}…` : c}<title>{c}</title>
+          </text>
+          {series.map((s, j) => {
+            const v = s.values[i] || 0;
+            return (
+              <rect key={j} className={`yc-bar yc-bar-h yc-fill-${toneOf(s, j)}`} x={L} y={T + i * row + 6 + j * bh} width={Math.max(xp(v) - L, 0)} height={bh - 1} rx={2}>
+                <title>{`${c} · ${s.name}: ${fmt(v)}`}</title>
+              </rect>
+            );
+          })}
+        </g>
+      ))}
+      {targets.map((t, k) => <line key={k} className="yc-chart-target" x1={xp(t.value)} x2={xp(t.value)} y1={T} y2={H - B}><title>{t.label || fmt(t.value)}</title></line>)}
+    </ChartFrame>
+  );
+}
 export const TrendChart = (p: BarChartProps) => <BarsAndLines kind="Líneas y barras" {...p} />;
 
 export function Histogram({ values, bins, tone = 'second', yLabel = 'Unidades', ...p }: Frame & { values: number[]; bins?: number; tone?: DataTone }) {
