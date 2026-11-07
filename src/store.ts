@@ -2,9 +2,12 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { HistoryItem, Period } from './components/ui.tsx';
-import { commonColumns, type ParsedFile } from './lib/files.ts';
+import { useMemo } from 'react';
+import type { ParsedFile } from './lib/files.ts';
+import { modelsFrom, readTcqs } from './lib/tcqs.ts';
 
-export const FILE_TYPES = ['TCQS', 'DATA ANALYSIS', 'QM'] as const;
+// MODELOS = Excel del proyecto (BOM) con los números de modelo válidos. DATA ANALYSIS y QM: pendientes.
+export const FILE_TYPES = ['TCQS', 'MODELOS'] as const;
 export type FileType = (typeof FILE_TYPES)[number];
 
 export interface LoadedFile extends ParsedFile { name: string; loadedAt: string }
@@ -15,8 +18,6 @@ export const TEST_USER = { user: 'demo', password: 'yield2026', name: 'Usuario d
 interface State {
   user: string | null;
   period: Period;
-  /** Columna llave para validar y hacer match (p. ej. serial). */
-  key: string;
   history: HistoryItem[];
   requests: string[];
   files: Partial<Record<FileType, LoadedFile>>;
@@ -25,12 +26,10 @@ interface State {
   logout: () => void;
   requestAccount: (user: string) => void;
   setPeriod: (p: Period) => void;
-  setKey: (k: string) => void;
   setFile: (t: FileType, f: LoadedFile) => void;
   setError: (t: FileType, msg: string) => void;
 }
 
-export const PERIOD_LABEL: Record<Period, string> = { dia: 'Día', semana: 'Semana', mes: 'Mes' };
 export const shortDate = (d: Date) =>
   d.toLocaleString('es-MX', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false }).replace('.', '');
 
@@ -39,7 +38,6 @@ export const useApp = create<State>()(
     (set, get) => ({
       user: null,
       period: 'semana',
-      key: '',
       history: [],
       requests: [],
       files: {},
@@ -52,24 +50,28 @@ export const useApp = create<State>()(
       logout: () => set({ user: null, files: {}, errors: {} }),
       requestAccount: (user) => set({ requests: [...get().requests, user.trim()] }),
       setPeriod: (period) => set({ period }),
-      setKey: (key) => set({ key }),
       setFile: (t, f) => set((s) => ({
         files: { ...s.files, [t]: f },
         errors: { ...s.errors, [t]: undefined },
-        history: [{ type: t, name: f.name, period: PERIOD_LABEL[s.period], date: f.loadedAt }, ...s.history],
+        history: [{ type: t, name: f.name, period: `${f.rows.length.toLocaleString('es-MX')} filas`, date: f.loadedAt }, ...s.history],
       })),
       // un archivo con error reemplaza al anterior: no comparar con datos viejos sin avisar
       setError: (t, msg) => set((s) => ({ errors: { ...s.errors, [t]: msg }, files: { ...s.files, [t]: undefined } })),
     }),
-    { name: 'yield-control', partialize: ({ user, period, key, history, requests }) => ({ user, period, key, history, requests }) },
+    { name: 'yield-control', partialize: ({ user, period, history, requests }) => ({ user, period, history, requests }) },
   ),
 );
 
-/** Archivos cargados, columnas en común y la llave vigente (la guardada si sigue en común, si no la primera). */
-export function useLoaded() {
-  const { files, key } = useApp();
-  const loaded = Object.fromEntries(FILE_TYPES.filter((t) => files[t]).map((t) => [t, files[t]!])) as Record<FileType, LoadedFile>;
-  const common = commonColumns(Object.values(loaded).map((f) => f.headers));
-  const current = common.find((c) => c.toLowerCase() === key.toLowerCase()) ?? common[0] ?? '';
-  return { loaded, count: Object.keys(loaded).length, common, key: current };
+
+/** Filas del TCQS ya filtradas a los modelos del proyecto (si se cargó el BOM). */
+export function useData() {
+  const { TCQS, MODELOS } = useApp((s) => s.files);
+  return useMemo(() => {
+    const read = TCQS ? readTcqs(TCQS) : null;
+    const models = MODELOS ? new Set(modelsFrom(MODELOS)) : null;
+    const all = read?.records ?? [];
+    const records = models ? all.filter((r) => models.has(r.model.toUpperCase())) : all;
+    const dates = records.map((r) => r.date).sort();
+    return { read, models, all, records, from: dates[0], to: dates.at(-1) };
+  }, [TCQS, MODELOS]);
 }

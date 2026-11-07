@@ -101,7 +101,9 @@ export function ParetoChart({ data, title = 'Pareto', level = 1, subtitle }: {
   const sorted = [...data].sort((a, b) => b.value - a.value);
   const total = sorted.reduce((s, d) => s + d.value, 0) || 1;
   const W = m.w, H = 280, L = 40, R = 44, T = 12, B = 36, iw = W - L - R, ih = H - T - B;
-  const max = sorted[0]?.value || 1, bw = iw / Math.max(sorted.length, 1), every = Math.max(1, Math.ceil(48 / bw));
+  // como en BarChart: cada cuántas etiquetas cabe una, según la más larga (mono 11px ≈ 7px por letra)
+  const lw = Math.max(48, 7 * Math.max(0, ...sorted.map((d) => d.label.length)) + 12);
+  const max = sorted[0]?.value || 1, bw = iw / Math.max(sorted.length, 1), every = Math.max(1, Math.ceil(lw / bw));
   let cum = 0;
   const pts = sorted.map((d, i) => { cum += d.value; return [L + i * bw + bw / 2, T + ih - (cum / total) * ih] as const; });
   const y80 = T + ih * 0.2;

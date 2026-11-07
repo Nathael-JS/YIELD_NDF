@@ -2,7 +2,8 @@ import { Link, Navigate, Outlet, useLocation, useNavigate } from 'react-router-d
 import { Button, PipelineNav } from '../components/ui.tsx';
 import { useApp } from '../store.ts';
 
-export const STEP_PATHS = ['/carga', '/comparacion', '/validacion', '/match', '/muestra'];
+const STEPS = ['Carga de datos', 'Validación', 'Yield'];
+export const STEP_PATHS = ['/carga', '/validacion', '/yield'];
 const EXTRA: Record<string, string> = { Gráficos: '/graficos', Historial: '/historial' };
 
 export default function Layout() {
@@ -13,6 +14,7 @@ export default function Layout() {
   return (
     <>
       <PipelineNav
+        steps={STEPS}
         current={STEP_PATHS.indexOf(pathname)}
         active={Object.keys(EXTRA).find((k) => EXTRA[k] === pathname) ?? null}
         onSelect={(t) => go(typeof t === 'number' ? (t < 0 ? '/' : STEP_PATHS[t]) : EXTRA[t])}
@@ -35,6 +37,6 @@ export function PageHead({ title, sub, children }: { title: string; sub?: string
   );
 }
 
-export const NeedFiles = ({ what }: { what: string }) => (
-  <p className="yc-card app-empty">Carga al menos dos archivos en <Link to="/carga">Carga de datos</Link> para {what}.</p>
+export const NeedTcqs = () => (
+  <p className="yc-card app-empty">Carga el TCQS en <Link to="/carga">Carga de datos</Link> para ver esta página.</p>
 );

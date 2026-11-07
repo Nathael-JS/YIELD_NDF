@@ -1,13 +1,18 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, FileChip, PeriodTabs } from '../components/ui.tsx';
+import { Button, FileChip } from '../components/ui.tsx';
 import { parseFile } from '../lib/files.ts';
-import { FILE_TYPES, shortDate, useApp, type FileType } from '../store.ts';
+import { modelsFrom } from '../lib/tcqs.ts';
+import { shortDate, useApp, type FileType } from '../store.ts';
 import { PageHead } from './Layout.tsx';
 
 const plural = (n: number, w: string) => `${n.toLocaleString('es-MX')} ${w}${n === 1 ? '' : 's'}`;
+const SLOTS: { type: FileType; label: string; accept: string; hint: string }[] = [
+  { type: 'TCQS', label: 'TCQS', accept: '.csv,.xlsx', hint: 'Yield por orden, modelo y estación (.csv o .xlsx)' },
+  { type: 'MODELOS', label: 'MODELOS · JULIET', accept: '.xlsx', hint: 'Excel del build con el BOM: define qué modelos son del proyecto' },
+];
 
-function Drop({ type }: { type: FileType }) {
+function Slot({ type, label, accept, hint }: (typeof SLOTS)[number]) {
   const { files, errors, setFile, setError } = useApp();
   const [busy, setBusy] = useState(false);
   const f = files[type], err = errors[type];
@@ -22,34 +27,34 @@ function Drop({ type }: { type: FileType }) {
       setBusy(false);
     }
   }
-
+  const detail = f && (type === 'MODELOS' ? plural(modelsFrom(f).length, 'modelo') : plural(f.rows.length, 'fila'));
   return (
-    <FileChip
-      type={type}
-      accept=".xlsx,.csv,.txt"
-      onFile={load}
+    <FileChip type={label} accept={accept} onFile={load}
       status={err ? 'error' : busy ? 'comparing' : f ? 'loaded' : 'empty'}
-      meta={err ?? (busy ? 'Leyendo…' : f ? `${f.name} · ${plural(f.rows.length, 'fila')} · ${plural(f.headers.length, 'columna')}` : undefined)}
-    />
+      meta={err ?? (busy ? 'Leyendo…' : f ? `${f.name} · ${detail}` : hint)} />
   );
 }
 
 export default function Carga() {
-  const { period, setPeriod, files } = useApp();
+  const { files } = useApp();
   const go = useNavigate();
-  const loaded = FILE_TYPES.filter((t) => files[t]).length;
   return (
     <>
-      <PageHead title="Carga de datos" sub="Carga los tres archivos del mismo periodo (.xlsx o .csv). Se leen en este equipo; no se envían a ningún servidor.">
-        <PeriodTabs value={period} onChange={setPeriod} />
-      </PageHead>
+      <PageHead title="Carga de datos" sub="Los archivos se leen en este equipo; no se envían a ningún servidor." />
       <section className="app-files app-files-lg" aria-label="Archivos">
-        {FILE_TYPES.map((t) => <Drop key={t} type={t} />)}
+        {SLOTS.map((s) => <Slot key={s.type} {...s} />)}
       </section>
       <div className="yc-row">
-        <Button variant="primary" disabled={loaded < 2} onClick={() => go('/comparacion')}>Comparar archivos</Button>
-        <span className="app-muted">{loaded < 2 ? 'Carga al menos dos archivos para comparar.' : `${loaded} de 3 archivos cargados.`}</span>
+        <Button variant="primary" disabled={!files.TCQS} onClick={() => go('/validacion')}>Validar datos</Button>
+        <span className="app-muted">{files.TCQS ? (files.MODELOS ? 'Listo para validar.' : 'Sin el Excel de modelos se usan todos los modelos del TCQS.') : 'Carga el TCQS para continuar.'}</span>
       </div>
+      <section aria-label="Pendientes">
+        <h2 className="app-h3">Pendientes</h2>
+        <div className="app-files">
+          <FileChip type="DATA ANALYSIS" meta="Pendiente · se cruzará por serial + estación" />
+          <FileChip type="QM" meta="Pendiente · se cruzará por serial + estación" />
+        </div>
+      </section>
     </>
   );
 }

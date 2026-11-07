@@ -10,15 +10,13 @@ import './styles/tokens.css';
 import './styles/yc.css';
 import './styles/app.css';
 import Carga from './pages/Carga.tsx';
-import Comparacion from './pages/Comparacion.tsx';
 import Graficos from './pages/Graficos.tsx';
 import Historial from './pages/Historial.tsx';
 import Inicio from './pages/Inicio.tsx';
 import Layout from './pages/Layout.tsx';
 import Login from './pages/Login.tsx';
-import Match from './pages/Match.tsx';
-import Pendiente from './pages/Pendiente.tsx';
 import Validacion from './pages/Validacion.tsx';
+import Yield from './pages/Yield.tsx';
 
 const router = createBrowserRouter([
   { path: '/login', element: <Login /> },
@@ -27,10 +25,8 @@ const router = createBrowserRouter([
     children: [
       { path: '/', element: <Inicio /> },
       { path: '/carga', element: <Carga /> },
-      { path: '/comparacion', element: <Comparacion /> },
       { path: '/validacion', element: <Validacion /> },
-      { path: '/match', element: <Match /> },
-      { path: '/muestra', element: <Pendiente title="Muestra" what="Yield, WIP y Pareto del periodo con los datos validados." /> },
+      { path: '/yield', element: <Yield /> },
       { path: '/graficos', element: <Graficos /> },
       { path: '/historial', element: <Historial /> },
       { path: '*', element: <Navigate to="/" replace /> },

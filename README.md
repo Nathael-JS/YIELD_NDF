@@ -12,7 +12,7 @@ npm install
 npm run dev
 ```
 
-Abre http://localhost:5173 y entra con el usuario de prueba: **demo** / **yield2026**.
+Abre http://localhost:5173, entra con el usuario de prueba **demo** / **yield2026** y carga el TCQS (.csv o .xlsx) y el Excel del build con el BOM de Juliet.
 
 ```bash
 npm test
@@ -29,10 +29,9 @@ src/
   components/ui.tsx      componentes del sistema de diseño (botones, menú, KPIs, login…)
   components/charts.tsx  gráficas SVG (Pareto, barras, tendencia, histograma, dispersión)
   styles/                tokens.css (claro/oscuro), yc.css (componentes), app.css (páginas)
-  lib/                   lectura de archivos y escalas de gráficas, con sus pruebas
+  lib/                   lectura de archivos, cálculos del TCQS y escalas de gráficas, con sus pruebas
   pages/                 una página por ruta
   store.ts               sesión, archivos e historial
-  data/demo.ts           datos de ejemplo hasta definir los cálculos reales
 ```
 
 El plan de trabajo está en [PLAN.md](PLAN.md).
