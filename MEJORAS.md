@@ -8,6 +8,10 @@ Qué se mejoró, cómo se hizo y qué se usó; después, lo pendiente y lo que n
 
 | Versión | Mejora | Cómo se hizo | Qué se usó |
 | --- | --- | --- | --- |
+| 0.9.0 | **Neon en directo e historial por sesión** | Guardado automático al tener TCQS + BOM (efecto en `Layout`, una vez por carga con `savedKey`); `yield_cargas` registra cada carga en la misma transacción que el resumen; Historial agrupa por `sesion` (un `crypto.randomUUID()` por inicio de sesión) | `pg`, transacción `begin/commit`, `HistoryList` con `action` |
+| 0.9.0 | **Login con gráficas vivas** | Barras con `transform: scaleY` + `transition`, línea con transición de `d`; cada 3.5 s una oscilación suave (`Math.sin`) sobre la base | CSS y un `setInterval`; nada con movimiento reducido |
+| 0.9.0 | **Carrusel con arrastre y clic** | Eventos de puntero (`setPointerCapture`): la gráfica sigue al puntero; > 60 px cambia; clic sin arrastrar avanza o retrocede según el lado | `ChartCarousel` (app, artefacto v21 y reporte HTML) |
+| 0.9.0 | **Menos re-dibujos** | Selectores de zustand (`useApp((s) => s.x)`) en lugar de leer todo el almacén | zustand (sin Redux: mismo patrón de almacén único, ~1 KB, sin código extra) |
 | 0.8.0 | **Barras horizontales** | `BarChart horizontal`: una fila por estación, nombre completo a la izquierda (se corta con «…» solo si no cabe) | Componente nuevo en la app y en el artefacto (v20) |
 | 0.8.0 | **▲/▼ de RTY y recuperado** | `change()` genérico: RTY del periodo anterior se calcula con sus estaciones | `src/lib/tcqs.ts` con prueba |
 | 0.8.0 | **Carrusel animado** | La gráfica entra del lado al que se navega, barras que crecen y líneas que se dibujan (CSS, `pathLength`); ← →; nada con movimiento reducido | `ChartCarousel`; dirección de diseño con *creative* |
@@ -35,6 +39,8 @@ Qué se mejoró, cómo se hizo y qué se usó; después, lo pendiente y lo que n
 5. **Etiquetas de git** por versión (`v0.1.0`…`v0.8.0`).
 
 ## No relevante por ahora
+
+- **Redux:** zustand ya es un almacén único con acciones, como Redux; cambiarlo no hace la app más rápida. La ganancia real eran los selectores (hecho en 0.9.0).
 
 - **Selector de tema claro/oscuro:** la app sigue al sistema operativo; `data-theme` ya lo permite si se pide.
 - **Cambiar a SheetJS:** `read-excel-file` ya lee los archivos reales.

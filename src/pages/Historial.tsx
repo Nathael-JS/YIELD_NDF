@@ -1,41 +1,56 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Badge, Button, HistoryList } from '../components/ui.tsx';
-import { loadSummary } from '../lib/db.ts';
-import { fromDb } from '../lib/tcqs.ts';
+import { Badge, Button, HistoryList, type HistoryItem } from '../components/ui.tsx';
+import { loadCargas, loadSummary, type Carga } from '../lib/db.ts';
+import { fromDb, pctText, shortDay } from '../lib/tcqs.ts';
 import { shortDate, useApp } from '../store.ts';
 import { PageHead } from './Layout.tsx';
-import { download } from '../lib/download.ts';
 
+type Row = HistoryItem & { carga: Carga };
+const when = (iso: string) => shortDate(new Date(iso));
+
+/** Historial de lo cargado, leído de Neon y agrupado por sesión (cada inicio de sesión es una). */
 export default function Historial() {
-  const { history, setFile } = useApp();
+  const setFile = useApp((s) => s.setFile), session = useApp((s) => s.session);
   const go = useNavigate();
+  const [cargas, setCargas] = useState<Carga[]>();
   const [msg, setMsg] = useState<string>();
-  // el histórico de Neon entra como si fuera un TCQS: todas las pantallas lo leen igual
-  const loadDb = async () => {
+  useEffect(() => { loadCargas().then(setCargas).catch((e) => setMsg(`No se pudo leer Neon: ${e.message}`)); }, []);
+
+  // lo leído de Neon entra como si fuera un TCQS: todas las pantallas lo leen igual
+  const open = async (desde?: string, hasta?: string, label = 'todo el histórico') => {
     setMsg('Cargando…');
     try {
-      const rows = await loadSummary();
-      if (!rows.length) return setMsg('La base todavía no tiene datos: guárdalos desde Validación.');
-      setFile('TCQS', { ...fromDb(rows), name: `Neon · histórico (${rows.length} filas)`, loadedAt: shortDate(new Date()) });
+      const rows = await loadSummary(desde, hasta);
+      if (!rows.length) return setMsg('No hay datos guardados para ese rango.');
+      setFile('TCQS', { ...fromDb(rows), name: `Neon · ${label}`, loadedAt: shortDate(new Date()) });
       go('/yield');
     } catch (e) {
-      setMsg(`No se pudo leer la base: ${e instanceof Error ? e.message : e}`);
+      setMsg(`No se pudo leer Neon: ${e instanceof Error ? e.message : e}`);
     }
   };
-  const backup = () => download(`yield-control-respaldo-${new Date().toISOString().slice(0, 10)}.json`, new Blob([JSON.stringify(history, null, 2)], { type: 'application/json' }));
+
+  const sessions = new Map<string, Carga[]>();
+  for (const c of cargas ?? []) (sessions.get(c.sesion) ?? sessions.set(c.sesion, []).get(c.sesion)!).push(c);
   return (
     <>
-      <PageHead title="Historial" sub="Archivos cargados en este equipo. El último de cada tipo queda guardado hasta que salgas; el respaldo descarga la lista en JSON." />
-      <HistoryList items={history} onBackup={backup} onCompare={() => go('/carga')} />
-      <section className="yc-card yc-pad app-db">
-        <div>
-          <h2 className="app-h3">Base de datos (Neon)</h2>
-          <p className="app-muted">Resumen por día × modelo × estación de todo lo guardado desde Validación. Sirve para ver semanas y meses sin volver a cargar archivos.</p>
-          {msg && <p className="app-muted" role="status"><Badge tone="info">Neon</Badge> {msg}</p>}
-        </div>
-        <Button variant="primary" onClick={loadDb}>Cargar histórico</Button>
-      </section>
+      <PageHead title="Historial" sub="Todo lo cargado y guardado en Neon, por sesión. Cada carga se abre en Yield con su rango de fechas.">
+        <Button variant="primary" onClick={() => open()} disabled={!cargas?.length}>Ver todo el histórico</Button>
+      </PageHead>
+      {msg && <p className="app-muted" role="status"><Badge tone="info">Neon</Badge> {msg}</p>}
+      {cargas && !cargas.length && <p className="yc-card app-empty">Todavía no hay cargas guardadas. Se guardan solas al cargar el TCQS y el Excel de modelos.</p>}
+      {[...sessions].map(([id, list]) => (
+        <HistoryList<Row>
+          key={id}
+          title={`${id === session ? 'Esta sesión' : 'Sesión'} · ${when(list.at(-1)!.guardado_en)} · ${list[0].usuario}`}
+          action="Abrir"
+          items={list.map((c) => ({
+            carga: c, type: 'TCQS', name: c.archivo, date: when(c.guardado_en),
+            period: `${shortDay(c.desde)} – ${shortDay(c.hasta)} · ${c.entradas.toLocaleString('es-MX')} entradas · FPY ${pctText((c.primer_pase / c.entradas) * 100)} %`,
+          }))}
+          onCompare={({ carga: c }) => open(c.desde, c.hasta, `${c.archivo} (${shortDay(c.desde)} – ${shortDay(c.hasta)})`)}
+        />
+      ))}
     </>
   );
 }

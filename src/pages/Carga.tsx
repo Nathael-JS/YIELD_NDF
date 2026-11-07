@@ -13,9 +13,9 @@ const SLOTS: { type: FileType; label: string; accept: string; hint: string }[] =
 ];
 
 function Slot({ type, label, accept, hint }: (typeof SLOTS)[number]) {
-  const { files, errors, setFile, setError } = useApp();
+  const f = useApp((s) => s.files[type]), err = useApp((s) => s.errors[type]);
+  const setFile = useApp((s) => s.setFile), setError = useApp((s) => s.setError);
   const [busy, setBusy] = useState(false);
-  const f = files[type], err = errors[type];
 
   async function load(file: File) {
     setBusy(true);
@@ -36,11 +36,11 @@ function Slot({ type, label, accept, hint }: (typeof SLOTS)[number]) {
 }
 
 export default function Carga() {
-  const { files } = useApp();
+  const files = useApp((s) => s.files);
   const go = useNavigate();
   return (
     <>
-      <PageHead title="Carga de datos" sub="Los archivos se leen en este equipo; no se envían a ningún servidor." />
+      <PageHead title="Carga de datos" sub="Los archivos se leen en este equipo. Con el TCQS y el BOM cargados, el resumen por día × modelo × estación se guarda solo en Neon." />
       <section className="app-files app-files-lg" aria-label="Archivos">
         {SLOTS.map((s) => <Slot key={s.type} {...s} />)}
       </section>

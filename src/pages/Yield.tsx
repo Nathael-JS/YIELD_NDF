@@ -18,7 +18,7 @@ const GRAINS = [
 
 export default function Yield() {
   const { records, from, to } = useData();
-  const { period, setPeriod } = useApp();
+  const period = useApp((s) => s.period), setPeriod = useApp((s) => s.setPeriod);
   const [model, setModel] = useState(ALL);
   const [pick, setPick] = useState<string>(); // clave del periodo; sin elegir = el último con datos
   const [busy, setBusy] = useState(false);

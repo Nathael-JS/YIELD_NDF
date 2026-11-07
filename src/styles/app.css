@@ -38,18 +38,17 @@ button.yc-nav-mark { border: 0; background: none; padding: 0; color: var(--ink);
 
 /* Ilustración del login (LoginPanel backdrop): crece, se dibuja y se queda quieta */
 .app-art-chart { position: absolute; left: 0; right: 0; bottom: 0; width: 100%; height: 34%; opacity: .5; }
-.app-art-bar { transform-box: fill-box; transform-origin: bottom; animation: app-grow .9s cubic-bezier(.2, .7, .2, 1) both; }
+.app-art-bar { transform-box: fill-box; transform-origin: bottom; transition: transform 1.2s cubic-bezier(.4, 0, .2, 1); }
 .app-art-meta { stroke: var(--ink-muted); stroke-dasharray: 6 6; vector-effect: non-scaling-stroke; }
-.app-art-line { fill: none; stroke: var(--ink); stroke-width: 2.5; stroke-linejoin: round; vector-effect: non-scaling-stroke; stroke-dasharray: 1; stroke-dashoffset: 1; animation: app-draw 1.6s .8s ease-out forwards; }
+.app-art-line { fill: none; stroke: var(--ink); stroke-width: 2.5; stroke-linejoin: round; vector-effect: non-scaling-stroke; stroke-dasharray: 1; stroke-dashoffset: 1; animation: app-draw 1.6s .8s ease-out forwards; transition: d 1.2s cubic-bezier(.4, 0, .2, 1); }
 .app-art-cards { position: absolute; top: 50%; left: max(24px, calc(25% - 250px)); width: 250px; display: grid; gap: var(--space-3); transform: translateY(-60%); }
 .app-art-cards > * { min-width: 0; animation: app-in .5s cubic-bezier(.2, .7, .2, 1) both; }
 .app-art-cards > :nth-child(2) { animation-delay: .5s; }
 .app-art-cards > :nth-child(3) { animation-delay: 1s; }
-@keyframes app-grow { from { transform: scaleY(0); } }
 @keyframes app-draw { to { stroke-dashoffset: 0; } }
 @keyframes app-in { from { opacity: 0; transform: translateY(16px); } }
 @media (max-width: 1100px) { .app-art-cards { display: none; } }
-@media (prefers-reduced-motion: reduce) { .app-art * { animation: none !important; } .app-art-line { stroke-dashoffset: 0; } }
+@media (prefers-reduced-motion: reduce) { .app-art * { animation: none !important; transition: none !important; } .app-art-line { stroke-dashoffset: 0; } }
 
 /* Inicio como landing */
 .app-hero { display: grid; gap: var(--space-3); padding: var(--space-4) 0 var(--space-2); }
@@ -68,6 +67,3 @@ button.yc-nav-mark { border: 0; background: none; padding: 0; color: var(--ink);
 .yc-table tr.is-focus td { background: var(--brand-tint); }
 .yc-table tr.is-focus td:first-child { font-weight: 600; }
 
-/* Historial: tarjeta de la base de datos */
-.app-db { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: var(--space-4); }
-.app-db p { margin: var(--space-1) 0 0; max-width: 60ch; }

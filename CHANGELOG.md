@@ -8,6 +8,22 @@ Un cambio de componente se publica primero en el artefacto y después se copia a
 
 Los errores encontrados y cómo se corrigieron están en [ERRORES.md](ERRORES.md); las mejoras y cómo se hicieron, en [MEJORAS.md](MEJORAS.md).
 
+## [0.9.0] — 2026-11-08 · sistema de diseño v21
+
+### Agregado
+- **Servidor:** tabla `yield_cargas` (una fila por carga: sesión, usuario, archivo, rango y totales), `GET /api/cargas` y `GET /api/resumen?desde=&hasta=`. El resumen y la carga se guardan en una sola transacción.
+- **Pantallas · Neon en directo:** con el TCQS y el BOM cargados, el resumen se guarda solo, una vez por carga (no se repite al recargar la página). Validación muestra el estado.
+- **Pantallas · Historial:** las cargas de Neon agrupadas por sesión (cada inicio de sesión es una); *Abrir* lleva esa carga a Yield y *Ver todo el histórico* trae todo.
+- **Pantallas · Login:** las gráficas del fondo siguen moviéndose cada 3.5 s (barras con `scaleY` y línea con transición de `d`); quietas con movimiento reducido.
+- **Componentes · `ChartCarousel`:** se arrastra con mouse o dedo (la gráfica sigue al puntero) o se hace clic a un lado; también en el reporte HTML.
+- **Componentes · `HistoryList`:** `action` (texto del botón) y `onBackup` opcional.
+
+### Cambiado
+- **Estado:** cada pantalla lee del almacén solo lo que usa (selectores de zustand), en lugar de todo el estado.
+
+### Quitado
+- Botones ‹ › del carrusel, el respaldo JSON del historial y el historial local (`history` en el almacén); `Guardar en Neon` manual.
+
 ## [0.8.0] — 2026-11-07 · sistema de diseño v20
 
 ### Agregado

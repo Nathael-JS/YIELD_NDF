@@ -46,7 +46,16 @@ Cada entrada dice qué pasaba, cómo se detectó, la causa, la corrección y con
 | E21 | El buscador del HTML no encontraba «critico» sin acento | Comparaba el texto tal cual | Compara sin mayúsculas ni acentos | Recorrido del HTML |
 | E22 | `node --test server/` se quedaba colgado | Ejecutaba también `index.js`, que arranca el servidor | `npm test` corre solo `server/*.test.js` | `npm test` |
 
+## 0.9.0
+
+| # | Qué pasaba | Causa | Corrección | Comprobación |
+| --- | --- | --- | --- | --- |
+| E23 | Cada recarga con los archivos guardados volvería a guardar la misma carga en Neon | El guardado automático no sabía qué ya se había guardado | `savedKey` (archivo + hora + BOM) guardado en el navegador; solo se guarda una vez | Recarga en Playwright: 1 fila en `yield_cargas` |
+| E24 | El texto de Carga decía que nada se enviaba a un servidor | Desde 0.8.0 el resumen va a Neon | Texto corregido | Revisión |
+
 ## Abiertos
+
+- **Lo abierto desde Neon no trae testers** (se guarda día × modelo × estación): faltan el Pareto 2do nivel y el histograma por tester (5 gráficas en vez de 6).
 
 - **La API de Neon no tiene autenticación:** cualquiera con la dirección puede escribir resumen. Solo acepta conteos validados y hace upsert (no borra). Hay que agregar cuentas reales antes de compartir la dirección.
 - **Plan gratis de Render:** el servicio se duerme y el primer acceso tarda cerca de un minuto.

@@ -1,5 +1,5 @@
 // Componentes del sistema de diseño Yield Control (portados de components/bundle.js).
-import { useState, type KeyboardEvent, type ButtonHTMLAttributes, type FormEvent, type ReactNode } from 'react';
+import { useRef, useState, type KeyboardEvent, type PointerEvent, type ButtonHTMLAttributes, type FormEvent, type ReactNode } from 'react';
 
 const cx = (...c: unknown[]) => c.filter(Boolean).join(' ');
 
@@ -137,25 +137,41 @@ export interface CarouselSlide { kind: string; title: string; content: ReactNode
 export function ChartCarousel({ slides, label = 'Gráficas' }: { slides: CarouselSlide[]; label?: string }) {
   const [idx, setIdx] = useState(0);
   const [dir, setDir] = useState<'next' | 'prev'>('next'); // de qué lado entra la gráfica nueva
+  const [dx, setDx] = useState(0); // cuánto se ha arrastrado
+  const from = useRef<number | null>(null);
   const n = slides.length;
   if (!n) return null;
   const i = Math.min(idx, n - 1);
   const go = (k: number) => { setDir(k < i ? 'prev' : 'next'); setIdx((k + n) % n); };
   const keys = (e: KeyboardEvent) => { if (e.key === 'ArrowRight') go(i + 1); if (e.key === 'ArrowLeft') go(i - 1); };
+  // arrastrar (mouse o dedo) más de 60 px cambia de gráfica; un clic sin arrastrar avanza o retrocede según el lado
+  const down = (e: PointerEvent<HTMLDivElement>) => { from.current = e.clientX; e.currentTarget.setPointerCapture(e.pointerId); };
+  const move = (e: PointerEvent) => { if (from.current != null) setDx(e.clientX - from.current); };
+  const up = (e: PointerEvent<HTMLDivElement>) => {
+    if (from.current == null) return;
+    const d = e.clientX - from.current, box = e.currentTarget.getBoundingClientRect();
+    from.current = null;
+    setDx(0);
+    if (Math.abs(d) > 60) go(d < 0 ? i + 1 : i - 1);
+    else if (Math.abs(d) < 6) go(e.clientX > box.left + box.width / 2 ? i + 1 : i - 1);
+  };
   return (
-    <section className="yc-carousel" aria-roledescription="carrusel" aria-label={label} onKeyDown={keys}>
+    <section className="yc-carousel" aria-roledescription="carrusel" aria-label={`${label}: arrastra, haz clic a un lado o usa ← →`} tabIndex={0} onKeyDown={keys}>
       <header className="yc-carousel-head">
         <div>
           <span className="yc-carousel-kind">{slides[i].kind}</span>
           <h3 className="yc-carousel-title">{slides[i].title}</h3>
         </div>
         <div className="yc-carousel-ctrl">
-          <button type="button" className="yc-icon-btn" aria-label="Gráfica anterior" onClick={() => go(i - 1)}>‹</button>
+          <span className="yc-carousel-hint" aria-hidden>Arrastra o haz clic a un lado</span>
           <span className="yc-carousel-count" aria-live="polite">{i + 1} / {n}</span>
-          <button type="button" className="yc-icon-btn" aria-label="Gráfica siguiente" onClick={() => go(i + 1)}>›</button>
         </div>
       </header>
-      <div key={i} className={`yc-carousel-body is-${dir}`}>{slides[i].content}</div>
+      <div className="yc-carousel-track" onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={() => { from.current = null; setDx(0); }}>
+        <div key={i} className={cx('yc-carousel-body', `is-${dir}`, dx !== 0 && 'is-dragging')} style={dx ? { transform: `translateX(${dx}px)`, opacity: 1 - Math.min(Math.abs(dx) / 600, 0.5) } : undefined}>
+          {slides[i].content}
+        </div>
+      </div>
       <div className="yc-carousel-dots">
         {slides.map((s, k) => (
           <button key={k} type="button" aria-label={s.title} aria-current={k === i ? 'true' : undefined} className={cx('yc-dot', k === i && 'is-on')} onClick={() => go(k)} />
@@ -166,14 +182,16 @@ export function ChartCarousel({ slides, label = 'Gráficas' }: { slides: Carouse
 }
 
 export interface HistoryItem { type: string; name: string; period: string; date: string }
-export function HistoryList({ items, title = 'Historial de la sesión', onBackup, onCompare }: {
-  items: HistoryItem[]; title?: string; onBackup?: () => void; onCompare?: (it: HistoryItem) => void;
+export function HistoryList<T extends HistoryItem>({ items, title = 'Historial de la sesión', onBackup, onCompare, action = 'Comparar' }: {
+  items: T[]; title?: string; onBackup?: () => void; onCompare?: (it: T) => void;
+  /** Texto del botón de cada fila. */
+  action?: string;
 }) {
   return (
     <section className="yc-history">
       <header className="yc-history-head">
         <h3>{title}</h3>
-        <Button onClick={onBackup} disabled={!items.length}>Generar respaldo</Button>
+        {onBackup && <Button onClick={onBackup} disabled={!items.length}>Generar respaldo</Button>}
       </header>
       {items.length ? (
         <ul className="yc-history-list">
@@ -182,7 +200,7 @@ export function HistoryList({ items, title = 'Historial de la sesión', onBackup
               <span className="yc-history-type">{it.type}</span>
               <span className="yc-history-name" title={it.name}>{it.name}</span>
               <span className="yc-history-meta">{it.period} · {it.date}</span>
-              <Button variant="quiet" onClick={() => onCompare?.(it)}>Comparar</Button>
+              <Button variant="quiet" onClick={() => onCompare?.(it)}>{action}</Button>
             </li>
           ))}
         </ul>
