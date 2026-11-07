@@ -33,8 +33,10 @@ export function Select({ label, options, value, onChange, disabled, name }: {
 }
 
 export const STEPS = ['Carga de datos', 'Comparación', 'Validación', 'Match', 'Muestra'];
-export function PipelineNav({ steps = STEPS, current = 0, extra = ['Gráficos', 'Historial'], active, title = 'Yield Control', onSelect, children }: {
+export function PipelineNav({ steps = STEPS, current = 0, done, extra = ['Gráficos', 'Historial'], active, title = 'Yield Control', onSelect, children }: {
   steps?: string[]; current?: number; extra?: string[]; active?: string | null; title?: string;
+  /** Qué pasos están hechos de verdad (✓). Sin esto, se marcan los anteriores a `current`. */
+  done?: boolean[];
   onSelect?: (target: number | string) => void; children?: ReactNode;
 }) {
   return (
@@ -42,7 +44,7 @@ export function PipelineNav({ steps = STEPS, current = 0, extra = ['Gráficos', 
       <button type="button" className="yc-nav-mark" onClick={() => onSelect?.(-1)}>{title}</button>
       <ol className="yc-steps">
         {steps.map((s, i) => {
-          const st = i < current ? 'done' : i === current ? 'current' : 'todo';
+          const st = i === current ? 'current' : (done ? done[i] : i < current) ? 'done' : 'todo';
           return (
             <li key={s} className={`yc-step yc-step-${st}`}>
               <button type="button" aria-current={st === 'current' ? 'step' : undefined} onClick={() => onSelect?.(i)}>

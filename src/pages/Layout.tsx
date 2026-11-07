@@ -1,6 +1,6 @@
 import { Link, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Button, PipelineNav } from '../components/ui.tsx';
-import { useApp } from '../store.ts';
+import { useApp, useData } from '../store.ts';
 
 const STEPS = ['Carga de datos', 'Validación', 'Yield'];
 export const STEP_PATHS = ['/carga', '/validacion', '/yield'];
@@ -10,12 +10,14 @@ export default function Layout() {
   const { user, logout } = useApp();
   const { pathname } = useLocation();
   const go = useNavigate();
+  const { read, records } = useData();
   if (!user) return <Navigate to="/login" replace />;
   return (
     <>
       <PipelineNav
         steps={STEPS}
         current={STEP_PATHS.indexOf(pathname)}
+        done={[!!read, records.length > 0]} // Carga: TCQS leído · Validación: hay filas válidas de Juliet
         active={Object.keys(EXTRA).find((k) => EXTRA[k] === pathname) ?? null}
         extra={Object.keys(EXTRA)}
         onSelect={(t) => go(typeof t === 'number' ? (t < 0 ? '/' : STEP_PATHS[t]) : EXTRA[t])}

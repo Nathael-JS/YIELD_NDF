@@ -53,7 +53,8 @@ Decisiones tomadas a partir de la guía:
 
 - La app usa solo componentes del sistema (`src/components/`, portados de `bundle.js`) y tokens (`src/styles/tokens.css`).
 - Cambios subidos al artefacto: `FileChip` como zona de carga, `LoginPanel` con avisos y `backdrop` animado, `ParetoChart` con etiquetas sin encimarse, `PipelineNav` fijo y en una fila en móvil.
-- Pendiente en el sistema: que `PipelineNav` marque ✓ por estado real y no por posición; que «Dónde mirar primero» abra Yield con la estación resaltada.
+- `PipelineNav` con `done`: ✓ por estado real (Carga = TCQS leído; Validación = hay filas válidas de Juliet), no por posición.
+- «Dónde mirar primero» abre `/yield#ESTACIÓN`: la fila se resalta y se lleva a la vista.
 - Mejora candidata: barras horizontales para estaciones con nombres largos (hoy el eje X muestra una de cada n etiquetas; la tabla las lista todas).
 
 ## Verificación

@@ -63,3 +63,7 @@ button.yc-nav-mark { border: 0; background: none; padding: 0; color: var(--ink);
 .app-main .app-watch-card { color: inherit; }
 .app-watch-card:hover { border-color: var(--line-strong); }
 .app-watch-head { display: flex; justify-content: space-between; align-items: center; gap: var(--space-2); }
+
+/* Estación que llega desde «Dónde mirar primero» */
+.yc-table tr.is-focus td { background: var(--brand-tint); }
+.yc-table tr.is-focus td:first-child { font-weight: 600; }

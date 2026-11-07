@@ -55,7 +55,7 @@ export default function Inicio() {
           <h2 id="watch" className="app-section-title">Dónde mirar primero</h2>
           <div className="app-watch">
             {watch.map((s) => (
-              <Link key={s.name} to="/yield" className="yc-card app-watch-card">
+              <Link key={s.name} to={{ pathname: '/yield', hash: encodeURIComponent(s.name) }} className="yc-card app-watch-card">
                 <span className="app-watch-head"><span className="app-mono">{s.name}</span><Badge tone={s.dx[1]}>{s.dx[0]}</Badge></span>
                 <span className="yc-kpi-value">{pctText(s.fpy)}<span className="yc-kpi-unit">% FPY</span></span>
                 <span className="app-muted">{n(s.ff)} primeras fallas de {n(s.input)} entradas · Final {pctText(s.final)} %</span>

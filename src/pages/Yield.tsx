@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Badge, KpiTile, PeriodTabs, Select } from '../components/ui.tsx';
 import { by, byFpy, diagnose, pctText, rty, shortDay, totals } from '../lib/tcqs.ts';
 import { useApp, useData } from '../store.ts';
@@ -17,6 +18,11 @@ export default function Yield() {
   const { records, from, to } = useData();
   const { period, setPeriod } = useApp();
   const [model, setModel] = useState(ALL);
+  // estación que llega desde «Dónde mirar primero» (/yield#FT): se resalta y se lleva a la vista
+  const focus = decodeURIComponent(useLocation().hash.slice(1));
+  useEffect(() => {
+    if (focus) document.querySelector(`[data-station="${CSS.escape(focus)}"]`)?.scrollIntoView({ block: 'center' });
+  }, [focus]);
   if (!records.length) return <><PageHead title="Yield" /><NeedTcqs /></>;
 
   const rs = model === ALL ? records : records.filter((r) => r.model === model);
@@ -45,7 +51,7 @@ export default function Yield() {
             {st.map((s) => {
               const [text, tone] = diagnose(s);
               return (
-                <tr key={s.name}>
+                <tr key={s.name} data-station={s.name} className={s.name === focus ? 'is-focus' : undefined} aria-current={s.name === focus || undefined}>
                   <td className="code">{s.name}</td>
                   <td className="num">{s.input.toLocaleString('es-MX')}</td>
                   <td className="num">{s.ff.toLocaleString('es-MX')}</td>
