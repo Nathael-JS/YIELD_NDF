@@ -1,5 +1,7 @@
 # Plan de trabajo — Yield Control
 
+Versiones en [CHANGELOG.md](CHANGELOG.md) · errores en [ERRORES.md](ERRORES.md) · mejoras en [MEJORAS.md](MEJORAS.md).
+
 App de yield para el proyecto **Juliet**, basada en el sistema de diseño **Yield Control** (artefacto `RqMowPxsmEFcuTiJy8Ntxu`). Todo corre en el navegador: los archivos no salen del equipo. Publicada en Render como sitio estático (`render.yaml`).
 
 ## Flujo
@@ -44,8 +46,8 @@ Decisiones tomadas a partir de la guía:
 3. **Guía SFC, diseño y menú (hecha).** Fórmulas de la guía, MA = SA, login animado, menú fijo, Inicio como landing con «Dónde mirar primero» y carrusel.
    - Por confirmar: meta (95 %) y mínimo de muestra (10).
    - Grupos para RTY (inspección, funcionales, liquid cooling) si se quieren por separado.
-4. **Comparación entre periodos.** Delta de cada KPI contra el periodo anterior (`KpiTile delta`).
-5. **Persistencia.** Guardar las filas en IndexedDB para que el historial reabra un archivo sin volver a cargarlo.
+4. **Comparación entre periodos (hecha, 0.7.0).** ▲/▼ de entradas, FPY, Final y retest contra el periodo anterior, solo con muestra suficiente.
+5. **Persistencia (hecha, 0.7.0).** El último archivo de cada tipo se guarda en IndexedDB y se borra al salir.
 6. **DATA ANALYSIS y QM.** Validación y match por serial + estación; Pareto 2do nivel por error code (el TCQS no trae error codes; hoy se abre por tester).
 7. **Cuentas reales** si llega un servidor (hoy: usuario de prueba).
 

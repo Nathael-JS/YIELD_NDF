@@ -110,3 +110,16 @@ export function periodOf(iso: string, g: Grain): [string, string] {
   const y = d.getUTCFullYear(), w = 1 + Math.floor((d.getTime() - Date.UTC(y, 0, 1)) / 864e5 / 7);
   return [`${y}-W${String(w).padStart(2, '0')}`, `Sem ${w}`];
 }
+
+/** Periodos con datos, en orden: [clave, etiqueta]. */
+export function periodsOf(rs: Rec[], g: Grain) {
+  return [...new Map(rs.map((r) => periodOf(r.date, g)))].sort(([a], [b]) => (a < b ? -1 : 1));
+}
+
+/** Cambio contra el periodo anterior, a un decimal; sin cambio si falta dato o alguno de los dos
+ * periodos tiene muy pocas entradas (guía, regla 1: con poco volumen el porcentaje no es estable). */
+export function change(cur: Totals, prev: Totals | undefined, key: 'input' | 'fpy' | 'final' | 'retest') {
+  if (!prev || cur.input < MIN_SAMPLE || prev.input < MIN_SAMPLE) return undefined;
+  const d = cur[key] - prev[key];
+  return Number.isFinite(d) ? Math.round(d * 10) / 10 : undefined;
+}

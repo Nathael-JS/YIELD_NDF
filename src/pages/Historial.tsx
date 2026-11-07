@@ -14,7 +14,7 @@ export default function Historial() {
   }
   return (
     <>
-      <PageHead title="Historial" sub="Archivos cargados en este equipo. Para volver a verlos hay que cargarlos de nuevo; el respaldo descarga la lista en JSON." />
+      <PageHead title="Historial" sub="Archivos cargados en este equipo. El último de cada tipo queda guardado hasta que salgas; el respaldo descarga la lista en JSON." />
       <HistoryList items={history} onBackup={backup} onCompare={() => go('/carga')} />
     </>
   );

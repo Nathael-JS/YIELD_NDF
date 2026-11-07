@@ -1,9 +1,10 @@
-// Estado de la app. Sesión e historial se guardan en localStorage; las filas de los archivos solo en memoria.
+// Estado de la app. Sesión e historial en localStorage; el último archivo de cada tipo en IndexedDB (lib/saved.ts).
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { HistoryItem, Period } from './components/ui.tsx';
 import { useMemo } from 'react';
 import type { ParsedFile } from './lib/files.ts';
+import { dropAll, dropFile, loadFiles, saveFile } from './lib/saved.ts';
 import { modelKey, modelsFrom, readTcqs } from './lib/tcqs.ts';
 
 // MODELOS = Excel del proyecto (BOM) con los números de modelo válidos. DATA ANALYSIS y QM: pendientes.
@@ -47,21 +48,29 @@ export const useApp = create<State>()(
         if (ok) set({ user: TEST_USER.name });
         return ok;
       },
-      logout: () => set({ user: null, files: {}, errors: {} }),
+      // al salir se borran también los archivos guardados: el equipo puede ser compartido
+      logout: () => { dropAll().catch(() => {}); set({ user: null, files: {}, errors: {} }); },
       requestAccount: (user) => set({ requests: [...get().requests, user.trim()] }),
       setPeriod: (period) => set({ period }),
-      setFile: (t, f) => set((s) => ({
+      setFile: (t, f) => { saveFile(t, f).catch(() => {}); set((s) => ({
         files: { ...s.files, [t]: f },
         errors: { ...s.errors, [t]: undefined },
         history: [{ type: t, name: f.name, period: `${f.rows.length.toLocaleString('es-MX')} filas`, date: f.loadedAt }, ...s.history],
-      })),
+      })); },
       // un archivo con error reemplaza al anterior: no comparar con datos viejos sin avisar
-      setError: (t, msg) => set((s) => ({ errors: { ...s.errors, [t]: msg }, files: { ...s.files, [t]: undefined } })),
+      setError: (t, msg) => { dropFile(t).catch(() => {}); set((s) => ({ errors: { ...s.errors, [t]: msg }, files: { ...s.files, [t]: undefined } })); },
     }),
     { name: 'yield-control', partialize: ({ user, period, history, requests }) => ({ user, period, history, requests }) },
   ),
 );
 
+// Recupera los archivos guardados al abrir la app (sin pisar uno que se haya cargado mientras tanto).
+// Fallar aquí solo significa volver a cargarlos.
+if (typeof indexedDB !== 'undefined') {
+  loadFiles().then((saved) => {
+    if (useApp.getState().user) useApp.setState((s) => ({ files: { ...saved, ...s.files } }));
+  }).catch(() => {});
+}
 
 /** Filas del TCQS ya filtradas a los modelos del proyecto (si se cargó el BOM). */
 export function useData() {

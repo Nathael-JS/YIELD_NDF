@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { by, diagnose, modelKey, modelsFrom, periodOf, readTcqs, rty, totals } from './tcqs.ts';
+import { by, change, diagnose, modelKey, modelsFrom, periodOf, periodsOf, readTcqs, rty, totals } from './tcqs.ts';
 
 const H = ['WORK_DATE', 'MODEL_NAME', 'SAP_MODEL_NAME', 'MO_NUMBER', 'GROUP_NAME', 'STATION_NAME', 'INPUT_QTY', 'FIRST_PASS_QTY', 'FIRST_FAIL_QTY', 'SECOND_PASS_QTY'];
 // filas con la forma del TCQS real (cantidades como texto, como las deja el lector de CSV)
@@ -66,4 +66,15 @@ test('modelKey iguala MA y SA del mismo número de parte', () => {
   assert.equal(modelKey('MA016491'), modelKey(' sa016491'));
   assert.equal(modelKey('920-9K33R-00MV-GS0'), '920-9K33R-00MV-GS0');
   assert.notEqual(modelKey('MA0164912'), 'SA0164912');
+});
+
+test('periodsOf y change: cambio contra el periodo anterior solo con muestra suficiente', () => {
+  const rec = (date: string, input: number, fp: number) => ({ date, model: 'm', mo: '', group: 'g', tester: '', input, fp, ff: input - fp, sp: 0 });
+  const rs = [rec('2026-11-03', 20, 18), rec('2026-10-27', 20, 16), rec('2026-11-04', 5, 5)];
+  assert.deepEqual(periodsOf(rs, 'semana').map(([k]) => k), ['2026-W44', '2026-W45']);
+  const [w44, w45] = ['2026-W44', '2026-W45'].map((k) => totals(rs.filter((r) => periodOf(r.date, 'semana')[0] === k)));
+  assert.equal(change(w45, w44, 'fpy'), 12); // 92 % − 80 %
+  assert.equal(change(w45, w44, 'input'), 5);
+  assert.equal(change(w45, undefined, 'fpy'), undefined);
+  assert.equal(change(totals([rec('x', 5, 5)]), w44, 'fpy'), undefined); // 5 entradas: no se compara
 });

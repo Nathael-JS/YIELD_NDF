@@ -34,4 +34,7 @@ src/
   store.ts               sesión, archivos e historial
 ```
 
-El plan de trabajo está en [PLAN.md](PLAN.md).
+- Plan de trabajo y fórmulas: [PLAN.md](PLAN.md)
+- Versiones: [CHANGELOG.md](CHANGELOG.md)
+- Errores encontrados y cómo se corrigieron: [ERRORES.md](ERRORES.md)
+- Mejoras hechas, cómo y con qué; pendientes: [MEJORAS.md](MEJORAS.md)
