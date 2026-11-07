@@ -28,6 +28,8 @@ create table if not exists usuarios (
   // cuenta principal (super administrador) desde el entorno: ADMIN_USER (y ADMIN_PASSWORD si hay que crearla)
   .then(async () => {
     // si la cuenta ya existe (creada desde «Crear cuenta») se activa como administradora y conserva su contraseña
+    // cuenta de prueba siempre activa: demo / yield2026 (pública; quitarla cuando se entregue a producción)
+    await db.query(`insert into usuarios (usuario, nombre, clave, activo) values ('demo', 'Usuario de prueba', $1, true) on conflict (usuario) do update set activo = true`, [await hashPassword('yield2026')]);
     if (!PRINCIPAL) return console.log('Cuenta principal: falta ADMIN_USER');
     const { rowCount } = await db.query('update usuarios set activo = true, admin = true where usuario = $1', [PRINCIPAL]);
     if (rowCount) return console.log(`Cuenta principal: ${PRINCIPAL} activada como administradora (con su propia contraseña)`);
@@ -86,13 +88,6 @@ async function account(req, res, path) {
     return s ? json(res, 200, { nombre: s.nombre, sesion: s.sid, admin: s.admin }) : json(res, 401, { error: 'Sesión vencida' });
   }
   const b = await body(req), usuario = String(b.usuario ?? '').trim().toLowerCase(), clave = String(b.clave ?? '');
-  if (path === '/api/signup') {
-    if (!/^[a-z0-9._@-]{3,60}$/.test(usuario)) return json(res, 400, { error: 'Usuario de 3 a 60 caracteres: letras, números, punto, guion o @' });
-    if (clave.length < 10 || clave.length > 200) return json(res, 400, { error: 'La contraseña debe tener al menos 10 caracteres' });
-    await db.query(`insert into usuarios (usuario, nombre, clave) values ($1, $2, $3) on conflict (usuario) do nothing`,
-      [usuario, String(b.nombre ?? usuario).trim().slice(0, 80) || usuario, await hashPassword(clave)]);
-    return json(res, 201, { pendiente: true }); // misma respuesta si ya existía: no revela qué usuarios hay
-  }
   // login
   const ip = req.headers['x-forwarded-for']?.split(',')[0].trim() || req.socket.remoteAddress;
   if (limited(ip)) return json(res, 429, { error: 'Demasiados intentos. Espera 15 minutos.' });
@@ -124,7 +119,7 @@ async function api(req, res) {
   const url = new URL(req.url, 'http://x');
   // un POST de otro sitio no puede mandar JSON sin permiso del navegador: junto con SameSite=Strict, frena CSRF
   if (req.method === 'POST' && !req.headers['content-type']?.startsWith('application/json')) return json(res, 415, { error: 'Se esperaba JSON' });
-  if (['/api/login', '/api/logout', '/api/me', '/api/signup'].includes(url.pathname)) {
+  if (['/api/login', '/api/logout', '/api/me'].includes(url.pathname)) {
     if (url.pathname !== '/api/me' && req.method !== 'POST') return json(res, 405, { error: 'Método no permitido' });
     return account(req, res, url.pathname);
   }

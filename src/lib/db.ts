@@ -9,13 +9,13 @@ export const setOnExpired = (f: () => void) => { onExpired = f; };
 export interface Carga { id: number; sesion: string; usuario: string; archivo: string; filas: number; entradas: number; primer_pase: number; primera_falla: number; segundo_pase: number; desde: string; hasta: string; guardado_en: string }
 
 async function call<T>(path: string, init?: RequestInit): Promise<T> {
-  const r = await fetch(path, init).catch(() => { throw new Error('No hay conexión con el servidor. Si Render estaba dormido, espera un minuto y vuelve a intentar.'); });
-  // un sitio estático o una página de error devuelven HTML: decirlo en lugar de fallar en silencio
-  if (!r.headers.get('content-type')?.includes('application/json'))
-    throw new Error(`El servidor no respondió como API (${r.status}). Revisa que abras la dirección del servicio Node de Render y que /api/salud responda.`);
+  // status 0 = no hay API (sin conexión, sitio estático o página de error en HTML)
+  const fail = (msg: string, status = 0) => Object.assign(new Error(msg), { status });
+  const r = await fetch(path, init).catch(() => { throw fail('No hay conexión con el servidor.'); });
+  if (!r.headers.get('content-type')?.includes('application/json')) throw fail(`El servidor no respondió como API (${r.status}).`);
   const body = await r.json();
   if (r.status === 401 && !path.startsWith('/api/login')) onExpired();
-  if (!r.ok) throw new Error(body.error ?? `Error ${r.status}`);
+  if (!r.ok) throw fail(body.error ?? `Error ${r.status}`, r.status);
   return body;
 }
 
@@ -23,7 +23,6 @@ const post = <T>(path: string, data: unknown) => call<T>(path, { method: 'POST',
 
 export interface Sesion { nombre: string; sesion: string; admin: boolean }
 export const apiLogin = (usuario: string, clave: string) => post<Sesion>('/api/login', { usuario, clave });
-export const apiSignup = (usuario: string, clave: string) => post<{ pendiente: boolean }>('/api/signup', { usuario, clave });
 export const apiLogout = () => post('/api/logout', {});
 export const apiMe = () => call<Sesion>('/api/me');
 

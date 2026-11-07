@@ -8,6 +8,14 @@ Un cambio de componente se publica primero en el artefacto y después se copia a
 
 Los errores encontrados y cómo se corrigieron están en [ERRORES.md](ERRORES.md); las mejoras y cómo se hicieron, en [MEJORAS.md](MEJORAS.md).
 
+## [0.12.0] — 2026-11-08
+
+### Cambiado
+- **Login:** vuelve la cuenta de prueba **demo / yield2026**, siempre activa. Con servidor es una cuenta real (se crea al arrancar) y usa Neon; sin servidor (sitio estático, sin base o sin conexión) entra en modo local, sin Neon.
+
+### Quitado
+- «Crear cuenta» en el login y `POST /api/signup`. Las cuentas se manejan desde Cuentas (administradores) y la cuenta principal desde Render.
+
 ## [0.11.2] — 2026-11-08
 
 ### Agregado
