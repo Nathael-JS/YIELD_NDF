@@ -2,7 +2,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { HistoryItem, Period } from './components/ui.tsx';
-import type { ParsedFile } from './lib/files.ts';
+import { commonColumns, type ParsedFile } from './lib/files.ts';
 
 export const FILE_TYPES = ['TCQS', 'DATA ANALYSIS', 'QM'] as const;
 export type FileType = (typeof FILE_TYPES)[number];
@@ -15,6 +15,8 @@ export const TEST_USER = { user: 'demo', password: 'yield2026', name: 'Usuario d
 interface State {
   user: string | null;
   period: Period;
+  /** Columna llave para validar y hacer match (p. ej. serial). */
+  key: string;
   history: HistoryItem[];
   requests: string[];
   files: Partial<Record<FileType, LoadedFile>>;
@@ -23,6 +25,7 @@ interface State {
   logout: () => void;
   requestAccount: (user: string) => void;
   setPeriod: (p: Period) => void;
+  setKey: (k: string) => void;
   setFile: (t: FileType, f: LoadedFile) => void;
   setError: (t: FileType, msg: string) => void;
 }
@@ -36,6 +39,7 @@ export const useApp = create<State>()(
     (set, get) => ({
       user: null,
       period: 'semana',
+      key: '',
       history: [],
       requests: [],
       files: {},
@@ -48,6 +52,7 @@ export const useApp = create<State>()(
       logout: () => set({ user: null, files: {}, errors: {} }),
       requestAccount: (user) => set({ requests: [...get().requests, user.trim()] }),
       setPeriod: (period) => set({ period }),
+      setKey: (key) => set({ key }),
       setFile: (t, f) => set((s) => ({
         files: { ...s.files, [t]: f },
         errors: { ...s.errors, [t]: undefined },
@@ -56,6 +61,15 @@ export const useApp = create<State>()(
       // un archivo con error reemplaza al anterior: no comparar con datos viejos sin avisar
       setError: (t, msg) => set((s) => ({ errors: { ...s.errors, [t]: msg }, files: { ...s.files, [t]: undefined } })),
     }),
-    { name: 'yield-control', partialize: ({ user, period, history, requests }) => ({ user, period, history, requests }) },
+    { name: 'yield-control', partialize: ({ user, period, key, history, requests }) => ({ user, period, key, history, requests }) },
   ),
 );
+
+/** Archivos cargados, columnas en común y la llave vigente (la guardada si sigue en común, si no la primera). */
+export function useLoaded() {
+  const { files, key } = useApp();
+  const loaded = Object.fromEntries(FILE_TYPES.filter((t) => files[t]).map((t) => [t, files[t]!])) as Record<FileType, LoadedFile>;
+  const common = commonColumns(Object.values(loaded).map((f) => f.headers));
+  const current = common.find((c) => c.toLowerCase() === key.toLowerCase()) ?? common[0] ?? '';
+  return { loaded, count: Object.keys(loaded).length, common, key: current };
+}

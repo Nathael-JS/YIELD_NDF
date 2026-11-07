@@ -1,4 +1,4 @@
-import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { Link, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Button, PipelineNav } from '../components/ui.tsx';
 import { useApp } from '../store.ts';
 
@@ -34,3 +34,7 @@ export function PageHead({ title, sub, children }: { title: string; sub?: string
     </header>
   );
 }
+
+export const NeedFiles = ({ what }: { what: string }) => (
+  <p className="yc-card app-empty">Carga al menos dos archivos en <Link to="/carga">Carga de datos</Link> para {what}.</p>
+);

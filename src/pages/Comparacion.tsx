@@ -1,8 +1,7 @@
-import { Link } from 'react-router-dom';
 import { Badge } from '../components/ui.tsx';
 import { commonColumns } from '../lib/files.ts';
 import { FILE_TYPES, PERIOD_LABEL, useApp } from '../store.ts';
-import { PageHead } from './Layout.tsx';
+import { NeedFiles, PageHead } from './Layout.tsx';
 
 export default function Comparacion() {
   const { files, period } = useApp();
@@ -12,7 +11,7 @@ export default function Comparacion() {
     <>
       <PageHead title="Comparación" sub={`Periodo: ${PERIOD_LABEL[period]} · ${loaded.length} de 3 archivos`} />
       {loaded.length < 2 ? (
-        <p className="yc-card app-empty">Carga al menos dos archivos en <Link to="/carga">Carga de datos</Link> para compararlos.</p>
+        <NeedFiles what="compararlos" />
       ) : (
         <>
           <div className="yc-table-wrap">

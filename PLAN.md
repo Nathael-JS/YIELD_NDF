@@ -22,8 +22,8 @@ Basado en el sistema de diseño **Yield Control** (artefacto `RqMowPxsmEFcuTiJy8
 | `/` | Inicio (landing) | `PipelineNav`, `KpiTile`, `ChartCarousel`, `ParetoChart`, `BarChart`, `Histogram`, `ScatterPlot`, `FileChip` | Hecho con datos de ejemplo |
 | `/carga` | Carga de datos | `PeriodTabs`, `FileChip` (zona de carga), `Button` | Hecho |
 | `/comparacion` | Comparación | `.yc-table`, `Badge` | Inicial: resumen y columnas en común |
-| `/validacion` | Validación | — | Pendiente (fase 2) |
-| `/match` | Match | — | Pendiente (fase 2) |
+| `/validacion` | Validación | `Select` (columna llave), `.yc-table`, `Badge` | Hecho: llave presente, vacía, repetida |
+| `/match` | Match | `Select`, `KpiTile`, `.yc-table`, `Badge` | Hecho: llaves en todos / faltantes por archivo |
 | `/muestra` | Muestra (Yield del periodo) | Ver *PantallaYield* | Pendiente (fase 3) |
 | `/graficos` | Gráficos | Las 5 gráficas + `TrendChart` con meta | Hecho con datos de ejemplo |
 | `/historial` | Historial | `HistoryList` + respaldo JSON | Hecho |
@@ -31,7 +31,7 @@ Basado en el sistema de diseño **Yield Control** (artefacto `RqMowPxsmEFcuTiJy8
 ## Fases
 
 1. **Base (hecha).** Proyecto, tokens claro/oscuro, componentes portados, login con usuario de prueba, carga local de los 3 archivos, historial con respaldo.
-2. **Reglas de los archivos.** Definir con ejemplos reales las columnas de TCQS, DATA ANALYSIS y QM (serial, estación, resultado, error code, fecha). Con eso: Validación (columnas obligatorias, tipos, duplicados) y Match (cruce por serial + estación, diferencias con `Badge warn`).
+2. **Validación y Match (hecha).** Sin suponer el formato: se elige la columna llave (p. ej. serial) entre las columnas que tienen todos los archivos. Validación cuenta llaves vacías y repetidas por archivo; Match cruza las llaves (sin distinguir mayúsculas ni espacios) y lista las que faltan en algún archivo. Falta con archivos reales: confirmar la llave (¿serial solo o serial + estación?) y qué columnas son obligatorias.
 3. **Cálculos.** FPY, Final Yield, RTY por grupo, WIP, NDF y Pareto 1er/2do nivel desde los archivos. Reemplazar `src/data/demo.ts` y quitar el aviso «Datos de ejemplo». Pantalla Muestra según *PantallaYield* (metas con `targets`, tabla con diagnóstico).
 4. **Periodo.** Día / Semana / Mes filtran los datos cargados; delta de KPIs contra el periodo anterior.
 5. **Persistencia de datos.** Guardar las filas en IndexedDB para que el historial pueda reabrir una comparación (hoy solo guarda la lista).
@@ -45,5 +45,5 @@ Basado en el sistema de diseño **Yield Control** (artefacto `RqMowPxsmEFcuTiJy8
 
 ## Verificación hecha
 
-- `npm run build` (tipos + build) y `npm test` (escalas de gráficas, lector de CSV, columnas en común).
+- `npm run build` (tipos + build) y `npm test` (escalas de gráficas, lector de CSV, columnas en común, validación y match).
 - Flujo en navegador: login con error y correcto, carga de CSV válido e inválido, comparación, respaldo, recarga con sesión, salir, tema oscuro y móvil (390 px sin scroll horizontal), sin errores de consola.
