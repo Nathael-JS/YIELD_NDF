@@ -4,13 +4,17 @@ import { saveSummary } from '../lib/db.ts';
 import { daily } from '../lib/tcqs.ts';
 import { Button, PipelineNav } from '../components/ui.tsx';
 import { useApp, useData } from '../store.ts';
+import Seguridad from './Seguridad.tsx';
 
 const STEPS = ['Carga de datos', 'Validación', 'Yield'];
 export const STEP_PATHS = ['/carga', '/validacion', '/yield'];
-const EXTRA: Record<string, string> = { Inicio: '/', Gráficos: '/graficos', Historial: '/historial', Cuentas: '/cuentas' };
+const EXTRA: Record<string, string> = { Inicio: '/', Gráficos: '/graficos', Historial: '/historial', Cuentas: '/cuentas', 'Base de datos': '/base' };
+const ADMIN_ONLY = ['Cuentas', 'Base de datos'];
 
 export default function Layout() {
   const user = useApp((s) => s.user), logout = useApp((s) => s.logout), admin = useApp((s) => s.admin);
+  // contraseña temporal o administrador sin MFA: no se usa nada más hasta resolverlo
+  const blocked = useApp((s) => s.cuenta.debeCambiar || s.cuenta.mfaPendiente);
   const { pathname } = useLocation();
   const go = useNavigate();
   const { read, records } = useData();
@@ -23,16 +27,16 @@ export default function Layout() {
         current={STEP_PATHS.indexOf(pathname)}
         done={[!!read, records.length > 0]} // Carga: TCQS leído · Validación: hay filas válidas de Juliet
         active={Object.keys(EXTRA).find((k) => EXTRA[k] === pathname) ?? null}
-        extra={Object.keys(EXTRA).filter((k) => admin || k !== 'Cuentas')}
+        extra={Object.keys(EXTRA).filter((k) => admin || !ADMIN_ONLY.includes(k))}
         onSelect={(t) => go(typeof t === 'number' ? (t < 0 ? '/' : STEP_PATHS[t]) : EXTRA[t])}
       >
-        <span className="app-user" title={user}>
-          <span className="app-avatar" aria-hidden>{user.split(' ').filter((w) => w.length > 2).map((w) => w[0]).slice(0, 2).join('').toUpperCase()}</span>
+        <button type="button" className="app-user" title="Seguridad de tu cuenta" onClick={() => go('/seguridad')}>
+          <span className="app-avatar" aria-hidden>{user.split(/[\s.@]+/).filter((w) => w.length > 2).map((w) => w[0]).slice(0, 2).join('').toUpperCase()}</span>
           <span className="app-user-name">{user}</span>
-        </span>
+        </button>
         <Button variant="quiet" onClick={logout}>Salir</Button>
       </PipelineNav>
-      <main className="app-main"><Outlet /></main>
+      <main className="app-main">{blocked ? <Seguridad /> : <Outlet />}</main>
     </>
   );
 }

@@ -21,14 +21,29 @@ async function call<T>(path: string, init?: RequestInit): Promise<T> {
 
 const post = <T>(path: string, data: unknown) => call<T>(path, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(data) });
 
-export interface Sesion { nombre: string; sesion: string; admin: boolean }
-export const apiLogin = (usuario: string, clave: string) => post<Sesion>('/api/login', { usuario, clave });
+export interface Sesion { nombre: string; sesion: string; admin: boolean; principal: boolean; mfa: boolean; debeCambiar: boolean; mfaPendiente: boolean }
+/** Con MFA activo, el primer paso devuelve un ticket de 5 min para el código. */
+export const apiLogin = (usuario: string, clave: string) => post<Sesion | { paso: 'codigo'; ticket: string }>('/api/login', { usuario, clave });
+export const apiCodigo = (ticket: string, codigo: string) => post<Sesion>('/api/login/codigo', { ticket, codigo });
+export const changePassword = (actual: string, nueva: string) => post('/api/seguridad/clave', { actual, nueva });
+export const mfaStart = () => post<{ secreto: string; uri: string }>('/api/seguridad/mfa/iniciar', {});
+export const mfaConfirm = (codigo: string) => post('/api/seguridad/mfa/confirmar', { codigo });
 export const apiLogout = () => post('/api/logout', {});
 export const apiMe = () => call<Sesion>('/api/me');
 
-export interface Cuenta { id: number; usuario: string; nombre: string; activo: boolean; admin: boolean; creado: string; principal: boolean }
+export interface Cuenta { id: number; usuario: string; nombre: string; activo: boolean; admin: boolean; debe_cambiar: boolean; mfa: boolean; creado: string; principal: boolean }
 export const loadCuentas = () => call<{ usuarios: Cuenta[] }>('/api/usuarios').then((b) => b.usuarios);
-export const setCuenta = (id: number, cambio: { activo?: boolean; admin?: boolean }) => post('/api/usuarios', { id, ...cambio });
+export type AccionCuenta =
+  | { accion: 'crear'; usuario: string; nombre: string; clave: string; admin: boolean }
+  | { accion: 'editar'; id: number; nombre?: string; activo?: boolean; admin?: boolean }
+  | { accion: 'clave'; id: number; clave: string }
+  | { accion: 'mfa' | 'borrar'; id: number };
+export const cuentaAccion = (a: AccionCuenta) => post('/api/usuarios', a);
+
+export interface EstadoBase { bytes: number; tablas: { tabla: string; filas: number; bytes: number }[]; resumen: { desde: string | null; hasta: string | null; filas: number } }
+export const loadBase = () => call<EstadoBase>('/api/base');
+export const baseAccion = (a: { accion: 'borrarCarga'; id: number } | { accion: 'borrarRango'; desde: string; hasta: string } | { accion: 'retener'; dias: number }) =>
+  post<{ borradas: number }>('/api/base', a);
 
 // quién guarda y en qué sesión lo pone el servidor a partir de la cookie
 export const saveSummary = (archivo: string, filas: DbRow[]) => post<{ guardadas: number }>('/api/resumen', { archivo, filas });

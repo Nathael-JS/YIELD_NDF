@@ -8,6 +8,19 @@ Un cambio de componente se publica primero en el artefacto y después se copia a
 
 Los errores encontrados y cómo se corrigieron están en [ERRORES.md](ERRORES.md); las mejoras y cómo se hicieron, en [MEJORAS.md](MEJORAS.md).
 
+## [0.13.0] — 2026-11-09 · sistema de diseño v22
+
+### Agregado
+- **MFA (TOTP):** códigos de 6 dígitos de una app autenticadora (RFC 6238, `node:crypto`, probado con los vectores del estándar). Obligatorio para administradores; opcional para los demás. Login en dos pasos con ticket de 5 min.
+- **Seguridad** (`/seguridad`, desde el chip de usuario): cambiar contraseña (mínimo 12) y configurar MFA con QR o clave escrita. Con contraseña temporal o administrador sin MFA, la app y la API solo permiten esto.
+- **Cuentas:** crear cuentas con contraseña temporal al azar, editar nombre, activar/desactivar, restablecer contraseña, quitar MFA; el **super administrador** (cuenta principal) además da o quita el rol de administrador y borra cuentas.
+- **Base de datos** (`/base`, administradores): espacio usado y porcentaje del plan gratis de Neon, filas y espacio por tabla, exportar el resumen a CSV, historial de cargas; el super administrador borra cargas, borra un rango del resumen y aplica retención (90/180/365 días). Archivos guardados en este equipo, con opción de borrarlos.
+- **Logo:** cuadro `brand` con tres barras ascendentes; favicon y marca del menú y del login.
+- La cuenta principal creada desde `ADMIN_PASSWORD` nace con contraseña temporal: pide cambiarla y configurar MFA al primer inicio.
+
+### Cambiado
+- Login: «cuenta desactivada» en vez de «pendiente».
+
 ## [0.12.0] — 2026-11-08
 
 ### Cambiado

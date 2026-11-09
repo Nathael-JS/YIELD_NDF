@@ -5,11 +5,11 @@ import { readFile } from 'node:fs/promises';
 import { extname, join, normalize, resolve } from 'node:path';
 import pg from 'pg';
 import { randomBytes, randomUUID } from 'node:crypto';
-import { checkPassword, cookieOf, failed, hashPassword, HOURS, limited, sign, verify } from './auth.js';
+import { checkPassword, checkTotp, cookieOf, failed, hashPassword, HOURS, limited, newSecret, otpUri, sign, verify } from './auth.js';
 import { validate } from './validate.js';
 
 const DIST = resolve('dist');
-const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.woff': 'font/woff', '.json': 'application/json' };
+const TYPES = { '.ico': 'image/x-icon', '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.woff': 'font/woff', '.json': 'application/json' };
 const LIMIT = 5 * 1024 * 1024;
 
 const db = process.env.DATABASE_URL ? new pg.Pool({ connectionString: process.env.DATABASE_URL, max: 3 }) : null;
@@ -24,7 +24,11 @@ create table if not exists yield_cargas (
   desde date not null, hasta date not null, guardado_en timestamptz not null default now());
 create table if not exists usuarios (
   id serial primary key, usuario text not null unique, nombre text not null, clave text not null,
-  activo boolean not null default false, admin boolean not null default false, creado timestamptz not null default now())`)
+  activo boolean not null default false, admin boolean not null default false, creado timestamptz not null default now());
+-- debe_cambiar: contraseña temporal (creada por un administrador o desde Render); mfa: secreto TOTP confirmado; mfa_nuevo: en configuración
+alter table usuarios add column if not exists debe_cambiar boolean not null default false;
+alter table usuarios add column if not exists mfa text;
+alter table usuarios add column if not exists mfa_nuevo text`)
   // cuenta principal (super administrador) desde el entorno: ADMIN_USER (y ADMIN_PASSWORD si hay que crearla)
   .then(async () => {
     // si la cuenta ya existe (creada desde «Crear cuenta») se activa como administradora y conserva su contraseña
@@ -34,8 +38,9 @@ create table if not exists usuarios (
     const { rowCount } = await db.query('update usuarios set activo = true, admin = true where usuario = $1', [PRINCIPAL]);
     if (rowCount) return console.log(`Cuenta principal: ${PRINCIPAL} activada como administradora (con su propia contraseña)`);
     if (!process.env.ADMIN_PASSWORD) return console.log(`Cuenta principal: ${PRINCIPAL} no existe; créala desde «Crear cuenta» o pon ADMIN_PASSWORD`);
-    await db.query(`insert into usuarios (usuario, nombre, clave, activo, admin) values ($1, $1, $2, true, true)`, [PRINCIPAL, await hashPassword(process.env.ADMIN_PASSWORD)]);
-    console.log(`Cuenta principal: ${PRINCIPAL} creada con la contraseña de ADMIN_PASSWORD`);
+    // la contraseña de Render es temporal: se pide cambiarla (y configurar el MFA) al primer inicio
+    await db.query(`insert into usuarios (usuario, nombre, clave, activo, admin, debe_cambiar) values ($1, $1, $2, true, true, true)`, [PRINCIPAL, await hashPassword(process.env.ADMIN_PASSWORD)]);
+    console.log(`Cuenta principal: ${PRINCIPAL} creada; pedirá cambiar la contraseña y configurar el MFA`);
   });
 // sin esto, una base que no responde al arrancar tumba el servidor; así sigue en pie y /api/salud lo explica
 ready?.catch((e) => console.error('No se pudo preparar la base:', e.message));
@@ -61,42 +66,139 @@ const NOPE = 'Usuario o contraseña incorrectos'; // nunca decir cuál de los do
 async function current(req) {
   const s = verify(cookieOf(req, 'yc_sesion'), SECRET);
   if (!s) return null;
-  const { rows: [u] } = await db.query('select activo, admin from usuarios where id = $1', [s.uid]);
-  return u?.activo ? { ...s, admin: u.admin } : null;
+  const { rows: [u] } = await db.query('select usuario, activo, admin, debe_cambiar, mfa from usuarios where id = $1', [s.uid]);
+  if (!u?.activo) return null;
+  // mientras falte cambiar la contraseña temporal o (si administra) configurar el MFA, solo puede usar /api/seguridad
+  const debeCambiar = u.debe_cambiar, mfaPendiente = u.admin && !u.mfa;
+  return { ...s, usuario: u.usuario, admin: u.admin, principal: u.usuario === PRINCIPAL, mfa: !!u.mfa, debeCambiar, mfaPendiente, limitado: debeCambiar || mfaPendiente };
 }
 
+const me = (s) => ({ nombre: s.nombre, sesion: s.sid, admin: s.admin, principal: s.principal, mfa: s.mfa, debeCambiar: s.debeCambiar, mfaPendiente: s.mfaPendiente });
+const strong = (c) => typeof c === 'string' && c.length >= 12 && c.length <= 200;
+const WEAK = 'La contraseña debe tener al menos 12 caracteres';
+
+async function security(req, res, s, path) {
+  const b = await body(req);
+  if (path === '/api/seguridad/clave') {
+    const { rows: [u] } = await db.query('select clave from usuarios where id = $1', [s.uid]);
+    if (!(await checkPassword(String(b.actual ?? ''), u.clave))) return json(res, 400, { error: 'La contraseña actual no es correcta' });
+    if (!strong(b.nueva)) return json(res, 400, { error: WEAK });
+    if (b.nueva === b.actual) return json(res, 400, { error: 'La nueva contraseña debe ser distinta' });
+    await db.query('update usuarios set clave = $2, debe_cambiar = false where id = $1', [s.uid, await hashPassword(b.nueva)]);
+    return json(res, 200, {});
+  }
+  if (path === '/api/seguridad/mfa/iniciar') {
+    const secreto = newSecret();
+    await db.query('update usuarios set mfa_nuevo = $2 where id = $1', [s.uid, secreto]);
+    return json(res, 200, { secreto, uri: otpUri(s.usuario, secreto) });
+  }
+  if (path === '/api/seguridad/mfa/confirmar') {
+    const { rows: [u] } = await db.query('select mfa_nuevo from usuarios where id = $1', [s.uid]);
+    if (!u.mfa_nuevo || !checkTotp(u.mfa_nuevo, b.codigo)) return json(res, 400, { error: 'Código incorrecto. Revisa la hora del teléfono y usa el código actual.' });
+    await db.query('update usuarios set mfa = mfa_nuevo, mfa_nuevo = null where id = $1', [s.uid]);
+    return json(res, 200, {});
+  }
+  return json(res, 404, { error: 'No encontrado' });
+}
+
+// Administración de cuentas. Los administradores gestionan usuarios; solo la cuenta principal (super administrador)
+// da o quita el rol de administrador, borra cuentas y toca a otros administradores.
 async function accounts(req, res, me) {
   if (!me.admin) return json(res, 403, { error: 'Solo para administradores' });
   if (req.method === 'GET') {
-    const { rows } = await db.query('select id, usuario, nombre, activo, admin, creado, usuario = $1 as principal from usuarios order by activo, creado desc', [PRINCIPAL]);
+    const { rows } = await db.query(`select id, usuario, nombre, activo, admin, debe_cambiar, mfa is not null as mfa, creado, usuario = $1 as principal
+      from usuarios order by usuario = $1 desc, activo, creado desc`, [PRINCIPAL]);
     return json(res, 200, { usuarios: rows });
   }
-  const b = await body(req), id = Number(b.id);
-  if (!Number.isInteger(id) || (typeof b.activo !== 'boolean' && typeof b.admin !== 'boolean')) return json(res, 400, { error: 'Se esperaba { id, activo? , admin? }' });
+  const b = await body(req);
+  if (b.accion === 'crear') {
+    const usuario = String(b.usuario ?? '').trim().toLowerCase(), nombre = String(b.nombre ?? '').trim().slice(0, 80) || usuario;
+    if (!/^[a-z0-9._@-]{3,80}$/.test(usuario)) return json(res, 400, { error: 'Usuario de 3 a 80 caracteres: letras, números, punto, guion o @' });
+    if (!strong(b.clave)) return json(res, 400, { error: WEAK });
+    if (b.admin && !me.principal) return json(res, 403, { error: 'Solo el super administrador crea administradores' });
+    const r = await db.query(`insert into usuarios (usuario, nombre, clave, activo, admin, debe_cambiar) values ($1, $2, $3, true, $4, true) on conflict (usuario) do nothing`,
+      [usuario, nombre, await hashPassword(b.clave), !!b.admin]);
+    return r.rowCount ? json(res, 201, {}) : json(res, 400, { error: 'Ese usuario ya existe' });
+  }
+  const id = Number(b.id);
+  if (!Number.isInteger(id)) return json(res, 400, { error: 'Falta la cuenta' });
   // nadie se quita a sí mismo el acceso ni el rol: evita quedarse sin administradores
-  if (id === me.uid) return json(res, 400, { error: 'No puedes cambiar tu propia cuenta' });
-  const { rows: [t] } = await db.query('select usuario from usuarios where id = $1', [id]);
-  if (t && t.usuario === PRINCIPAL) return json(res, 403, { error: 'La cuenta principal solo se cambia desde Render (ADMIN_USER)' });
-  const { rowCount } = await db.query('update usuarios set activo = coalesce($2, activo), admin = coalesce($3, admin) where id = $1', [id, b.activo ?? null, b.admin ?? null]);
-  return rowCount ? json(res, 200, {}) : json(res, 404, { error: 'Cuenta no encontrada' });
+  if (id === me.uid) return json(res, 400, { error: 'Tu propia cuenta se cambia en Seguridad' });
+  const { rows: [t] } = await db.query('select usuario, admin from usuarios where id = $1', [id]);
+  if (!t) return json(res, 404, { error: 'Cuenta no encontrada' });
+  if (t.usuario === PRINCIPAL) return json(res, 403, { error: 'La cuenta principal solo se cambia desde Render (ADMIN_USER)' });
+  if ((t.admin || b.admin !== undefined || b.accion === 'borrar') && !me.principal) return json(res, 403, { error: 'Solo el super administrador gestiona administradores y borra cuentas' });
+  if (b.accion === 'editar') {
+    if (b.nombre !== undefined && !String(b.nombre).trim()) return json(res, 400, { error: 'El nombre no puede quedar vacío' });
+    await db.query('update usuarios set nombre = coalesce($2, nombre), activo = coalesce($3, activo), admin = coalesce($4, admin) where id = $1',
+      [id, b.nombre === undefined ? null : String(b.nombre).trim().slice(0, 80), typeof b.activo === 'boolean' ? b.activo : null, typeof b.admin === 'boolean' ? b.admin : null]);
+  } else if (b.accion === 'clave') {
+    if (!strong(b.clave)) return json(res, 400, { error: WEAK });
+    await db.query('update usuarios set clave = $2, debe_cambiar = true where id = $1', [id, await hashPassword(b.clave)]);
+  } else if (b.accion === 'mfa') {
+    await db.query('update usuarios set mfa = null, mfa_nuevo = null where id = $1', [id]);
+  } else if (b.accion === 'borrar') {
+    await db.query('delete from usuarios where id = $1', [id]);
+  } else return json(res, 400, { error: 'Acción desconocida' });
+  return json(res, 200, {});
+}
+
+/** Estado y limpieza de la base (solo administradores; borrar, solo el super administrador). */
+async function database(req, res, me) {
+  if (!me.admin) return json(res, 403, { error: 'Solo para administradores' });
+  if (req.method === 'GET') {
+    const [{ rows: [g] }, { rows: tablas }, { rows: [r] }] = await Promise.all([
+      db.query('select pg_database_size(current_database())::bigint as bytes'),
+      // conteo exacto (n_live_tup de pg_stat se actualiza con retraso); son tablas chicas
+      db.query(`select t as tabla, (xpath('/row/c/text()', query_to_xml('select count(*) as c from ' || t, false, true, '')))[1]::text::int as filas,
+        pg_total_relation_size(t::regclass)::bigint as bytes from unnest(array['yield_resumen', 'yield_cargas', 'usuarios']) as t`),
+      db.query(`select to_char(min(fecha), 'YYYY-MM-DD') desde, to_char(max(fecha), 'YYYY-MM-DD') hasta, count(*)::int filas from yield_resumen`),
+    ]);
+    return json(res, 200, { bytes: Number(g.bytes), tablas: tablas.map((t) => ({ ...t, bytes: Number(t.bytes) })), resumen: r });
+  }
+  if (!me.principal) return json(res, 403, { error: 'Solo el super administrador borra datos' });
+  const b = await body(req);
+  if (b.accion === 'borrarCarga' && Number.isInteger(b.id)) {
+    const r = await db.query('delete from yield_cargas where id = $1', [b.id]);
+    return json(res, 200, { borradas: r.rowCount });
+  }
+  if (b.accion === 'borrarRango' && DAY.test(b.desde) && DAY.test(b.hasta)) {
+    const r = await db.query('delete from yield_resumen where fecha between $1 and $2', [b.desde, b.hasta]);
+    return json(res, 200, { borradas: r.rowCount });
+  }
+  if (b.accion === 'retener' && Number.isInteger(b.dias) && b.dias >= 30) {
+    const r = await db.query(`delete from yield_cargas where guardado_en < now() - make_interval(days => $1)`, [b.dias]);
+    return json(res, 200, { borradas: r.rowCount });
+  }
+  return json(res, 400, { error: 'Acción o datos inválidos (la retención mínima es de 30 días)' });
 }
 
 async function account(req, res, path) {
   if (path === '/api/logout') { res.setHeader('set-cookie', cookie('', 0)); return json(res, 200, {}); }
   if (path === '/api/me') {
     const s = await current(req);
-    return s ? json(res, 200, { nombre: s.nombre, sesion: s.sid, admin: s.admin }) : json(res, 401, { error: 'Sesión vencida' });
+    return s ? json(res, 200, me(s)) : json(res, 401, { error: 'Sesión vencida' });
   }
-  const b = await body(req), usuario = String(b.usuario ?? '').trim().toLowerCase(), clave = String(b.clave ?? '');
-  // login
+  const b = await body(req);
   const ip = req.headers['x-forwarded-for']?.split(',')[0].trim() || req.socket.remoteAddress;
   if (limited(ip)) return json(res, 429, { error: 'Demasiados intentos. Espera 15 minutos.' });
-  const { rows: [u] } = await db.query('select id, nombre, clave, activo, admin from usuarios where usuario = $1', [usuario]);
-  if (!u || !(await checkPassword(clave, u.clave))) { failed(ip); return json(res, 401, { error: NOPE }); }
-  if (!u.activo) return json(res, 403, { error: 'Tu cuenta está pendiente: el encargado debe activarla.' });
-  const sid = randomUUID();
-  res.setHeader('set-cookie', cookie(sign({ uid: u.id, nombre: u.nombre, sid }, SECRET), HOURS * 3600));
-  return json(res, 200, { nombre: u.nombre, sesion: sid, admin: u.admin });
+  let u;
+  if (path === '/api/login/codigo') {
+    // segundo paso: el ticket prueba que la contraseña ya fue correcta hace menos de 5 min
+    const t = verify(b.ticket, SECRET);
+    ({ rows: [u] } = t?.paso === 'mfa' ? await db.query('select id, nombre, activo, mfa from usuarios where id = $1', [t.uid]) : { rows: [] });
+    if (!u?.activo || !u.mfa) return json(res, 401, { error: 'Vuelve a iniciar sesión' });
+    if (!checkTotp(u.mfa, b.codigo)) { failed(ip); return json(res, 401, { error: 'Código incorrecto' }); }
+  } else {
+    ({ rows: [u] } = await db.query('select id, nombre, clave, activo, mfa from usuarios where usuario = $1', [String(b.usuario ?? '').trim().toLowerCase()]));
+    if (!u || !(await checkPassword(String(b.clave ?? ''), u.clave))) { failed(ip); return json(res, 401, { error: NOPE }); }
+    if (!u.activo) return json(res, 403, { error: 'Tu cuenta está desactivada. Habla con el administrador.' });
+    if (u.mfa) return json(res, 200, { paso: 'codigo', ticket: sign({ uid: u.id, paso: 'mfa' }, SECRET, Date.now(), 5 * 60e3) });
+  }
+  const token = sign({ uid: u.id, nombre: u.nombre, sid: randomUUID() }, SECRET);
+  res.setHeader('set-cookie', cookie(token, HOURS * 3600));
+  const s = await current({ headers: { cookie: `yc_sesion=${token}` } });
+  return json(res, 200, me(s));
 }
 
 /** Diagnóstico sin secretos: ¿hay base y cómo está la cuenta principal? (abrir /api/salud en el navegador) */
@@ -119,13 +221,16 @@ async function api(req, res) {
   const url = new URL(req.url, 'http://x');
   // un POST de otro sitio no puede mandar JSON sin permiso del navegador: junto con SameSite=Strict, frena CSRF
   if (req.method === 'POST' && !req.headers['content-type']?.startsWith('application/json')) return json(res, 415, { error: 'Se esperaba JSON' });
-  if (['/api/login', '/api/logout', '/api/me'].includes(url.pathname)) {
+  if (['/api/login', '/api/login/codigo', '/api/logout', '/api/me'].includes(url.pathname)) {
     if (url.pathname !== '/api/me' && req.method !== 'POST') return json(res, 405, { error: 'Método no permitido' });
     return account(req, res, url.pathname);
   }
   const s = await current(req);
   if (!s) return json(res, 401, { error: 'Inicia sesión' });
+  if (url.pathname.startsWith('/api/seguridad/')) return req.method === 'POST' ? security(req, res, s, url.pathname) : json(res, 405, { error: 'Método no permitido' });
+  if (s.limitado) return json(res, 403, { error: 'Completa la seguridad de tu cuenta', seguridad: true });
   if (url.pathname === '/api/usuarios') return accounts(req, res, s);
+  if (url.pathname === '/api/base') return database(req, res, s);
   if (req.method === 'GET' && url.pathname === '/api/cargas') {
     const { rows } = await db.query(`select id, sesion, usuario, archivo, filas, entradas, primer_pase, primera_falla, segundo_pase,
       to_char(desde, 'YYYY-MM-DD') desde, to_char(hasta, 'YYYY-MM-DD') hasta, guardado_en from yield_cargas order by guardado_en desc limit 200`);

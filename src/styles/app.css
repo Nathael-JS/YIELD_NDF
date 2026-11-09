@@ -24,7 +24,7 @@ button.yc-nav-mark { border: 0; background: none; padding: 0; color: var(--ink);
 
 /* Login a pantalla completa; usuario en el menú */
 .app-login .yc-login { min-height: 100vh; }
-.app-user { display: inline-flex; align-items: center; gap: var(--space-2); margin-left: var(--space-3); padding-left: var(--space-4); border-left: 1px solid var(--line); font-size: 12px; color: var(--ink-muted); white-space: nowrap; }
+.app-user { border: 0; background: none; cursor: pointer; font: inherit; display: inline-flex; align-items: center; gap: var(--space-2); margin-left: var(--space-3); padding-left: var(--space-4); border-left: 1px solid var(--line); font-size: 12px; color: var(--ink-muted); white-space: nowrap; }
 .app-avatar { display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: var(--radius-pill); background: var(--brand-tint); color: var(--brand); font: 600 11px/1 var(--font-mono); }
 @media (max-width: 640px) { .app-user-name { display: none; } .app-user { margin-left: 0; padding-left: var(--space-2); } }
 
@@ -69,4 +69,18 @@ button.yc-nav-mark { border: 0; background: none; padding: 0; color: var(--ink);
 
 
 /* Cuentas: acciones por fila */
-.app-actions { display: flex; gap: var(--space-1); }
+.app-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1); }
+
+/* Seguridad, Cuentas, Base de datos */
+.app-sec { display: grid; gap: var(--space-3); }
+.app-sec .app-muted { max-width: 70ch; }
+.app-form { display: grid; gap: var(--space-3); max-width: 360px; }
+.app-form-row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--space-3); max-width: none; }
+.app-form-row .app-h3 { flex-basis: 100%; }
+.app-check { display: inline-flex; align-items: center; gap: var(--space-2); height: 36px; font-size: 13px; }
+.app-mfa { display: flex; flex-wrap: wrap; gap: var(--space-6); align-items: flex-start; }
+.app-mfa img { border: 1px solid var(--line); border-radius: var(--radius-md); background: #fff; }
+.app-secret { font-size: 15px; letter-spacing: 1px; user-select: all; }
+.app-msg { overflow-wrap: anywhere; }
+.app-sec > .yc-btn { justify-self: start; }
+.yc-table .app-actions { min-width: 300px; }

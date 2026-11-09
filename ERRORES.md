@@ -68,14 +68,24 @@ Cada entrada dice qué pasaba, cómo se detectó, la causa, la corrección y con
 | E28 | El botón Entrar podía no hacer nada sin mostrar error | Si el servidor respondía HTML con 200 (sitio estático), la respuesta se tomaba como éxito vacío | Se exige respuesta JSON; si no, mensaje claro | Playwright con respuesta HTML simulada |
 | E29 | Con la base inaccesible al arrancar, el servidor se caía | Promesa rechazada sin manejar en Node 22 | Se registra el error y el servidor sigue; `/api/salud` lo explica | Servidor con contraseña de base errónea |
 
+## 0.13.0
+
+| # | Qué pasaba | Causa | Corrección | Comprobación |
+| --- | --- | --- | --- | --- |
+| E30 | Las acciones de Cuentas rompían las filas de la tabla | `display: flex` puesto en la celda (`td`) | El flex va en un `div` dentro de la celda | Captura |
+| E31 | «Cargas registradas» mostraba 0 con cargas guardadas | `n_live_tup` de Postgres se actualiza con retraso | Conteo exacto por tabla | Consulta directa |
+
 ## Abiertos
+
+- **Un código MFA se puede reusar dentro de sus 30 s** (no se guarda el último usado). Riesgo bajo: también hace falta la contraseña.
+- **Cambiar la contraseña no cierra las otras sesiones** (desactivar la cuenta sí).
+- **`ADMIN_PASSWORD` en Render** ya no se usa cuando la cuenta principal existe: borrarla después del primer inicio.
 
 - **El límite de intentos** vive en la memoria del servidor: se reinicia al reiniciar y no se comparte si hubiera varias instancias.
 - **Cerrar sesión** borra la cookie del navegador, pero una cookie copiada sigue valiendo hasta que vence (12 h), salvo que se desactive la cuenta (desde 0.11.0 corta el acceso al instante).
 
 - **Lo abierto desde Neon no trae testers** (se guarda día × modelo × estación): faltan el Pareto 2do nivel y el histograma por tester (5 gráficas en vez de 6).
 
-- **La API de Neon no tiene autenticación:** cualquiera con la dirección puede escribir resumen. Solo acepta conteos validados y hace upsert (no borra). Hay que agregar cuentas reales antes de compartir la dirección.
 - **Plan gratis de Render:** el servicio se duerme y el primer acceso tarda cerca de un minuto.
 
 - La regla MA = SA podría confundir dos partes distintas que compartan número. Confirmar con el BOM si aparece un caso.
