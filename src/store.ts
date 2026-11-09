@@ -4,7 +4,7 @@ import { persist } from 'zustand/middleware';
 import type { Period, Tone } from './components/ui.tsx';
 import { useMemo } from 'react';
 import type { ParsedFile } from './lib/files.ts';
-import { apiLogout, apiMe, setOnExpired } from './lib/db.ts';
+import { apiLogout, apiMe, setOnExpired, type Sesion } from './lib/db.ts';
 import { dropAll, dropFile, loadFiles, saveFile } from './lib/saved.ts';
 import { modelKey, modelsFrom, readTcqs } from './lib/tcqs.ts';
 
@@ -26,9 +26,10 @@ interface State {
   files: Partial<Record<FileType, LoadedFile>>;
   errors: Partial<Record<FileType, string>>;
   /** Con la respuesta del servidor (POST /api/login). */
-  login: (nombre: string, sesion: string, admin: boolean) => void;
-  /** Solo decide qué se muestra; los permisos los revisa el servidor en cada llamada. */
+  login: (s: Sesion) => void;
+  /** Solo deciden qué se muestra; los permisos los revisa el servidor en cada llamada. */
   admin: boolean;
+  cuenta: Pick<Sesion, 'principal' | 'mfa' | 'debeCambiar' | 'mfaPendiente'>;
   logout: () => void;
   setPeriod: (p: Period) => void;
   setFile: (t: FileType, f: LoadedFile) => void;
@@ -38,6 +39,8 @@ interface State {
 
 export const shortDate = (d: Date) =>
   d.toLocaleString('es-MX', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false }).replace('.', '');
+
+const NADA = { principal: false, mfa: false, debeCambiar: false, mfaPendiente: false };
 
 export const useApp = create<State>()(
   persist(
@@ -50,9 +53,10 @@ export const useApp = create<State>()(
       files: {},
       errors: {},
       admin: false,
-      login: (user, session, admin) => set({ user, session, admin, db: null }),
+      cuenta: NADA,
+      login: (s) => set({ user: s.nombre, session: s.sesion, admin: s.admin, cuenta: s, db: null }),
       // al salir se borran también los archivos guardados: el equipo puede ser compartido
-      logout: () => { apiLogout().catch(() => {}); dropAll().catch(() => {}); set({ user: null, admin: false, files: {}, errors: {}, savedKey: '' }); },
+      logout: () => { apiLogout().catch(() => {}); dropAll().catch(() => {}); set({ user: null, admin: false, cuenta: NADA, files: {}, errors: {}, savedKey: '' }); },
       setPeriod: (period) => set({ period }),
       setFile: (t, f) => { saveFile(t, f).catch(() => {}); set((s) => ({
         files: { ...s.files, [t]: f },
@@ -62,13 +66,13 @@ export const useApp = create<State>()(
       setDb: (db, savedKey) => set((s) => ({ db, savedKey: savedKey ?? s.savedKey })),
       setError: (t, msg) => { dropFile(t).catch(() => {}); set((s) => ({ errors: { ...s.errors, [t]: msg }, files: { ...s.files, [t]: undefined } })); },
     }),
-    { name: 'yield-control', partialize: ({ user, admin, period, session, savedKey }) => ({ user, admin, period, session, savedKey }) },
+    { name: 'yield-control', partialize: ({ user, admin, cuenta, period, session, savedKey }) => ({ user, admin, cuenta, period, session, savedKey }) },
   ),
 );
 
 // La sesión de verdad la tiene el servidor: si venció (o la cookie no está), se vuelve al login.
 setOnExpired(() => { if (useApp.getState().user) useApp.getState().logout(); });
-if (useApp.getState().user) apiMe().then((s) => useApp.setState({ user: s.nombre, session: s.sesion, admin: s.admin })).catch(() => {});
+if (useApp.getState().user) apiMe().then((s) => useApp.getState().login(s)).catch(() => {});
 
 // Recupera los archivos guardados al abrir la app (sin pisar uno que se haya cargado mientras tanto).
 // Fallar aquí solo significa volver a cargarlos.

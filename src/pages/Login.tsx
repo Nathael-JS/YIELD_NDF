@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { Badge, FileChip, KpiTile, LoginPanel } from '../components/ui.tsx';
 import { META_FPY } from '../lib/tcqs.ts';
-import { apiLogin } from '../lib/db.ts';
+import { apiCodigo, apiLogin } from '../lib/db.ts';
 import { useApp } from '../store.ts';
 
 // Ilustración del login: barras que crecen y siguen moviéndose como si llegaran datos, la línea de FPY que las
@@ -49,28 +49,36 @@ export const DEMO = { user: 'demo', password: 'yield2026', name: 'Usuario de pru
 export default function Login() {
   const user = useApp((s) => s.user), login = useApp((s) => s.login);
   const [error, setError] = useState<string>();
+  const [ticket, setTicket] = useState<string>(); // segundo paso: código de la app autenticadora
   if (user) return <Navigate to="/" replace />;
   return (
     <div className="app-login">
       <LoginPanel
+        key={ticket ? 'codigo' : 'login'}
+        defaultMode={ticket ? 'code' : 'login'}
         backdrop={<LoginArt />}
         signup={false}
         error={error}
-        onSubmit={async (_mode, data) => {
+        onSubmit={async (mode, data) => {
           const u = String(data.get('user') ?? '').trim().toLowerCase(), p = String(data.get('password') ?? '');
           setError(undefined);
           try {
-            const s = await apiLogin(u, p);
-            login(s.nombre, s.sesion, s.admin);
+            const s = mode === 'code' ? await apiCodigo(ticket!, String(data.get('code') ?? '')) : await apiLogin(u, p);
+            if ('paso' in s) return setTicket(s.ticket);
+            login(s);
           } catch (e) {
             const status = (e as { status?: number }).status;
+            if (mode === 'code' && status === 401 && String((e as Error).message).startsWith('Vuelve')) setTicket(undefined);
             // sin servidor (sitio estático, sin base o sin conexión) la cuenta de prueba entra en modo local, sin Neon
-            if ((status === 0 || status === 503) && u === DEMO.user && p === DEMO.password) return login(DEMO.name, 'local', false);
+            if (mode !== 'code' && (status === 0 || status === 503) && u === DEMO.user && p === DEMO.password)
+              return login({ nombre: DEMO.name, sesion: 'local', admin: false, principal: false, mfa: false, debeCambiar: false, mfaPendiente: false });
             setError(e instanceof Error ? e.message : 'No se pudo conectar con el servidor');
           }
         }}
       >
-        <p className="yc-login-hint"><Badge tone="neutral">Prueba</Badge> Usuario <span className="app-mono">{DEMO.user}</span> · contraseña <span className="app-mono">{DEMO.password}</span></p>
+        {ticket
+          ? <button type="button" className="yc-link" onClick={() => { setTicket(undefined); setError(undefined); }}>Volver a usuario y contraseña</button>
+          : <p className="yc-login-hint"><Badge tone="neutral">Prueba</Badge> Usuario <span className="app-mono">{DEMO.user}</span> · contraseña <span className="app-mono">{DEMO.password}</span></p>}
       </LoginPanel>
     </div>
   );

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { checkPassword, failed, hashPassword, limited, sign, verify } from './auth.js';
+import { checkPassword, checkTotp, failed, hashPassword, limited, newSecret, sign, totp, verify } from './auth.js';
 
 test('contraseñas: hash con sal distinta y verificación', async () => {
   const a = await hashPassword('clave-larga-1'), b = await hashPassword('clave-larga-1');
@@ -27,4 +27,20 @@ test('límite de intentos por dirección', () => {
   assert.equal(limited('1.2.3.4', 2000), true);
   assert.equal(limited('1.2.3.4', 1000 + 16 * 60e3), false);
   assert.equal(limited('5.6.7.8', 2000), false);
+});
+
+test('TOTP: vector del RFC 6238 y ventana de ±30 s', () => {
+  const rfc = 'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ'; // "12345678901234567890" en base32
+  assert.equal(totp(rfc, 59e3), '287082');
+  assert.equal(totp(rfc, 1111111109e3), '081804');
+  assert.equal(checkTotp(rfc, '287082', 59e3 + 30e3), true);
+  assert.equal(checkTotp(rfc, '287082', 59e3 + 90e3), false);
+  assert.equal(checkTotp(rfc, '28708', 59e3), false);
+  assert.match(newSecret(), /^[A-Z2-7]{32}$/);
+});
+
+test('ticket corto del segundo paso vence a los 5 min', () => {
+  const t = sign({ uid: 1, paso: 'mfa' }, 's', 0, 5 * 60e3);
+  assert.equal(verify(t, 's', 4 * 60e3).paso, 'mfa');
+  assert.equal(verify(t, 's', 6 * 60e3), null);
 });
