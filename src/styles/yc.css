@@ -25,6 +25,7 @@ body { margin: 0; background: var(--surface-100); color: var(--ink); font: 400 1
 .yc-badge-warn { background: var(--warn-bg); color: var(--warn-fg); }
 .yc-badge-bad { background: var(--bad-bg); color: var(--bad-fg); }
 .yc-badge-info { background: var(--info-bg); color: var(--info-fg); }
+.yc-badge.has-hint { cursor: help; text-decoration: underline dotted; text-underline-offset: 3px; }
 .yc-badge-neutral { background: var(--surface-200); color: var(--ink-muted); }
 
 /* PipelineNav */

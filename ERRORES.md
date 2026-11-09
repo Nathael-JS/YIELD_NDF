@@ -75,7 +75,16 @@ Cada entrada dice qué pasaba, cómo se detectó, la causa, la corrección y con
 | E30 | Las acciones de Cuentas rompían las filas de la tabla | `display: flex` puesto en la celda (`td`) | El flex va en un `div` dentro de la celda | Captura |
 | E31 | «Cargas registradas» mostraba 0 con cargas guardadas | `n_live_tup` de Postgres se actualiza con retraso | Conteo exacto por tabla | Consulta directa |
 
+## 0.15.0
+
+| # | Qué pasaba | Causa | Corrección | Comprobación |
+| --- | --- | --- | --- | --- |
+| E32 | La imagen descargada dejaba un hueco abajo | Filtrar botones y formulario no quitaba su espacio | Se ocultan con una clase mientras se toma la imagen | PNG revisado |
+| E33 | 56 avisos de CSP al crear la imagen | `base-uri 'none'` bloqueaba el documento temporal de `html-to-image` | `base-uri 'self'` | Consola sin errores |
+
 ## Abiertos
+
+- **Comentarios:** no se editan ni se borran desde la app (sí desde la base).
 
 - **Etiquetas inclinadas muy largas en muy poco ancho:** la primera puede salirse por la izquierda de la tarjeta. En el celular no pasa porque la gráfica de estaciones usa barras acostadas; si otra gráfica lo necesita, dar más margen izquierdo.
 

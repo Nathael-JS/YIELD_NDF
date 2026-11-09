@@ -12,8 +12,9 @@ export function Button({ variant = 'secondary', className, ...rest }: ButtonProp
 }
 
 export type Tone = 'ok' | 'warn' | 'bad' | 'info' | 'neutral';
-export function Badge({ tone = 'neutral', children }: { tone?: Tone; children: ReactNode }) {
-  return <span className={`yc-badge yc-badge-${tone}`}>{children}</span>;
+/** `title`: explicación al pasar el mouse (se subraya punteado para que se note que hay más). */
+export function Badge({ tone = 'neutral', title, children }: { tone?: Tone; title?: string; children: ReactNode }) {
+  return <span className={cx(`yc-badge yc-badge-${tone}`, title && 'has-hint')} title={title}>{children}</span>;
 }
 
 export interface SelectOption { value: string; label: string }

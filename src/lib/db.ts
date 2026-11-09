@@ -44,6 +44,10 @@ export interface Modelos { modelos: string[]; archivo: string | null; usuario: s
 export const loadModelos = () => call<Modelos>('/api/modelos');
 export const saveModelos = (archivo: string, modelos: string[]) => post<{ guardados: number }>('/api/modelos', { archivo, modelos });
 
+export interface Comentario { id: number; usuario: string; texto: string; creado: string }
+export const loadComentarios = (grafica: string) => call<{ comentarios: Comentario[] }>(`/api/comentarios?grafica=${encodeURIComponent(grafica)}`).then((b) => b.comentarios);
+export const saveComentario = (grafica: string, texto: string) => post<Comentario>('/api/comentarios', { grafica, texto });
+
 export interface EstadoBase { bytes: number; tablas: { tabla: string; filas: number; bytes: number }[]; resumen: { desde: string | null; hasta: string | null; filas: number } }
 export const loadBase = () => call<EstadoBase>('/api/base');
 export const baseAccion = (a: { accion: 'borrarCarga'; id: number } | { accion: 'borrarRango'; desde: string; hasta: string } | { accion: 'retener'; dias: number }) =>

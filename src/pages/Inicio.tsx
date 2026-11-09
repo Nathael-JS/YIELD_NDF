@@ -25,6 +25,8 @@ export default function Inicio() {
     </>
   );
   const t = totals(records);
+  // órdenes distintas (MO_NUMBER) detrás de esas entradas; lo abierto desde la base no las trae
+  const orders = new Set(records.map((r) => r.mo).filter(Boolean)).size;
   const st = by(records, (r) => r.group).filter((s) => s.input > 0);
   const watch = toWatch(st);
   return (
@@ -32,7 +34,7 @@ export default function Inicio() {
       <section className="app-hero">
         <span className="app-eyebrow">Proyecto Juliet · {shortDay(from!)} – {shortDay(to!)}</span>
         <h1>FPY de <span className="app-hero-num">{pctText(t.fpy)}%</span> en {n(t.input)} entradas</h1>
-        <p>Final Yield {pctText(t.final)} %: {pctText(t.retest)} % se recupera en retest. {watch.length ? `${watch.length === 1 ? 'Una estación pide' : `${watch.length} estaciones piden`} atención.` : 'Todas las estaciones con muestra suficiente están en meta.'}</p>
+        <p>Final Yield {pctText(t.final)} %: {pctText(t.retest)} % se recupera en retest. {watch.length ? `${watch.length === 1 ? 'Una estación pide' : `${watch.length} estaciones piden`} atención.` : 'Todas las estaciones con datos suficientes están en meta.'}</p>
         <div className="yc-row">
           <Button variant="primary" onClick={() => go('/yield')}>Ver yield por estación</Button>
           <Button onClick={() => go('/carga')}>Cargar otro TCQS</Button>
@@ -41,7 +43,7 @@ export default function Inicio() {
       </section>
 
       <div className="yc-grid-kpi">
-        <KpiTile label="Entradas" value={n(t.input)} />
+        <KpiTile label={orders ? 'Entradas / órdenes' : 'Entradas'} value={n(t.input)} unit={orders ? ` / ${n(orders)} órdenes` : undefined} />
         <KpiTile label="FPY" value={pctText(t.fpy)} unit="%" />
         <KpiTile label="Final Yield" value={pctText(t.final)} unit="%" />
         <KpiTile label="RTY" value={pctText(rty(st))} unit="%" />

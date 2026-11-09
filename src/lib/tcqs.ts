@@ -89,9 +89,11 @@ export const pctText = (n: number) => (Number.isFinite(n) ? n.toFixed(1) : '—'
 export const rty = (stations: Totals[]) => stations.filter((s) => s.input > 0).reduce((p, s) => (p * s.fpy) / 100, 1) * 100;
 
 export type Tone = 'ok' | 'warn' | 'bad' | 'neutral';
+/** Explicación al pasar el mouse sobre un diagnóstico. */
+export const DX_HINT: Record<string, string> = { 'Datos insuficientes': `Los datos tomados del archivo Excel no son suficientes para un muestreo completo (menos de ${MIN_SAMPLE} entradas).` };
 export function diagnose(t: Totals): [string, Tone] {
   if (!t.input) return ['Sin dato', 'neutral'];
-  if (t.input < MIN_SAMPLE) return ['Muestra insuficiente', 'neutral'];
+  if (t.input < MIN_SAMPLE) return ['Datos insuficientes', 'neutral'];
   if (t.fpy >= META_FPY) return ['OK', 'ok'];
   if (t.final >= META_FPY) return ['Posible falsa falla', 'warn']; // se recupera en retest sin reparar: revisar fixture/tester
   return ['Crítico', 'bad'];

@@ -31,7 +31,11 @@ alter table usuarios add column if not exists mfa text;
 alter table usuarios add column if not exists mfa_nuevo text;
 -- modelos del proyecto (Juliet), sacados del Excel del BOM: filtran el TCQS de todos sin volver a cargar el Excel
 create table if not exists yield_modelos (
-  modelo text primary key, archivo text not null, usuario text not null, guardado_en timestamptz not null default now())`)
+  modelo text primary key, archivo text not null, usuario text not null, guardado_en timestamptz not null default now());
+-- comentarios de una gráfica ampliada (Gráficos); grafica = qué gráfica y con qué rango de fechas
+create table if not exists yield_comentarios (
+  id serial primary key, grafica text not null, usuario text not null, texto text not null, creado timestamptz not null default now());
+create index if not exists yield_comentarios_grafica on yield_comentarios (grafica)`)
   // cuenta principal (super administrador) desde el entorno: ADMIN_USER (y ADMIN_PASSWORD si hay que crearla)
   .then(async () => {
     // si la cuenta ya existe (creada desde «Crear cuenta») se activa como administradora y conserva su contraseña
@@ -154,7 +158,7 @@ async function database(req, res, me) {
       db.query('select pg_database_size(current_database())::bigint as bytes'),
       // conteo exacto (n_live_tup de pg_stat se actualiza con retraso); son tablas chicas
       db.query(`select t as tabla, (xpath('/row/c/text()', query_to_xml('select count(*) as c from ' || t, false, true, '')))[1]::text::int as filas,
-        pg_total_relation_size(t::regclass)::bigint as bytes from unnest(array['yield_resumen', 'yield_cargas', 'yield_modelos', 'usuarios']) as t`),
+        pg_total_relation_size(t::regclass)::bigint as bytes from unnest(array['yield_resumen', 'yield_cargas', 'yield_modelos', 'yield_comentarios', 'usuarios']) as t`),
       db.query(`select to_char(min(fecha), 'YYYY-MM-DD') desde, to_char(max(fecha), 'YYYY-MM-DD') hasta, count(*)::int filas from yield_resumen`),
     ]);
     return json(res, 200, { bytes: Number(g.bytes), tablas: tablas.map((t) => ({ ...t, bytes: Number(t.bytes) })), resumen: r });
@@ -197,6 +201,20 @@ async function models(req, res, me) {
     await c.query('commit');
   } catch (e) { await c.query('rollback'); throw e; } finally { c.release(); }
   return json(res, 200, { guardados: new Set(list).size });
+}
+
+/** Comentarios de una gráfica: todos leen y escriben; cada uno firma con su usuario (lo pone el servidor). */
+async function comments(req, res, me, url) {
+  if (req.method === 'GET') {
+    const g = url.searchParams.get('grafica') ?? '';
+    if (!g || g.length > 200) return json(res, 400, { error: 'Falta la gráfica' });
+    const { rows } = await db.query('select id, usuario, texto, creado from yield_comentarios where grafica = $1 order by creado desc limit 100', [g]);
+    return json(res, 200, { comentarios: rows });
+  }
+  const b = await body(req), texto = typeof b.texto === 'string' ? b.texto.trim() : '';
+  if (typeof b.grafica !== 'string' || !b.grafica || b.grafica.length > 200 || !texto || texto.length > 2000) return json(res, 400, { error: 'Comentario vacío o demasiado largo (máx. 2000)' });
+  const { rows: [c] } = await db.query('insert into yield_comentarios (grafica, usuario, texto) values ($1, $2, $3) returning id, usuario, texto, creado', [b.grafica, me.usuario, texto]);
+  return json(res, 200, c);
 }
 
 async function account(req, res, path) {
@@ -258,6 +276,7 @@ async function api(req, res) {
   if (url.pathname === '/api/usuarios') return accounts(req, res, s);
   if (url.pathname === '/api/base') return database(req, res, s);
   if (url.pathname === '/api/modelos') return models(req, res, s);
+  if (url.pathname === '/api/comentarios') return comments(req, res, s, url);
   if (req.method === 'GET' && url.pathname === '/api/cargas') {
     const { rows } = await db.query(`select id, sesion, usuario, archivo, filas, entradas, primer_pase, primera_falla, segundo_pase,
       to_char(desde, 'YYYY-MM-DD') desde, to_char(hasta, 'YYYY-MM-DD') hasta, guardado_en from yield_cargas order by guardado_en desc limit 200`);
@@ -305,7 +324,7 @@ async function api(req, res) {
 
 // la página solo carga lo suyo, no se puede incrustar en otro sitio y no filtra la dirección al salir
 const HEADERS = {
-  'content-security-policy': "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' blob: data:; worker-src 'self' blob:; frame-ancestors 'none'; base-uri 'none'; form-action 'self'",
+  'content-security-policy': "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' blob: data:; worker-src 'self' blob:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
   'x-content-type-options': 'nosniff', 'referrer-policy': 'no-referrer', 'x-frame-options': 'DENY',
   ...(SECURE ? { 'strict-transport-security': 'max-age=31536000' } : {}),
 };

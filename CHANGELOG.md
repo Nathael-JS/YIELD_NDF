@@ -8,6 +8,17 @@ Un cambio de componente se publica primero en el artefacto y después se copia a
 
 Los errores encontrados y cómo se corrigieron están en [ERRORES.md](ERRORES.md); las mejoras y cómo se hicieron, en [MEJORAS.md](MEJORAS.md).
 
+## [0.15.0] — 2026-11-09
+
+### Agregado
+- **Gráficos · Ampliar:** cada gráfica abre en pantalla dividida: la gráfica grande (fija al bajar), la tabla con los datos que dibuja (Pareto con % y % acumulado, estaciones, periodos, testers) y **comentarios** guardados en la base (tabla `yield_comentarios`, por gráfica y rango de fechas, firmados por el servidor). Se cierra con Esc o «Cerrar».
+- **Descargar imagen (PNG):** el mismo panel —gráfica, resumen y comentarios, con el diseño y las fuentes— a doble resolución, sin botones ni formulario. `html-to-image`, cargado solo al descargar.
+- **Inicio:** «Entradas / órdenes»: entradas y órdenes distintas (MO_NUMBER, sin repetir) del archivo. Lo abierto desde la base no trae órdenes y muestra solo entradas.
+
+### Cambiado
+- «Muestra insuficiente» → **«Datos insuficientes»**, subrayado punteado; al pasar el mouse explica que los datos del archivo no bastan para un muestreo completo (menos de 10 entradas). `Badge` acepta `title`.
+- CSP: `base-uri 'self'` (antes `'none'`), necesario para incrustar las fuentes en la imagen.
+
 ## [0.14.0] — 2026-11-09 · sistema de diseño v24
 
 ### Agregado
