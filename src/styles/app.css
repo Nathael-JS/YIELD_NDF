@@ -1,5 +1,5 @@
 /* Maquetación de páginas; los componentes usan yc.css (sistema de diseño). */
-.app-main { max-width: 1120px; margin: 0 auto; padding: var(--space-8) var(--space-6) var(--space-12); display: grid; gap: var(--space-6); }
+.app-main { max-width: 1600px; margin: 0 auto; padding: var(--space-8) var(--space-6) var(--space-12); display: grid; gap: var(--space-6); }
 .app-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: var(--space-4); }
 .app-head h1 { margin: 0; font-size: 28px; line-height: 34px; font-weight: 600; letter-spacing: -.3px; }
 .app-head p { margin: var(--space-1) 0 0; max-width: 60ch; color: var(--ink-muted); }
@@ -84,3 +84,9 @@ button.yc-nav-mark { border: 0; background: none; padding: 0; color: var(--ink);
 .app-msg { overflow-wrap: anywhere; }
 .app-sec > .yc-btn { justify-self: start; }
 .yc-table .app-actions { min-width: 300px; }
+
+/* Gráfica de estaciones: apaisada en pantallas anchas, acostada en el celular (slides.tsx) */
+@media (max-width: 760px) { .app-wide { display: none; } }
+@media (min-width: 761px) { .app-narrow { display: none; } }
+.app-view { display: grid; gap: var(--space-6); }
+.app-view[hidden] { display: none; }

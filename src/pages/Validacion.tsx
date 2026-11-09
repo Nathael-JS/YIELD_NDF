@@ -36,7 +36,7 @@ export default function Validacion() {
       <PageHead title="Validación" sub="Qué filas del TCQS se pueden usar y qué modelos son del proyecto Juliet.">
         <Button variant="primary" disabled={!records.length} onClick={() => go('/yield')}>Ver yield</Button>
       </PageHead>
-      {db && <p className="app-muted" role="status"><Badge tone={db[0]}>Neon</Badge> {db[1]}</p>}
+      {db && <p className="app-muted" role="status"><Badge tone={db[0]}>Base</Badge> {db[1]}</p>}
       <div className="yc-grid-kpi">
         <KpiTile label="Filas del TCQS" value={n(all.length + read.bad.length)} />
         <KpiTile label="Modelos en el BOM" value={models ? n(models.size) : '—'} />
@@ -48,7 +48,7 @@ export default function Validacion() {
           {checks.map(([tone, title, text]) => (
             <li key={title}><Badge tone={tone}>{CHECK[tone]}</Badge><div><strong>{title}</strong><p className="app-muted">{text}</p></div></li>
           ))}
-          {!models && <li><Badge tone="info">Sin filtro</Badge><div><strong>Sin Excel de modelos</strong><p className="app-muted">Carga el BOM del proyecto para quedarte solo con Juliet. Mientras tanto se usan todos los modelos.</p></div></li>}
+          {!models && <li><Badge tone="info">Sin filtro</Badge><div><strong>Sin Excel de modelos</strong><p className="app-muted">Un administrador sube el Excel del BOM en Base de datos para quedarte solo con Juliet. Mientras tanto se usan todos los modelos.</p></div></li>}
         </ul>
       </section>
       <div className="yc-table-wrap">

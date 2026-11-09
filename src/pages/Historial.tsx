@@ -15,7 +15,7 @@ export default function Historial() {
   const go = useNavigate();
   const [cargas, setCargas] = useState<Carga[]>();
   const [msg, setMsg] = useState<string>();
-  useEffect(() => { loadCargas().then(setCargas).catch((e) => setMsg(`No se pudo leer Neon: ${e.message}`)); }, []);
+  useEffect(() => { loadCargas().then(setCargas).catch((e) => setMsg(`No se pudo leer la base: ${e.message}`)); }, []);
 
   // lo leído de Neon entra como si fuera un TCQS: todas las pantallas lo leen igual
   const open = async (desde?: string, hasta?: string, label = 'todo el histórico') => {
@@ -23,10 +23,10 @@ export default function Historial() {
     try {
       const rows = await loadSummary(desde, hasta);
       if (!rows.length) return setMsg('No hay datos guardados para ese rango.');
-      setFile('TCQS', { ...fromDb(rows), name: `Neon · ${label}`, loadedAt: shortDate(new Date()) });
+      setFile('TCQS', { ...fromDb(rows), name: `Base · ${label}`, loadedAt: shortDate(new Date()) });
       go('/yield');
     } catch (e) {
-      setMsg(`No se pudo leer Neon: ${e instanceof Error ? e.message : e}`);
+      setMsg(`No se pudo leer la base: ${e instanceof Error ? e.message : e}`);
     }
   };
 
@@ -34,10 +34,10 @@ export default function Historial() {
   for (const c of cargas ?? []) (sessions.get(c.sesion) ?? sessions.set(c.sesion, []).get(c.sesion)!).push(c);
   return (
     <>
-      <PageHead title="Historial" sub="Todo lo cargado y guardado en Neon, por sesión. Cada carga se abre en Yield con su rango de fechas.">
+      <PageHead title="Historial" sub="Todo lo cargado y guardado en la base, por sesión. Cada carga se abre en Yield con su rango de fechas.">
         <Button variant="primary" onClick={() => open()} disabled={!cargas?.length}>Ver todo el histórico</Button>
       </PageHead>
-      {msg && <p className="app-muted" role="status"><Badge tone="info">Neon</Badge> {msg}</p>}
+      {msg && <p className="app-muted" role="status"><Badge tone="info">Base</Badge> {msg}</p>}
       {cargas && !cargas.length && <p className="yc-card app-empty">Todavía no hay cargas guardadas. Se guardan solas al cargar el TCQS y el Excel de modelos.</p>}
       {[...sessions].map(([id, list]) => (
         <HistoryList<Row>

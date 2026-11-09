@@ -8,6 +8,19 @@ Un cambio de componente se publica primero en el artefacto y después se copia a
 
 Los errores encontrados y cómo se corrigieron están en [ERRORES.md](ERRORES.md); las mejoras y cómo se hicieron, en [MEJORAS.md](MEJORAS.md).
 
+## [0.14.0] — 2026-11-09 · sistema de diseño v24
+
+### Agregado
+- **Modelos de Juliet en la base** (tabla `yield_modelos`): un administrador sube el Excel del BOM una vez en **Base de datos** y la lista filtra el TCQS de todos. Ya no se carga en cada sesión; Carga solo pide el TCQS.
+- **Reporte HTML con todos los modelos:** lista «Modelo» arriba; cada modelo trae sus KPIs, carrusel y tabla del mismo periodo. Abre con el modelo que se veía en pantalla.
+
+### Cambiado
+- **FPY y Final Yield por estación apaisada:** columnas a lo ancho en pantallas anchas; en el celular (≤ 760 px) barras acostadas con el nombre completo. Las páginas usan hasta 1600 px.
+- Nombres largos del eje X (estaciones, testers) se inclinan en vez de saltarse (barras y Pareto).
+- Los textos de la app dicen «la base» en vez de «Neon»: funciona con cualquier PostgreSQL.
+- Menú en el celular: los enlaces no se parten en dos líneas.
+- Sistema de diseño (v23–v24): BarChart y ParetoChart con etiquetas inclinadas, README de BarChart con el patrón apaisada/acostada, vista previa de la Pantalla de Yield responsiva y menú sin cortes. Vistas previas revisadas en el navegador a 1200 y 390 px.
+
 ## [0.13.0] — 2026-11-09 · sistema de diseño v22
 
 ### Agregado
