@@ -8,6 +8,15 @@ Un cambio de componente se publica primero en el artefacto y después se copia a
 
 Los errores encontrados y cómo se corrigieron están en [ERRORES.md](ERRORES.md); las mejoras y cómo se hicieron, en [MEJORAS.md](MEJORAS.md).
 
+## [0.15.1] — 2026-11-10 · sistema de diseño v25
+
+### Corregido
+- **Órdenes en «Entradas»:** también en **Yield** (y en el HTML y el PDF), no solo en Inicio.
+- **Órdenes desde la base:** lo abierto desde Historial mostraba solo entradas porque la base no guardaba órdenes. Ahora `yield_resumen.ordenes` guarda las órdenes de cada día × modelo × estación y se cuentan sin repetir (`countOrders`). Las cargas guardadas antes de esta versión no las traen: vuelve a cargar el TCQS una vez para completarlas.
+
+### Sistema de diseño
+- `Badge` con `title` (explicación al pasar el mouse, subrayado punteado), en código, tipos, README y vista previa.
+
 ## [0.15.0] — 2026-11-09
 
 ### Agregado
