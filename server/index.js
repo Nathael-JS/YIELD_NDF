@@ -26,6 +26,8 @@ create table if not exists usuarios (
   id serial primary key, usuario text not null unique, nombre text not null, clave text not null,
   activo boolean not null default false, admin boolean not null default false, creado timestamptz not null default now());
 -- debe_cambiar: contraseña temporal (creada por un administrador o desde Render); mfa: secreto TOTP confirmado; mfa_nuevo: en configuración
+-- órdenes (MO_NUMBER) de cada día × modelo × estación, separadas por coma: para contar órdenes distintas
+alter table yield_resumen add column if not exists ordenes text;
 alter table usuarios add column if not exists debe_cambiar boolean not null default false;
 alter table usuarios add column if not exists mfa text;
 alter table usuarios add column if not exists mfa_nuevo text;
@@ -287,7 +289,7 @@ async function api(req, res) {
     // ?desde=&hasta= opcionales (las de una carga del historial)
     const desde = url.searchParams.get('desde') ?? '0001-01-01', hasta = url.searchParams.get('hasta') ?? '9999-12-31';
     if (!DAY.test(desde) || !DAY.test(hasta)) return json(res, 400, { error: 'Fechas inválidas' });
-    const { rows } = await db.query(`select to_char(fecha, 'YYYY-MM-DD') fecha, modelo, estacion, entradas, primer_pase, primera_falla, segundo_pase
+    const { rows } = await db.query(`select to_char(fecha, 'YYYY-MM-DD') fecha, modelo, estacion, entradas, primer_pase, primera_falla, segundo_pase, coalesce(ordenes, '') ordenes
       from yield_resumen where fecha between $1 and $2 order by fecha, modelo, estacion`, [desde, hasta]);
     return json(res, 200, { filas: rows });
   }
@@ -301,11 +303,11 @@ async function api(req, res) {
     try {
     await c.query('begin');
     // la carga más reciente de un mismo día × modelo × estación reemplaza a la anterior
-    const r = await c.query(`insert into yield_resumen (fecha, modelo, estacion, entradas, primer_pase, primera_falla, segundo_pase, archivo)
-      select f, m, e, i, p, ff, sp, $8 from unnest($1::date[], $2::text[], $3::text[], $4::int[], $5::int[], $6::int[], $7::int[]) as t(f, m, e, i, p, ff, sp)
+    const r = await c.query(`insert into yield_resumen (fecha, modelo, estacion, entradas, primer_pase, primera_falla, segundo_pase, ordenes, archivo)
+      select f, m, e, i, p, ff, sp, o, $9 from unnest($1::date[], $2::text[], $3::text[], $4::int[], $5::int[], $6::int[], $7::int[], $8::text[]) as t(f, m, e, i, p, ff, sp, o)
       on conflict (fecha, modelo, estacion) do update set entradas = excluded.entradas, primer_pase = excluded.primer_pase,
-        primera_falla = excluded.primera_falla, segundo_pase = excluded.segundo_pase, archivo = excluded.archivo, guardado_en = now()`,
-      [col('fecha'), col('modelo'), col('estacion'), col('entradas'), col('primer_pase'), col('primera_falla'), col('segundo_pase'), v.archivo]);
+        primera_falla = excluded.primera_falla, segundo_pase = excluded.segundo_pase, ordenes = excluded.ordenes, archivo = excluded.archivo, guardado_en = now()`,
+      [col('fecha'), col('modelo'), col('estacion'), col('entradas'), col('primer_pase'), col('primera_falla'), col('segundo_pase'), v.filas.map((f) => f.ordenes ?? null), v.archivo]);
     // registro de la carga para el historial por sesión
     await c.query(`insert into yield_cargas (sesion, usuario, archivo, filas, entradas, primer_pase, primera_falla, segundo_pase, desde, hasta)
       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,

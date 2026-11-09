@@ -1,6 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { Badge, Button, ChartCarousel, KpiTile } from '../components/ui.tsx';
-import { ACTION, by, pctText, rty, shortDay, toWatch, totals } from '../lib/tcqs.ts';
+import { ACTION, by, countOrders, pctText, rty, shortDay, toWatch, totals } from '../lib/tcqs.ts';
 import { useData } from '../store.ts';
 import { PageHead } from './Layout.tsx';
 import { slides } from './slides.tsx';
@@ -25,8 +25,8 @@ export default function Inicio() {
     </>
   );
   const t = totals(records);
-  // órdenes distintas (MO_NUMBER) detrás de esas entradas; lo abierto desde la base no las trae
-  const orders = new Set(records.map((r) => r.mo).filter(Boolean)).size;
+  // órdenes distintas (MO_NUMBER); de la base salen solo si se guardaron desde 0.15.1
+  const orders = countOrders(records);
   const st = by(records, (r) => r.group).filter((s) => s.input > 0);
   const watch = toWatch(st);
   return (

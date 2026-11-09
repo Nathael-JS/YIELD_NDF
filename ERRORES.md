@@ -82,6 +82,13 @@ Cada entrada dice qué pasaba, cómo se detectó, la causa, la corrección y con
 | E32 | La imagen descargada dejaba un hueco abajo | Filtrar botones y formulario no quitaba su espacio | Se ocultan con una clase mientras se toma la imagen | PNG revisado |
 | E33 | 56 avisos de CSP al crear la imagen | `base-uri 'none'` bloqueaba el documento temporal de `html-to-image` | `base-uri 'self'` | Consola sin errores |
 
+## 0.15.1
+
+| # | Qué pasaba | Causa | Corrección | Comprobación |
+| --- | --- | --- | --- | --- |
+| E34 | «Entradas» no mostraba las órdenes en Yield | Solo se cambió Inicio | También en Yield (HTML y PDF salen de ahí) | Playwright |
+| E35 | Tampoco en Inicio con datos abiertos desde la base | La base no guardaba MO_NUMBER | Columna `ordenes` en `yield_resumen` | Prueba de ida y vuelta + Playwright (755 / 11 desde archivo y desde la base) |
+
 ## Abiertos
 
 - **Comentarios:** no se editan ni se borran desde la app (sí desde la base).

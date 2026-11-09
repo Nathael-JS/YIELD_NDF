@@ -136,22 +136,27 @@ export function toWatch<T extends Totals>(stations: T[]) {
 }
 
 /** Fila de la tabla yield_resumen en Neon: conteos por día × modelo × estación (los % se calculan al leer). */
-export interface DbRow { fecha: string; modelo: string; estacion: string; entradas: number; primer_pase: number; primera_falla: number; segundo_pase: number }
+/** `ordenes`: MO_NUMBER del grupo separados por coma (las filas viejas no lo traen). */
+export interface DbRow { fecha: string; modelo: string; estacion: string; entradas: number; primer_pase: number; primera_falla: number; segundo_pase: number; ordenes?: string }
 
 export function daily(rs: Rec[]): DbRow[] {
   const m = new Map<string, DbRow>();
   for (const r of rs) {
     const k = `${r.date}|${r.model}|${r.group}`;
-    const d = m.get(k) ?? m.set(k, { fecha: r.date, modelo: r.model, estacion: r.group, entradas: 0, primer_pase: 0, primera_falla: 0, segundo_pase: 0 }).get(k)!;
+    const d = m.get(k) ?? m.set(k, { fecha: r.date, modelo: r.model, estacion: r.group, entradas: 0, primer_pase: 0, primera_falla: 0, segundo_pase: 0, ordenes: '' }).get(k)!;
     d.entradas += r.input; d.primer_pase += r.fp; d.primera_falla += r.ff; d.segundo_pase += r.sp;
+    if (r.mo && !d.ordenes!.split(',').includes(r.mo)) d.ordenes = d.ordenes ? `${d.ordenes},${r.mo}` : r.mo;
   }
   return [...m.values()];
 }
 
 /** El histórico de Neon con forma de TCQS, para que todas las pantallas lo lean igual. */
+/** Órdenes distintas detrás de las filas (lo leído de la base trae varias por fila, separadas por coma). */
+export const countOrders = (rs: Rec[]) => new Set(rs.flatMap((r) => r.mo.split(',')).filter(Boolean)).size;
+
 export function fromDb(rows: DbRow[]): ParsedFile {
   return {
     headers: [...REQUIRED],
-    rows: rows.map((r) => [r.fecha, r.modelo, '', r.estacion, '', r.entradas, r.primer_pase, r.primera_falla, r.segundo_pase]),
+    rows: rows.map((r) => [r.fecha, r.modelo, r.ordenes ?? '', r.estacion, '', r.entradas, r.primer_pase, r.primera_falla, r.segundo_pase]),
   };
 }
