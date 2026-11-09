@@ -48,8 +48,8 @@ function YGrid({ r, label, w }: { r: Range; label?: string; w: number }) {
     </>
   );
 }
-const XLabel = ({ text, w }: { text?: string; w: number }) =>
-  text ? <text className="yc-chart-label" x={w - CR} y={CH - 4} textAnchor="end">{text}</text> : null;
+const XLabel = ({ text, w, h = CH }: { text?: string; w: number; h?: number }) =>
+  text ? <text className="yc-chart-label" x={w - CR} y={h - 4} textAnchor="end">{text}</text> : null;
 
 /** shape: 0 círculo, 1 cuadrado, 2 triángulo. */
 function Mark({ shape, x, y, cls, title }: { shape: number; x: number; y: number; cls: string; title?: string }) {
@@ -101,10 +101,11 @@ export function ParetoChart({ data, title = 'Pareto', level = 1, subtitle }: {
   const m = useSvgWidth();
   const sorted = [...data].sort((a, b) => b.value - a.value);
   const total = sorted.reduce((s, d) => s + d.value, 0) || 1;
-  const W = m.w, H = 280, L = 40, R = 44, T = 12, B = 36, iw = W - L - R, ih = H - T - B;
-  // como en BarChart: cada cuántas etiquetas cabe una, según la más larga (mono 11px ≈ 7px por letra)
+  // como en BarChart: si los nombres no caben derechos se inclinan (mono 11px ≈ 7px por letra)
   const lw = Math.max(48, 7 * Math.max(0, ...sorted.map((d) => d.label.length)) + 12);
-  const max = sorted[0]?.value || 1, bw = iw / Math.max(sorted.length, 1), every = Math.max(1, Math.ceil(lw / bw));
+  const bw0 = (m.w - 84) / Math.max(sorted.length, 1), tilt = lw > bw0, extra = tilt ? Math.ceil((lw - 12) * 0.64) - 18 : 0;
+  const W = m.w, H = 280 + extra, L = 40, R = 44, T = 12, B = 36 + extra, iw = W - L - R, ih = H - T - B;
+  const max = sorted[0]?.value || 1, bw = iw / Math.max(sorted.length, 1), every = tilt ? Math.max(1, Math.ceil(14 / bw)) : 1;
   let cum = 0;
   const pts = sorted.map((d, i) => { cum += d.value; return [L + i * bw + bw / 2, T + ih - (cum / total) * ih] as const; });
   const y80 = T + ih * 0.2;
@@ -126,7 +127,9 @@ export function ParetoChart({ data, title = 'Pareto', level = 1, subtitle }: {
               <rect className={`yc-pareto-bar${i === 0 ? ' is-top' : ''}`} x={x + bw * 0.15} y={T + ih - bh} width={bw * 0.7} height={bh} rx={2}>
                 <title>{`${d.label}: ${d.value} (${Math.round((d.value / total) * 100)}%)`}</title>
               </rect>
-              {i % every === 0 && <text className="yc-pareto-x" x={x + bw / 2} y={H - B + 18} textAnchor="middle">{d.label}</text>}
+              {i % every === 0 && (tilt
+                ? <text className="yc-pareto-x" x={x + bw / 2} y={H - B + 14} textAnchor="end" transform={`rotate(-40 ${x + bw / 2} ${H - B + 14})`}>{d.label}</text>
+                : <text className="yc-pareto-x" x={x + bw / 2} y={H - B + 18} textAnchor="middle">{d.label}</text>)}
             </g>
           );
         })}
@@ -152,7 +155,9 @@ function BarsAndLines({ kind, categories: cats, series = [], lines = [], targets
   const all = [0, ...series.flatMap((s) => s.values), ...lines.flatMap((s) => s.values), ...targets.map((t) => t.value)];
   // cada cuántas etiquetas del eje X cabe una, según la más larga (mono 11px ≈ 7px por letra)
   const lw = Math.max(56, 7 * Math.max(0, ...cats.map((c) => c.length)) + 12);
-  const r = niceRange(0, Math.max(...all)), g = CIW / Math.max(cats.length, 1), bw = (g * 0.7) / ns, every = Math.max(1, Math.ceil(lw / g));
+  const r = niceRange(0, Math.max(...all)), g = CIW / Math.max(cats.length, 1), bw = (g * 0.7) / ns;
+  // si los nombres no caben derechos se inclinan (todos visibles); solo con muchísimas categorías se salta alguno
+  const tilt = lw > g, every = tilt ? Math.max(1, Math.ceil(14 / g)) : 1, extra = tilt ? Math.ceil((lw - 12) * 0.64) - 18 : 0;
   const xc = (i: number) => CL + i * g + g / 2;
   const both = [...series, ...lines];
   const aria = `${p.title || kind}: ` + cats.map((c, i) => `${c} ${both.map((s) => `${s.name} ${fmt(s.values[i] || 0)}`).join(', ')}`).join('; ');
@@ -162,7 +167,7 @@ function BarsAndLines({ kind, categories: cats, series = [], lines = [], targets
     ...targets.map((t) => ({ name: t.label || fmt(t.value), kind: 'target' as const })),
   ];
   return (
-    <ChartFrame p={p} legend={<Legend items={legend} />} aria={aria} m={m}>
+    <ChartFrame p={p} legend={<Legend items={legend} />} aria={aria} m={m} h={CH + extra}>
       <YGrid r={r} label={p.yLabel} w={CW} />
       {cats.map((c, i) => (
         <g key={c}>
@@ -174,7 +179,9 @@ function BarsAndLines({ kind, categories: cats, series = [], lines = [], targets
               </rect>
             );
           })}
-          {i % every === 0 && <text className="yc-chart-x" x={xc(i)} y={CT + CIH + 18} textAnchor="middle">{c}</text>}
+          {i % every === 0 && (tilt
+            ? <text className="yc-chart-x" x={xc(i)} y={CT + CIH + 14} textAnchor="end" transform={`rotate(-40 ${xc(i)} ${CT + CIH + 14})`}>{c}</text>
+            : <text className="yc-chart-x" x={xc(i)} y={CT + CIH + 18} textAnchor="middle">{c}</text>)}
         </g>
       ))}
       {targets.map((t, k) => {
@@ -194,7 +201,7 @@ function BarsAndLines({ kind, categories: cats, series = [], lines = [], targets
           </g>
         );
       })}
-      <XLabel text={p.xLabel} w={CW} />
+      <XLabel text={p.xLabel} w={CW} h={CH + extra} />
     </ChartFrame>
   );
 }

@@ -56,6 +56,32 @@ npm run dev
 
 `npm run dev` reenvía `/api` al servidor del puerto 3000.
 
+## PostgreSQL sin depender de Neon
+
+El servidor usa `pg` con una sola variable, `DATABASE_URL`: sirve cualquier PostgreSQL 13 o más nuevo (Neon, Render Postgres, Supabase, AWS RDS o uno propio). Las tablas se crean solas al arrancar.
+
+1. Crear la base y un usuario solo para la app (no el dueño del servidor):
+
+```sql
+create user yield_app with password 'una-clave-larga';
+create database yield owner yield_app;
+```
+
+2. Poner en Render `DATABASE_URL=postgres://yield_app:…@host:5432/yield` (con `?sslmode=require` si la base está fuera de Render).
+3. Pasar los datos desde Neon (una vez):
+
+```bash
+pg_dump --no-owner --no-acl "$NEON_URL" | psql "$NUEVA_URL"
+```
+
+4. Respaldo diario (cron del servidor o un Cron Job de Render):
+
+```bash
+pg_dump -Fc "$DATABASE_URL" -f yield-$(date +%F).dump
+```
+
+Restaurar: `pg_restore --clean --no-owner -d "$DATABASE_URL" yield-AAAA-MM-DD.dump`.
+
 ## Documentos
 
 - Plan de trabajo y fórmulas: [PLAN.md](PLAN.md)

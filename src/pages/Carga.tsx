@@ -2,14 +2,12 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button, FileChip } from '../components/ui.tsx';
 import { parseFile } from '../lib/files.ts';
-import { modelsFrom } from '../lib/tcqs.ts';
 import { shortDate, useApp, type FileType } from '../store.ts';
 import { PageHead } from './Layout.tsx';
 
 const plural = (n: number, w: string) => `${n.toLocaleString('es-MX')} ${w}${n === 1 ? '' : 's'}`;
 const SLOTS: { type: FileType; label: string; accept: string; hint: string }[] = [
   { type: 'TCQS', label: 'TCQS', accept: '.csv,.xlsx', hint: 'Yield por orden, modelo y estación (.csv o .xlsx)' },
-  { type: 'MODELOS', label: 'MODELOS · JULIET', accept: '.xlsx', hint: 'Excel del build con el BOM: define qué modelos son del proyecto' },
 ];
 
 function Slot({ type, label, accept, hint }: (typeof SLOTS)[number]) {
@@ -27,7 +25,7 @@ function Slot({ type, label, accept, hint }: (typeof SLOTS)[number]) {
       setBusy(false);
     }
   }
-  const detail = f && (type === 'MODELOS' ? plural(modelsFrom(f).length, 'modelo') : plural(f.rows.length, 'fila'));
+  const detail = f && plural(f.rows.length, 'fila');
   return (
     <FileChip type={label} accept={accept} onFile={load}
       status={err ? 'error' : busy ? 'comparing' : f ? 'loaded' : 'empty'}
@@ -36,17 +34,19 @@ function Slot({ type, label, accept, hint }: (typeof SLOTS)[number]) {
 }
 
 export default function Carga() {
-  const files = useApp((s) => s.files);
+  const files = useApp((s) => s.files), modelos = useApp((s) => s.modelos);
   const go = useNavigate();
   return (
     <>
-      <PageHead title="Carga de datos" sub="Los archivos se leen en este equipo. Con el TCQS y el BOM cargados, el resumen por día × modelo × estación se guarda solo en Neon." />
+      <PageHead title="Carga de datos" sub="El TCQS se lee en este equipo. Con la lista de modelos de Juliet, el resumen por día × modelo × estación se guarda solo en la base." />
       <section className="app-files app-files-lg" aria-label="Archivos">
         {SLOTS.map((s) => <Slot key={s.type} {...s} />)}
+        <FileChip type="MODELOS · JULIET" status={modelos ? 'loaded' : 'empty'}
+          meta={modelos ? `En la base · ${plural(modelos.modelos.length, 'modelo')} · ${modelos.archivo}` : 'Sin lista en la base: un administrador sube el BOM en Base de datos'} />
       </section>
       <div className="yc-row">
         <Button variant="primary" disabled={!files.TCQS} onClick={() => go('/validacion')}>Validar datos</Button>
-        <span className="app-muted">{files.TCQS ? (files.MODELOS ? 'Listo para validar.' : 'Sin el Excel de modelos se usan todos los modelos del TCQS.') : 'Carga el TCQS para continuar.'}</span>
+        <span className="app-muted">{files.TCQS ? (modelos ? 'Listo para validar.' : 'Sin lista de modelos se usan todos los modelos del TCQS.') : 'Carga el TCQS para continuar.'}</span>
       </div>
       <section aria-label="Pendientes">
         <h2 className="app-h3">Pendientes</h2>

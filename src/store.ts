@@ -4,12 +4,12 @@ import { persist } from 'zustand/middleware';
 import type { Period, Tone } from './components/ui.tsx';
 import { useMemo } from 'react';
 import type { ParsedFile } from './lib/files.ts';
-import { apiLogout, apiMe, setOnExpired, type Sesion } from './lib/db.ts';
+import { apiLogout, apiMe, loadModelos, setOnExpired, type Modelos, type Sesion } from './lib/db.ts';
 import { dropAll, dropFile, loadFiles, saveFile } from './lib/saved.ts';
-import { modelKey, modelsFrom, readTcqs } from './lib/tcqs.ts';
+import { modelKey, readTcqs } from './lib/tcqs.ts';
 
-// MODELOS = Excel del proyecto (BOM) con los números de modelo válidos. DATA ANALYSIS y QM: pendientes.
-export const FILE_TYPES = ['TCQS', 'MODELOS'] as const;
+// Los modelos de Juliet (BOM) viven en la base (`modelos`); DATA ANALYSIS y QM: pendientes.
+export const FILE_TYPES = ['TCQS'] as const;
 export type FileType = (typeof FILE_TYPES)[number];
 
 export interface LoadedFile extends ParsedFile { name: string; loadedAt: string }
@@ -25,6 +25,9 @@ interface State {
   db: [Tone, string] | null;
   files: Partial<Record<FileType, LoadedFile>>;
   errors: Partial<Record<FileType, string>>;
+  /** Modelos del proyecto guardados en la base; null = sin lista (se usan todos los modelos del TCQS). */
+  modelos: Modelos | null;
+  reloadModelos: () => Promise<void>;
   /** Con la respuesta del servidor (POST /api/login). */
   login: (s: Sesion) => void;
   /** Solo deciden qué se muestra; los permisos los revisa el servidor en cada llamada. */
@@ -54,9 +57,11 @@ export const useApp = create<State>()(
       errors: {},
       admin: false,
       cuenta: NADA,
-      login: (s) => set({ user: s.nombre, session: s.sesion, admin: s.admin, cuenta: s, db: null }),
+      modelos: null,
+      reloadModelos: () => loadModelos().then((m) => { set({ modelos: m.modelos.length ? m : null }); }),
+      login: (s) => { set({ user: s.nombre, session: s.sesion, admin: s.admin, cuenta: s, db: null }); useApp.getState().reloadModelos().catch(() => {}); },
       // al salir se borran también los archivos guardados: el equipo puede ser compartido
-      logout: () => { apiLogout().catch(() => {}); dropAll().catch(() => {}); set({ user: null, admin: false, cuenta: NADA, files: {}, errors: {}, savedKey: '' }); },
+      logout: () => { apiLogout().catch(() => {}); dropAll().catch(() => {}); set({ user: null, admin: false, cuenta: NADA, files: {}, errors: {}, savedKey: '', modelos: null }); },
       setPeriod: (period) => set({ period }),
       setFile: (t, f) => { saveFile(t, f).catch(() => {}); set((s) => ({
         files: { ...s.files, [t]: f },
@@ -78,16 +83,16 @@ if (useApp.getState().user) apiMe().then((s) => useApp.getState().login(s)).catc
 // Fallar aquí solo significa volver a cargarlos.
 if (typeof indexedDB !== 'undefined') {
   loadFiles().then((saved) => {
-    if (useApp.getState().user) useApp.setState((s) => ({ files: { ...saved, ...s.files } }));
+    if (useApp.getState().user) useApp.setState((s) => ({ files: { ...(saved.TCQS && { TCQS: saved.TCQS }), ...s.files } }));
   }).catch(() => {});
 }
 
-/** Filas del TCQS ya filtradas a los modelos del proyecto (si se cargó el BOM). */
+/** Filas del TCQS ya filtradas a los modelos del proyecto (si hay lista en la base). */
 export function useData() {
-  const { TCQS, MODELOS } = useApp((s) => s.files);
+  const TCQS = useApp((s) => s.files.TCQS), MODELOS = useApp((s) => s.modelos);
   return useMemo(() => {
     const read = TCQS ? readTcqs(TCQS) : null;
-    const bom = MODELOS ? modelsFrom(MODELOS) : [];
+    const bom = MODELOS?.modelos ?? [];
     const models = MODELOS ? new Set(bom.map(modelKey)) : null;
     const all = read?.records ?? [];
     const records = models ? all.filter((r) => models.has(modelKey(r.model))) : all;

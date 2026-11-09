@@ -40,6 +40,10 @@ export type AccionCuenta =
   | { accion: 'mfa' | 'borrar'; id: number };
 export const cuentaAccion = (a: AccionCuenta) => post('/api/usuarios', a);
 
+export interface Modelos { modelos: string[]; archivo: string | null; usuario: string | null; guardado_en: string | null }
+export const loadModelos = () => call<Modelos>('/api/modelos');
+export const saveModelos = (archivo: string, modelos: string[]) => post<{ guardados: number }>('/api/modelos', { archivo, modelos });
+
 export interface EstadoBase { bytes: number; tablas: { tabla: string; filas: number; bytes: number }[]; resumen: { desde: string | null; hasta: string | null; filas: number } }
 export const loadBase = () => call<EstadoBase>('/api/base');
 export const baseAccion = (a: { accion: 'borrarCarga'; id: number } | { accion: 'borrarRango'; desde: string; hasta: string } | { accion: 'retener'; dias: number }) =>

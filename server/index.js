@@ -28,7 +28,10 @@ create table if not exists usuarios (
 -- debe_cambiar: contraseña temporal (creada por un administrador o desde Render); mfa: secreto TOTP confirmado; mfa_nuevo: en configuración
 alter table usuarios add column if not exists debe_cambiar boolean not null default false;
 alter table usuarios add column if not exists mfa text;
-alter table usuarios add column if not exists mfa_nuevo text`)
+alter table usuarios add column if not exists mfa_nuevo text;
+-- modelos del proyecto (Juliet), sacados del Excel del BOM: filtran el TCQS de todos sin volver a cargar el Excel
+create table if not exists yield_modelos (
+  modelo text primary key, archivo text not null, usuario text not null, guardado_en timestamptz not null default now())`)
   // cuenta principal (super administrador) desde el entorno: ADMIN_USER (y ADMIN_PASSWORD si hay que crearla)
   .then(async () => {
     // si la cuenta ya existe (creada desde «Crear cuenta») se activa como administradora y conserva su contraseña
@@ -151,7 +154,7 @@ async function database(req, res, me) {
       db.query('select pg_database_size(current_database())::bigint as bytes'),
       // conteo exacto (n_live_tup de pg_stat se actualiza con retraso); son tablas chicas
       db.query(`select t as tabla, (xpath('/row/c/text()', query_to_xml('select count(*) as c from ' || t, false, true, '')))[1]::text::int as filas,
-        pg_total_relation_size(t::regclass)::bigint as bytes from unnest(array['yield_resumen', 'yield_cargas', 'usuarios']) as t`),
+        pg_total_relation_size(t::regclass)::bigint as bytes from unnest(array['yield_resumen', 'yield_cargas', 'yield_modelos', 'usuarios']) as t`),
       db.query(`select to_char(min(fecha), 'YYYY-MM-DD') desde, to_char(max(fecha), 'YYYY-MM-DD') hasta, count(*)::int filas from yield_resumen`),
     ]);
     return json(res, 200, { bytes: Number(g.bytes), tablas: tablas.map((t) => ({ ...t, bytes: Number(t.bytes) })), resumen: r });
@@ -171,6 +174,29 @@ async function database(req, res, me) {
     return json(res, 200, { borradas: r.rowCount });
   }
   return json(res, 400, { error: 'Acción o datos inválidos (la retención mínima es de 30 días)' });
+}
+
+const MODEL = /^(?:\d{3}-[0-9A-Z]{5}-[0-9A-Z]{4}-[0-9A-Z]{3}|[A-Z]{2}\d{6})$/; // mismo formato que modelsFrom (src/lib/tcqs.ts)
+
+/** Modelos de Juliet: todos los leen; solo un administrador reemplaza la lista (sube el Excel del BOM). */
+async function models(req, res, me) {
+  if (req.method === 'GET') {
+    const { rows } = await db.query('select modelo, archivo, usuario, guardado_en from yield_modelos order by modelo');
+    return json(res, 200, { modelos: rows.map((r) => r.modelo), archivo: rows[0]?.archivo ?? null, usuario: rows[0]?.usuario ?? null, guardado_en: rows[0]?.guardado_en ?? null });
+  }
+  if (!me.admin) return json(res, 403, { error: 'Solo un administrador cambia los modelos' });
+  const b = await body(req), list = b.modelos;
+  if (typeof b.archivo !== 'string' || !b.archivo || b.archivo.length > 200 || !Array.isArray(list) || !list.length || list.length > 5000 || !list.every((m) => typeof m === 'string' && MODEL.test(m)))
+    return json(res, 400, { error: 'Lista de modelos inválida' });
+  const c = await db.connect();
+  try {
+    // se reemplaza completa: la lista vieja no se mezcla con la del BOM nuevo
+    await c.query('begin');
+    await c.query('delete from yield_modelos');
+    await c.query('insert into yield_modelos (modelo, archivo, usuario) select distinct unnest($1::text[]), $2, $3', [list, b.archivo, me.usuario]);
+    await c.query('commit');
+  } catch (e) { await c.query('rollback'); throw e; } finally { c.release(); }
+  return json(res, 200, { guardados: new Set(list).size });
 }
 
 async function account(req, res, path) {
@@ -231,6 +257,7 @@ async function api(req, res) {
   if (s.limitado) return json(res, 403, { error: 'Completa la seguridad de tu cuenta', seguridad: true });
   if (url.pathname === '/api/usuarios') return accounts(req, res, s);
   if (url.pathname === '/api/base') return database(req, res, s);
+  if (url.pathname === '/api/modelos') return models(req, res, s);
   if (req.method === 'GET' && url.pathname === '/api/cargas') {
     const { rows } = await db.query(`select id, sesion, usuario, archivo, filas, entradas, primer_pase, primera_falla, segundo_pase,
       to_char(desde, 'YYYY-MM-DD') desde, to_char(hasta, 'YYYY-MM-DD') hasta, guardado_en from yield_cargas order by guardado_en desc limit 200`);

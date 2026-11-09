@@ -55,18 +55,18 @@ export const NeedTcqs = () => (
   <p className="yc-card app-empty">Carga el TCQS en <Link to="/carga">Carga de datos</Link> para ver esta página.</p>
 );
 
-/** Guarda en Neon, una sola vez por carga, el resumen de Juliet en cuanto están el TCQS y el BOM. */
+/** Guarda en la base, una sola vez por carga, el resumen de Juliet en cuanto están el TCQS y la lista de modelos. */
 function useAutoSave(records: ReturnType<typeof useData>['records']) {
-  const tcqs = useApp((s) => s.files.TCQS), bom = useApp((s) => s.files.MODELOS);
+  const tcqs = useApp((s) => s.files.TCQS), bom = useApp((s) => s.modelos);
   useEffect(() => {
     const { savedKey, user, setDb } = useApp.getState();
     // sin BOM no hay filtro de Juliet; lo que viene de Neon ya está guardado
-    if (!tcqs || !bom || !records.length || tcqs.name.startsWith('Neon ·') || !user) return;
-    const key = `${tcqs.name}|${tcqs.loadedAt}|${bom.name}`;
+    if (!tcqs || !bom || !records.length || tcqs.name.startsWith('Base ·') || !user) return;
+    const key = `${tcqs.name}|${tcqs.loadedAt}|${bom.archivo}|${bom.guardado_en}`;
     if (key === savedKey) return;
-    setDb(['info', 'Guardando en Neon…'], key);
+    setDb(['info', 'Guardando en la base…'], key);
     saveSummary(tcqs.name, daily(records))
-      .then((r) => setDb(['ok', `Guardado en Neon: ${r.guardadas} filas (día × modelo × estación).`]))
-      .catch((e) => setDb(['bad', `No se guardó en Neon: ${e.message}. Se reintenta al volver a cargar el archivo.`], ''));
+      .then((r) => setDb(['ok', `Guardado en la base: ${r.guardadas} filas (día × modelo × estación).`]))
+      .catch((e) => setDb(['bad', `No se guardó en la base: ${e.message}. Se reintenta al volver a cargar el archivo.`], ''));
   }, [tcqs, bom, records]);
 }

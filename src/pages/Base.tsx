@@ -1,9 +1,10 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { Badge, Button, HistoryList, KpiTile, Select, type HistoryItem } from '../components/ui.tsx';
-import { baseAccion, loadBase, loadCargas, loadSummary, type Carga, type EstadoBase } from '../lib/db.ts';
+import { Badge, Button, FileChip, HistoryList, KpiTile, Select, type HistoryItem } from '../components/ui.tsx';
+import { baseAccion, loadBase, loadCargas, loadSummary, saveModelos, type Carga, type EstadoBase } from '../lib/db.ts';
+import { parseFile } from '../lib/files.ts';
 import { download } from '../lib/download.ts';
 import { dropAll } from '../lib/saved.ts';
-import { shortDay } from '../lib/tcqs.ts';
+import { modelsFrom, shortDay } from '../lib/tcqs.ts';
 import { shortDate, useApp } from '../store.ts';
 import { PageHead } from './Layout.tsx';
 
@@ -13,7 +14,8 @@ type Row = HistoryItem & { carga: Carga };
 
 /** Estado y limpieza de la base de datos y de los archivos guardados en este equipo. Borrar: solo super administrador. */
 export default function Base() {
-  const principal = useApp((s) => s.cuenta.principal), files = useApp((s) => s.files);
+  const principal = useApp((s) => s.cuenta.principal), files = useApp((s) => s.files), modelos = useApp((s) => s.modelos);
+  const [busy, setBusy] = useState(false);
   const [st, setSt] = useState<EstadoBase>();
   const [cargas, setCargas] = useState<Carga[]>([]);
   const [msg, setMsg] = useState<['ok' | 'bad', string]>();
@@ -33,18 +35,31 @@ export default function Base() {
     const f = new FormData(e.currentTarget), desde = String(f.get('desde')), hasta = String(f.get('hasta'));
     act({ accion: 'borrarRango', desde, hasta }, `Borrar el resumen del ${desde} al ${hasta}`);
   };
+  // el Excel del BOM se lee aquí; a la base solo va la lista de números de modelo
+  const uploadBom = async (file: File) => {
+    setBusy(true);
+    try {
+      const list = modelsFrom(await parseFile(file));
+      if (!list.length) throw new Error('no trae números de modelo');
+      const r = await saveModelos(file.name, list);
+      await useApp.getState().reloadModelos();
+      setMsg(['ok', `${file.name}: ${r.guardados} modelos de Juliet guardados en la base para todos.`]); reload();
+    } catch (e) {
+      setMsg(['bad', `${file.name}: ${e instanceof Error ? e.message : 'no se pudo leer'}`]);
+    } finally { setBusy(false); }
+  };
   const t = (name: string) => st?.tablas.find((x) => x.tabla === name);
   const local = Object.values(files).filter(Boolean);
   return (
     <>
-      <PageHead title="Base de datos" sub="Espacio, contenido y limpieza de Neon y de lo guardado en este equipo.">
+      <PageHead title="Base de datos" sub="Espacio, contenido y limpieza de la base (PostgreSQL) y de lo guardado en este equipo.">
         <Button onClick={exportCsv}>Exportar resumen (CSV)</Button>
       </PageHead>
       {msg && <p className="app-muted" role={msg[0] === 'bad' ? 'alert' : 'status'}><Badge tone={msg[0]}>{msg[0] === 'ok' ? 'Listo' : 'Error'}</Badge> {msg[1]}</p>}
       {st && (
         <div className="yc-grid-kpi">
           <KpiTile label="Espacio usado" value={size(st.bytes)} />
-          <KpiTile label="Del plan gratis (512 MB)" value={((st.bytes / NEON_FREE) * 100).toFixed(1)} unit="%" />
+          <KpiTile label="Del plan gratis de Neon (512 MB)" value={((st.bytes / NEON_FREE) * 100).toFixed(1)} unit="%" />
           <KpiTile label="Resumen día × modelo × estación" value={st.resumen.filas.toLocaleString('es-MX')} />
           <KpiTile label="Cargas registradas" value={(t('yield_cargas')?.filas ?? 0).toLocaleString('es-MX')} />
         </div>
@@ -54,13 +69,19 @@ export default function Base() {
           <table className="yc-table">
             <thead><tr><th>Tabla</th><th>Qué guarda</th><th className="num">Filas</th><th className="num">Espacio</th></tr></thead>
             <tbody>
-              {[['yield_resumen', `Conteos por día × modelo × estación${st.resumen.desde ? ` · ${shortDay(st.resumen.desde)} – ${shortDay(st.resumen.hasta!)}` : ''}`], ['yield_cargas', 'Una fila por carga (historial)'], ['usuarios', 'Cuentas']].map(([n, what]) => (
+              {[['yield_resumen', `Conteos por día × modelo × estación${st.resumen.desde ? ` · ${shortDay(st.resumen.desde)} – ${shortDay(st.resumen.hasta!)}` : ''}`], ['yield_cargas', 'Una fila por carga (historial)'], ['yield_modelos', 'Modelos de Juliet (del BOM)'], ['usuarios', 'Cuentas']].map(([n, what]) => (
                 <tr key={n}><td className="code">{n}</td><td>{what}</td><td className="num">{(t(n)?.filas ?? 0).toLocaleString('es-MX')}</td><td className="num">{size(t(n)?.bytes ?? 0)}</td></tr>
               ))}
             </tbody>
           </table>
         </div>
       )}
+      <section className="yc-card yc-pad app-sec">
+        <h2 className="app-h3">Modelos de Juliet</h2>
+        <p className="app-muted">La lista filtra el TCQS de todos los usuarios. Sube el Excel del build con el BOM para reemplazarla.</p>
+        <FileChip type="MODELOS · JULIET" accept=".xlsx" onFile={uploadBom} status={busy ? 'comparing' : modelos ? 'loaded' : 'empty'}
+          meta={busy ? 'Leyendo…' : modelos ? `${modelos.modelos.length.toLocaleString('es-MX')} modelos · ${modelos.archivo} · ${modelos.usuario} · ${shortDate(new Date(modelos.guardado_en!))}` : 'Sin lista: se usan todos los modelos del TCQS'} />
+      </section>
       {principal && (
         <section className="yc-card yc-pad app-sec">
           <h2 className="app-h3">Limpieza <Badge tone="warn">Super administrador</Badge></h2>

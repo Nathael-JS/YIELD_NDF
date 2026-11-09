@@ -17,14 +17,17 @@ export function slides(rs: Rec[], grain: Grain, scope: string): Slide[] {
   const labels = new Map(rs.map((r) => periodOf(r.date, grain)));
   const periods = by(rs, (r) => periodOf(r.date, grain)[0]).filter((p) => p.input > 0).sort((a, b) => (a.name < b.name ? -1 : 1));
   const testerFpy = by(rs, (r) => r.tester).filter((t) => t.input > 0).map((t) => r1(t.fpy));
+  const bars = { title: 'FPY y Final Yield por estación', subtitle: `${scope} · de peor a mejor FPY`, yLabel: '%', categories: st.map((s) => s.name), targets: meta,
+    series: [{ name: 'FPY', tone: 'pass' as const, values: st.map((s) => r1(s.fpy)) }, { name: 'Final Yield', tone: 'second' as const, values: st.map((s) => r1(s.final)) }] };
+  // apaisada (columnas a lo ancho) en pantallas anchas; en el celular, barras acostadas con el nombre completo.
+  // Las dos van en el HTML y el CSS muestra una: así también funciona en el reporte descargable, sin JavaScript.
+  const stations = <><div className="app-wide"><BarChart {...bars} /></div><div className="app-narrow"><BarChart horizontal {...bars} /></div></>;
   const out: (Slide | false)[] = [
     fails.length > 0 && { id: 'pareto', kind: 'Líneas y barras', title: 'Pareto 1er nivel',
       content: <ParetoChart title="Primeras fallas por estación" level={1} subtitle={`1er nivel · ${scope}`} data={fails} /> },
     testers.length > 0 && { id: 'pareto2', kind: 'Líneas y barras', title: `Pareto 2do nivel · ${top}`,
       content: <ParetoChart title={`Primeras fallas por tester en ${top}`} level={2} subtitle="2do nivel · el TCQS no trae error codes; se abre por tester" data={testers} /> },
-    { id: 'estaciones', kind: 'Barras', title: 'FPY y Final Yield por estación',
-      content: <BarChart horizontal title="FPY y Final Yield por estación" subtitle={`${scope} · de peor a mejor FPY`} yLabel="%" categories={st.map((s) => s.name)} targets={meta}
-        series={[{ name: 'FPY', tone: 'pass', values: st.map((s) => r1(s.fpy)) }, { name: 'Final Yield', tone: 'second', values: st.map((s) => r1(s.final)) }]} /> },
+    { id: 'estaciones', kind: 'Barras', title: 'FPY y Final Yield por estación', content: stations },
     periods.length > 1 && { id: 'tendencia', kind: 'Líneas y barras', title: 'Evolución del yield',
       content: <TrendChart title="Evolución del yield" subtitle={scope} yLabel="%" categories={periods.map((p) => labels.get(p.name)!)} targets={meta}
         lines={[{ name: 'FPY', tone: 'pass', values: periods.map((p) => r1(p.fpy)) }, { name: 'Final Yield', tone: 'second', values: periods.map((p) => r1(p.final)) }]} /> },

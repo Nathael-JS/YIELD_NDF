@@ -8,6 +8,7 @@ Qué se mejoró, cómo se hizo y qué se usó; después, lo pendiente y lo que n
 
 | Versión | Mejora | Cómo se hizo | Qué se usó |
 | --- | --- | --- | --- |
+| 0.14.0 | **Modelos en la base, gráfica apaisada y HTML por modelo** | `yield_modelos` reemplazada completa en una transacción (solo administradores); dos versiones de la gráfica y CSS elige una (sirve también en el HTML sin JavaScript); etiquetas inclinadas; una sección por modelo en el HTML | `BarChart`, `FileChip`, `modelsFrom`, `pg` |
 | 0.13.0 | **Super administrador, MFA y base de datos** | TOTP propio con `node:crypto` (vectores del RFC 6238); contraseña temporal obligatoria de cambiar; la API limita la cuenta hasta completar la seguridad; Cuentas con crear/editar/restablecer/borrar; página Base de datos con espacio, CSV y limpieza | `qrcode` (cargado solo en Seguridad), `yc-table`, `KpiTile`, `HistoryList`, `Badge` |
 | 0.11.0 | **Pantalla de cuentas y roles** | Tabla con estado y rol por cuenta; Activar/Desactivar y Hacer/Quitar admin. El servidor revisa activo y rol en la base en cada llamada | `yc-table`, `Badge`, `Button`; `GET/POST /api/usuarios` |
 | 0.10.0 | **Cuentas reales y API protegida** | `scrypt` con sal para claves; cookie firmada con HMAC (`HttpOnly`, `SameSite=Strict`, `Secure`); la API exige sesión y toma usuario/sesión de ella; límite de intentos; solo JSON en POST; cabeceras CSP y demás | `node:crypto` (sin dependencias), pruebas en `server/auth.test.js` |
