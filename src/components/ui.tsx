@@ -139,22 +139,30 @@ export function ChartCarousel({ slides, label = 'Gráficas' }: { slides: Carouse
   const [idx, setIdx] = useState(0);
   const [dir, setDir] = useState<'next' | 'prev'>('next'); // de qué lado entra la gráfica nueva
   const [dx, setDx] = useState(0); // cuánto se ha arrastrado
-  const from = useRef<number | null>(null);
+  const [settle, setSettle] = useState(false); // regresando a su lugar tras un arrastre corto
+  const from = useRef<number | null>(null), last = useRef({ x: 0, t: 0, v: 0 });
   const n = slides.length;
   if (!n) return null;
   const i = Math.min(idx, n - 1);
-  const go = (k: number) => { setDir(k < i ? 'prev' : 'next'); setIdx((k + n) % n); };
+  const go = (k: number) => { setSettle(false); setDir(k < i ? 'prev' : 'next'); setIdx((k + n) % n); };
   const keys = (e: KeyboardEvent) => { if (e.key === 'ArrowRight') go(i + 1); if (e.key === 'ArrowLeft') go(i - 1); };
-  // arrastrar (mouse o dedo) más de 60 px cambia de gráfica; un clic sin arrastrar avanza o retrocede según el lado
-  const down = (e: PointerEvent<HTMLDivElement>) => { from.current = e.clientX; e.currentTarget.setPointerCapture(e.pointerId); };
-  const move = (e: PointerEvent) => { if (from.current != null) setDx(e.clientX - from.current); };
+  // arrastrar más de 60 px (o un gesto rápido de 20 px) cambia de gráfica; uno corto regresa con rebote;
+  // un clic sin arrastrar avanza o retrocede según el lado
+  const down = (e: PointerEvent<HTMLDivElement>) => { from.current = e.clientX; last.current = { x: e.clientX, t: e.timeStamp, v: 0 }; e.currentTarget.setPointerCapture(e.pointerId); };
+  const move = (e: PointerEvent) => {
+    if (from.current == null) return;
+    const l = last.current, dt = e.timeStamp - l.t;
+    if (dt > 0) last.current = { x: e.clientX, t: e.timeStamp, v: (e.clientX - l.x) / dt };
+    setDx(e.clientX - from.current);
+  };
   const up = (e: PointerEvent<HTMLDivElement>) => {
     if (from.current == null) return;
-    const d = e.clientX - from.current, box = e.currentTarget.getBoundingClientRect();
+    const d = e.clientX - from.current, box = e.currentTarget.getBoundingClientRect(), flick = Math.abs(last.current.v) > 0.5 && Math.abs(d) > 20;
     from.current = null;
     setDx(0);
-    if (Math.abs(d) > 60) go(d < 0 ? i + 1 : i - 1);
+    if (Math.abs(d) > 60 || flick) go(d < 0 ? i + 1 : i - 1);
     else if (Math.abs(d) < 6) go(e.clientX > box.left + box.width / 2 ? i + 1 : i - 1);
+    else setSettle(true);
   };
   return (
     <section className="yc-carousel" aria-roledescription="carrusel" aria-label={`${label}: arrastra, haz clic a un lado o usa ← →`} tabIndex={0} onKeyDown={keys}>
@@ -169,7 +177,8 @@ export function ChartCarousel({ slides, label = 'Gráficas' }: { slides: Carouse
         </div>
       </header>
       <div className="yc-carousel-track" onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={() => { from.current = null; setDx(0); }}>
-        <div key={i} className={cx('yc-carousel-body', `is-${dir}`, dx !== 0 && 'is-dragging')} style={dx ? { transform: `translateX(${dx}px)`, opacity: 1 - Math.min(Math.abs(dx) / 600, 0.5) } : undefined}>
+        <div key={i} className={cx('yc-carousel-body', `is-${dir}`, dx !== 0 && 'is-dragging', settle && 'is-settling')} onTransitionEnd={() => setSettle(false)}
+          style={dx ? { transform: `translateX(${dx}px)`, opacity: 1 - Math.min(Math.abs(dx) / 600, 0.5) } : undefined}>
           {slides[i].content}
         </div>
       </div>

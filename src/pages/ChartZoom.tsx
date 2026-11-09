@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from 'react';
 import { Badge, Button } from '../components/ui.tsx';
 import { loadComentarios, saveComentario, type Comentario } from '../lib/db.ts';
 import { download } from '../lib/download.ts';
@@ -12,8 +12,9 @@ export default function ChartZoom({ slide, range, grafica, onClose }: { slide: S
   const [list, setList] = useState<Comentario[]>([]);
   const [msg, setMsg] = useState<['ok' | 'bad', string]>();
   const [busy, setBusy] = useState(false);
+  // al montar y en el mismo cuadro: la transición de Gráficos fotografía el panel ya abierto
+  useLayoutEffect(() => { dialog.current?.showModal(); }, []);
   useEffect(() => {
-    dialog.current?.showModal();
     loadComentarios(grafica).then(setList).catch((e) => setMsg(['bad', `No se pudieron leer los comentarios: ${e.message}`]));
   }, [grafica]);
 
@@ -42,18 +43,19 @@ export default function ChartZoom({ slide, range, grafica, onClose }: { slide: S
   };
 
   return (
-    <dialog ref={dialog} className="app-zoom" onClose={onClose} aria-labelledby="zoom-title">
+    // Esc no cierra de golpe: cierra con la misma animación que «Cerrar»
+    <dialog ref={dialog} className="app-zoom" onCancel={(e) => { e.preventDefault(); onClose(); }} aria-labelledby="zoom-title">
       <div className="app-zoom-shot" ref={shot}>
         <header className="app-zoom-head">
           <div><span className="yc-carousel-kind">{slide.kind}</span><h2 id="zoom-title">{slide.title}</h2><p className="app-muted">Juliet · {range}</p></div>
           <div className="yc-row" data-noshot>
             <Button onClick={image} disabled={busy}>{busy ? 'Creando imagen…' : 'Descargar imagen'}</Button>
-            <Button variant="quiet" onClick={() => dialog.current?.close()}>Cerrar</Button>
+            <Button variant="quiet" onClick={onClose}>Cerrar</Button>
           </div>
         </header>
         {msg && <p className="app-muted app-msg" role={msg[0] === 'bad' ? 'alert' : 'status'} data-noshot><Badge tone={msg[0]}>{msg[0] === 'ok' ? 'Listo' : 'Error'}</Badge> {msg[1]}</p>}
         <div className="app-zoom-split">
-          <div className="app-zoom-chart">{slide.content}</div>
+          <div className="app-zoom-chart" style={{ viewTransitionName: 'yc-zoom' }}>{slide.content}</div>
           <aside className="app-zoom-side">
             <section className="app-zoom-sec">
               <h3 className="app-h3">Resumen · {slide.summary.rows.length} filas</h3>
