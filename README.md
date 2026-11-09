@@ -39,6 +39,8 @@ src/
 1. En [Neon](https://neon.tech) crea un proyecto y copia su *connection string* (`postgres://…`).
 2. En Render: **New → Blueprint** con este repositorio. Lee `render.yaml` y crea el servicio `yield-control`. En **Environment** pon `DATABASE_URL` (la cadena de Neon), `ADMIN_USER` (correo de la cuenta principal, super administrador) y `ADMIN_PASSWORD` (contraseña **temporal** para crearla: al primer inicio pide cambiarla y configurar el MFA; después bórrala de Render). Nunca pongas contraseñas en el repositorio. `SESSION_SECRET` la genera Render.
 
+Si al entrar sale «respondió una página y no la API», el servicio de Render es un **Static Site**: crea el Web Service con el Blueprint y borra el sitio estático.
+
 **Cuentas:** la de prueba `demo` / `yield2026` siempre está activa (quitarla antes de producción). Los administradores manejan las demás en **Cuentas** (menú superior).
 3. La tabla `yield_resumen` se crea sola al arrancar. Sin `DATABASE_URL` la app funciona igual y los botones de Neon avisan que falta.
 

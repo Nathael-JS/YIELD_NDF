@@ -12,7 +12,7 @@ async function call<T>(path: string, init?: RequestInit): Promise<T> {
   // status 0 = no hay API (sin conexión, sitio estático o página de error en HTML)
   const fail = (msg: string, status = 0) => Object.assign(new Error(msg), { status });
   const r = await fetch(path, init).catch(() => { throw fail('No hay conexión con el servidor.'); });
-  if (!r.headers.get('content-type')?.includes('application/json')) throw fail(`El servidor no respondió como API (${r.status}).`);
+  if (!r.headers.get('content-type')?.includes('application/json')) throw fail(`El servidor respondió una página y no la API (${r.status}): en Render debe ser un Web Service (Node), no un Static Site.`);
   const body = await r.json();
   if (r.status === 401 && !path.startsWith('/api/login')) onExpired();
   if (!r.ok) throw fail(body.error ?? `Error ${r.status}`, r.status);
