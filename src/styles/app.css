@@ -96,6 +96,11 @@ button.yc-nav-mark { border: 0; background: none; padding: 0; color: var(--ink);
 .app-zoom-btn { position: absolute; top: var(--space-4); right: var(--space-4); min-height: 30px; font-size: 13px; }
 .app-zoomable :is(.yc-chart-title, .yc-pareto-title) { padding-right: 104px; }
 .app-zoom { width: min(1440px, 96vw); max-width: none; height: min(92vh, 1040px); max-height: none; padding: 0; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface-100); color: var(--ink); box-shadow: var(--shadow-panel); }
+/* Ampliar: la tarjeta se convierte en el panel y regresa (View Transitions, Graficos.tsx) */
+::view-transition-group(yc-zoom) { animation-duration: .38s; animation-timing-function: cubic-bezier(.2, .7, .2, 1); }
+::view-transition-old(root), ::view-transition-new(root) { animation-duration: .25s; }
+/* la imagen vieja se va rápido: sin doble gráfica a mitad del cambio */
+::view-transition-old(yc-zoom) { animation-duration: .12s; }
 .app-zoom::backdrop { background: var(--overlay); }
 .app-zoom-shot { display: grid; gap: var(--space-4); padding: var(--space-6); background: var(--surface-100); }
 .app-zoom-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: var(--space-4); }

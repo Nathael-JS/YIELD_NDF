@@ -8,6 +8,12 @@ Un cambio de componente se publica primero en el artefacto y después se copia a
 
 Los errores encontrados y cómo se corrigieron están en [ERRORES.md](ERRORES.md); las mejoras y cómo se hicieron, en [MEJORAS.md](MEJORAS.md).
 
+## [0.16.0] — 2026-11-10
+
+### Agregado
+- **Ampliar con transición:** en Gráficos la tarjeta se convierte en el panel ampliado y regresa a su lugar al cerrar (botón o Esc), con View Transitions del navegador: 0 KB extra. Sin soporte o con «reducir movimiento», abre y cierra al instante como antes.
+- **Carrusel con rebote:** un arrastre corto regresa a su lugar con un rebote suave (antes saltaba); un gesto rápido de 20 px o más cambia de gráfica aunque no llegue a 60 px.
+
 ## [0.15.1] — 2026-11-10 · sistema de diseño v25
 
 ### Corregido
