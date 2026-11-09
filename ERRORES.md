@@ -77,6 +77,8 @@ Cada entrada dice qué pasaba, cómo se detectó, la causa, la corrección y con
 
 ## Abiertos
 
+- **Etiquetas inclinadas muy largas en muy poco ancho:** la primera puede salirse por la izquierda de la tarjeta. En el celular no pasa porque la gráfica de estaciones usa barras acostadas; si otra gráfica lo necesita, dar más margen izquierdo.
+
 - **Un código MFA se puede reusar dentro de sus 30 s** (no se guarda el último usado). Riesgo bajo: también hace falta la contraseña.
 - **Cambiar la contraseña no cierra las otras sesiones** (desactivar la cuenta sí).
 - **`ADMIN_PASSWORD` en Render** ya no se usa cuando la cuenta principal existe: borrarla después del primer inicio.
