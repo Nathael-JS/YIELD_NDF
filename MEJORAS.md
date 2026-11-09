@@ -8,6 +8,7 @@ Qué se mejoró, cómo se hizo y qué se usó; después, lo pendiente y lo que n
 
 | Versión | Mejora | Cómo se hizo | Qué se usó |
 | --- | --- | --- | --- |
+| 0.15.0 | **Gráfica ampliada con datos, comentarios e imagen** | `<dialog>` nativo (Esc, foco y fondo sin código propio); cada gráfica trae su tabla (`summary`); comentarios en `yield_comentarios`; la imagen se toma del panel ocultando los controles | `html-to-image` (carga diferida), `yc-table`, `Button`, `Badge` con `title` |
 | 0.14.0 | **Modelos en la base, gráfica apaisada y HTML por modelo** | `yield_modelos` reemplazada completa en una transacción (solo administradores); dos versiones de la gráfica y CSS elige una (sirve también en el HTML sin JavaScript); etiquetas inclinadas; una sección por modelo en el HTML | `BarChart`, `FileChip`, `modelsFrom`, `pg` |
 | 0.13.0 | **Super administrador, MFA y base de datos** | TOTP propio con `node:crypto` (vectores del RFC 6238); contraseña temporal obligatoria de cambiar; la API limita la cuenta hasta completar la seguridad; Cuentas con crear/editar/restablecer/borrar; página Base de datos con espacio, CSV y limpieza | `qrcode` (cargado solo en Seguridad), `yc-table`, `KpiTile`, `HistoryList`, `Badge` |
 | 0.11.0 | **Pantalla de cuentas y roles** | Tabla con estado y rol por cuenta; Activar/Desactivar y Hacer/Quitar admin. El servidor revisa activo y rol en la base en cada llamada | `yc-table`, `Badge`, `Button`; `GET/POST /api/usuarios` |

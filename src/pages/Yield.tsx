@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Badge, Button, KpiTile, PeriodTabs, Select } from '../components/ui.tsx';
-import { by, byFpy, change, diagnose, pctText, periodOf, periodsOf, rty, shortDay, toWatch, totals, type Grain, type Rec } from '../lib/tcqs.ts';
+import { by, byFpy, change, diagnose, DX_HINT, pctText, periodOf, periodsOf, rty, shortDay, toWatch, totals, type Grain, type Rec } from '../lib/tcqs.ts';
 import { useApp, useData } from '../store.ts';
 import { NeedTcqs, PageHead } from './Layout.tsx';
 import { download } from '../lib/download.ts';
@@ -122,7 +122,7 @@ function view(rs: Rec[], period: Grain, key: string | undefined, prevKey: string
                 <td className="num">{p1(s.fpy)}</td>
                 <td className="num">{p1(s.final)}</td>
                 <td className="num">{p1(s.retest)}</td>
-                <td><Badge tone={tone}>{text}</Badge></td>
+                <td><Badge tone={tone} title={DX_HINT[text]}>{text}</Badge></td>
               </tr>
             );
           })}

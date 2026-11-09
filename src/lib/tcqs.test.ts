@@ -43,7 +43,7 @@ test('by, rty y diagnose', () => {
   const st = by(readTcqs(tcqs).records, (r) => r.group);
   assert.deepEqual(st.map((s) => s.name), ['FT', 'J_TAG']);
   assert.equal(rty(st), 75); // 75 % × 100 %
-  assert.equal(diagnose(st[0])[0], 'Muestra insuficiente'); // 8 entradas
+  assert.equal(diagnose(st[0])[0], 'Datos insuficientes'); // 8 entradas
   assert.equal(diagnose(totals([]))[0], 'Sin dato');
   assert.equal(diagnose({ ...st[0], input: 20, fpy: 80, final: 96 })[1], 'warn');
   assert.equal(diagnose({ ...st[0], input: 20, fpy: 80, final: 90 })[1], 'bad');

@@ -90,3 +90,26 @@ button.yc-nav-mark { border: 0; background: none; padding: 0; color: var(--ink);
 @media (min-width: 761px) { .app-narrow { display: none; } }
 .app-view { display: grid; gap: var(--space-6); }
 .app-view[hidden] { display: none; }
+
+/* Gráficos: «Ampliar» abre la gráfica en pantalla dividida (ChartZoom) */
+.app-zoomable { position: relative; }
+.app-zoom-btn { position: absolute; top: var(--space-4); right: var(--space-4); min-height: 30px; font-size: 13px; }
+.app-zoomable :is(.yc-chart-title, .yc-pareto-title) { padding-right: 104px; }
+.app-zoom { width: min(1440px, 96vw); max-width: none; height: min(92vh, 1040px); max-height: none; padding: 0; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface-100); color: var(--ink); box-shadow: var(--shadow-panel); }
+.app-zoom::backdrop { background: var(--overlay); }
+.app-zoom-shot { display: grid; gap: var(--space-4); padding: var(--space-6); background: var(--surface-100); }
+.app-zoom-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: var(--space-4); }
+.app-zoom-shot.is-shot [data-noshot] { display: none; }
+.app-zoom-head h2 { margin: 0; font-size: 20px; line-height: 28px; }
+.app-zoom-head p { margin: var(--space-1) 0 0; }
+.app-zoom-split { display: grid; grid-template-columns: minmax(0, 2fr) minmax(300px, 1fr); gap: var(--space-4); align-items: start; }
+.app-zoom-chart { position: sticky; top: 0; }
+.app-zoom-side, .app-zoom-sec, .app-zoom-form { display: grid; gap: var(--space-3); }
+.app-zoom-side { gap: var(--space-6); }
+.app-zoom-form .yc-btn { justify-self: start; }
+.app-textarea { height: auto; min-height: 88px; padding: var(--space-2) var(--space-3); resize: vertical; font: inherit; line-height: 20px; }
+.app-comments { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); }
+.app-comments li { padding: var(--space-3); background: var(--surface-000); border: 1px solid var(--line); border-radius: var(--radius-md); }
+.app-comments p { margin: var(--space-1) 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+@media (max-width: 900px) { .app-zoom-split { grid-template-columns: 1fr; } .app-zoom-chart { position: static; } }
+@media (max-width: 640px) { .app-zoom { width: 100vw; height: 100dvh; border-radius: 0; } .app-zoom-shot { padding: var(--space-4); } }

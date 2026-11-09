@@ -69,7 +69,7 @@ export default function Base() {
           <table className="yc-table">
             <thead><tr><th>Tabla</th><th>Qué guarda</th><th className="num">Filas</th><th className="num">Espacio</th></tr></thead>
             <tbody>
-              {[['yield_resumen', `Conteos por día × modelo × estación${st.resumen.desde ? ` · ${shortDay(st.resumen.desde)} – ${shortDay(st.resumen.hasta!)}` : ''}`], ['yield_cargas', 'Una fila por carga (historial)'], ['yield_modelos', 'Modelos de Juliet (del BOM)'], ['usuarios', 'Cuentas']].map(([n, what]) => (
+              {[['yield_resumen', `Conteos por día × modelo × estación${st.resumen.desde ? ` · ${shortDay(st.resumen.desde)} – ${shortDay(st.resumen.hasta!)}` : ''}`], ['yield_cargas', 'Una fila por carga (historial)'], ['yield_modelos', 'Modelos de Juliet (del BOM)'], ['yield_comentarios', 'Comentarios de las gráficas'], ['usuarios', 'Cuentas']].map(([n, what]) => (
                 <tr key={n}><td className="code">{n}</td><td>{what}</td><td className="num">{(t(n)?.filas ?? 0).toLocaleString('es-MX')}</td><td className="num">{size(t(n)?.bytes ?? 0)}</td></tr>
               ))}
             </tbody>
