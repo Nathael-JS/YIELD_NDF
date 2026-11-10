@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { by, change, congruence, countOrders, daily, fromDb, diagnose, modelKey, modelsFrom, periodOf, periodsOf, readTcqs, REQUIRED, rty, totals } from './tcqs.ts';
+import { by, change, congruence, countOrders, daily, fromDb, diagnose, modelKey, modelsFrom, periodOf, periodsOf, ranges, readTcqs, REQUIRED, rty, totals } from './tcqs.ts';
 
 const H = ['WORK_DATE', 'MODEL_NAME', 'SAP_MODEL_NAME', 'MO_NUMBER', 'GROUP_NAME', 'STATION_NAME', 'INPUT_QTY', 'FIRST_PASS_QTY', 'FIRST_FAIL_QTY', 'SECOND_PASS_QTY'];
 // filas con la forma del TCQS real (cantidades como texto, como las deja el lector de CSV)
@@ -99,11 +99,19 @@ test('congruence: el archivo contra las fórmulas, fila por fila', () => {
   ] };
   const c = congruence(f);
   assert.equal(c.filas, 3);
-  assert.deepEqual(c.campos.fpy, { ok: 2, mal: 1, filas: [4] });
-  assert.deepEqual(c.campos.final, { ok: 3, mal: 0, filas: [] });
-  assert.deepEqual(c.campos.retest, { ok: 3, mal: 0, filas: [] });
+  assert.deepEqual(c.campos.fpy, { ok: 2, mal: 1, ejemplos: [{ fila: 4, fecha: '2026-11-05', estacion: 'LC', archivo: 80, calculado: 90 }] });
+  assert.deepEqual(c.campos.final, { ok: 3, mal: 0, ejemplos: [] });
+  assert.deepEqual(c.campos.retest, { ok: 3, mal: 0, ejemplos: [] });
   assert.equal(c.campos.entradas!.mal, 0);
   assert.equal(Math.round(c.reportado.fpy), 72); // (75·4 + 50·4 + 80·10) / 18
   assert.equal(Math.round(c.calculado.fpy), 78); // 14 / 18
   assert.equal(congruence(f, (m) => m === 'SA2').filas, 1);
+});
+
+test('ranges: día contra el anterior; semana lunes a sábado contra la anterior', () => {
+  assert.deepEqual(ranges('2026-11-01', 'dia'), [['2026-11-01', '2026-11-01'], ['2026-10-31', '2026-10-31']]);
+  // jueves 5 nov → lunes 2 a sábado 7; la anterior, lunes 26 oct a sábado 31
+  assert.deepEqual(ranges('2026-11-05', 'semana'), [['2026-11-02', '2026-11-07'], ['2026-10-26', '2026-10-31']]);
+  assert.deepEqual(ranges('2026-11-08', 'semana')[0], ['2026-11-02', '2026-11-07']); // domingo: su semana, sin él
+  assert.deepEqual(ranges('2026-11-02', 'semana')[0], ['2026-11-02', '2026-11-07']); // lunes
 });

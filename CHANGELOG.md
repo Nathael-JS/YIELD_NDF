@@ -8,6 +8,18 @@ Un cambio de componente se publica primero en el artefacto y después se copia a
 
 Los errores encontrados y cómo se corrigieron están en [ERRORES.md](ERRORES.md); las mejoras y cómo se hicieron, en [MEJORAS.md](MEJORAS.md).
 
+## [0.19.0] — 2026-11-10
+
+### Agregado
+- **Comparativas · Datos que no cuadran:** cuántas filas no cuadran por columna en todo el archivo y los ejemplos guardados del rango elegido (fila, fecha, estación, valor del archivo y de la fórmula). Sin revisión para ese rango, pide cargar el TCQS. La congruencia ahora guarda el detalle de cada ejemplo, no solo el n.º de fila.
+- **Comparativas por semana:** lunes a sábado (sin domingo) contra la semana anterior; al elegirla aparece el aviso «En desarrollo».
+- **Carga:** «Cambiar archivo» y «Borrar archivo» (quita el archivo de la app; lo del historial no se toca).
+- **Historial · respaldos** (tabla `yield_respaldos`): «Crear respaldo» en cada registro y «Borrar» (administradores), que antes crea un respaldo automático. Los respaldos vencen a los 7 días; se pueden **descargar** (.json), **restaurar** y **cargar** de nuevo desde el archivo (el servidor lo valida como una carga nueva).
+
+### Cambiado
+- **Yield → historial:** la carga se guarda en el historial aunque no haya lista de modelos (antes se esperaba al BOM y no se guardaba nada); Yield muestra «Guardado en el historial» con enlace.
+- `HistoryList` acepta `extra` (más acciones por fila).
+
 ## [0.18.0] — 2026-11-10
 
 ### Agregado

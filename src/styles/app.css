@@ -121,3 +121,11 @@ button.yc-nav-mark { border: 0; background: none; padding: 0; color: var(--ink);
 .app-comments p { margin: var(--space-1) 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 @media (max-width: 900px) { .app-zoom-split { grid-template-columns: 1fr; } .app-zoom-chart { position: static; } }
 @media (max-width: 640px) { .app-zoom { width: 100vw; height: 100dvh; border-radius: 0; } .app-zoom-shot { padding: var(--space-4); } }
+
+/* Carga: el archivo y sus acciones (cambiar, borrar) */
+.app-slot { display: grid; gap: var(--space-1); align-content: start; }
+.app-backups { border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface-000); overflow: hidden; }
+/* aviso «En desarrollo» (Comparativas · Semana) */
+.app-soon { width: min(420px, 92vw); padding: var(--space-6); border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface-000); color: var(--ink); box-shadow: var(--shadow-panel); }
+.app-soon::backdrop { background: var(--overlay); }
+.app-soon h2 { margin-top: 0; }

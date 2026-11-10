@@ -37,6 +37,8 @@ interface State {
   setPeriod: (p: Period) => void;
   setFile: (t: FileType, f: LoadedFile) => void;
   setError: (t: FileType, msg: string) => void;
+  /** Quita el archivo de la app y de lo guardado en este equipo (no toca la base). */
+  removeFile: (t: FileType) => void;
   setDb: (db: [Tone, string] | null, savedKey?: string) => void;
 }
 
@@ -69,6 +71,7 @@ export const useApp = create<State>()(
       })); },
       // un archivo con error reemplaza al anterior: no comparar con datos viejos sin avisar
       setDb: (db, savedKey) => set((s) => ({ db, savedKey: savedKey ?? s.savedKey })),
+      removeFile: (t) => { dropFile(t).catch(() => {}); set((s) => ({ files: { ...s.files, [t]: undefined }, errors: { ...s.errors, [t]: undefined }, savedKey: '', db: null })); },
       setError: (t, msg) => { dropFile(t).catch(() => {}); set((s) => ({ errors: { ...s.errors, [t]: msg }, files: { ...s.files, [t]: undefined } })); },
     }),
     { name: 'yield-control', partialize: ({ user, admin, cuenta, period, session, savedKey }) => ({ user, admin, cuenta, period, session, savedKey }) },

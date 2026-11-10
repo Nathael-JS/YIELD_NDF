@@ -16,6 +16,6 @@ export function validate(b) {
   }
   // congruencia: opcional, solo se guarda; se acepta un objeto chico y nada más
   const c = b.congruencia, size = c == null ? 0 : JSON.stringify(c).length;
-  if (c != null && (typeof c !== 'object' || Array.isArray(c) || size > 4000)) return { error: 'Congruencia inválida' };
+  if (c != null && (typeof c !== 'object' || Array.isArray(c) || size > 16000)) return { error: 'Congruencia inválida' };
   return { archivo: b.archivo.trim().slice(0, 200), sesion: b.sesion, usuario: b.usuario, filas: b.filas, congruencia: c ?? null };
 }

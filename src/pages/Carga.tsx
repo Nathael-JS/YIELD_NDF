@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button, FileChip } from '../components/ui.tsx';
 import { parseFile } from '../lib/files.ts';
@@ -12,7 +12,8 @@ const SLOTS: { type: FileType; label: string; accept: string; hint: string }[] =
 
 function Slot({ type, label, accept, hint }: (typeof SLOTS)[number]) {
   const f = useApp((s) => s.files[type]), err = useApp((s) => s.errors[type]);
-  const setFile = useApp((s) => s.setFile), setError = useApp((s) => s.setError);
+  const setFile = useApp((s) => s.setFile), setError = useApp((s) => s.setError), removeFile = useApp((s) => s.removeFile);
+  const pick = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
 
   async function load(file: File) {
@@ -27,9 +28,19 @@ function Slot({ type, label, accept, hint }: (typeof SLOTS)[number]) {
   }
   const detail = f && plural(f.rows.length, 'fila');
   return (
-    <FileChip type={label} accept={accept} onFile={load}
-      status={err ? 'error' : busy ? 'comparing' : f ? 'loaded' : 'empty'}
-      meta={err ?? (busy ? 'Leyendo…' : f ? `${f.name} · ${detail}` : hint)} />
+    <div className="app-slot">
+      <FileChip type={label} accept={accept} onFile={load}
+        status={err ? 'error' : busy ? 'comparing' : f ? 'loaded' : 'empty'}
+        meta={err ?? (busy ? 'Leyendo…' : f ? `${f.name} · ${detail}` : hint)} />
+      {(f || err) && (
+        <div className="yc-row">
+          <input ref={pick} type="file" hidden accept={accept} onChange={(e) => { const x = e.target.files?.[0]; e.target.value = ''; if (x) load(x); }} />
+          <Button variant="quiet" onClick={() => pick.current?.click()}>Cambiar archivo</Button>
+          {/* quita el archivo de la app; lo ya guardado en el historial se borra desde Historial */}
+          <Button variant="quiet" onClick={() => confirm(`¿Quitar ${f?.name ?? 'el archivo'} de la carga? Lo guardado en el historial no se borra.`) && removeFile(type)}>Borrar archivo</Button>
+        </div>
+      )}
+    </div>
   );
 }
 

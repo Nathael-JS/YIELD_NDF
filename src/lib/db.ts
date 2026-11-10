@@ -6,7 +6,7 @@ import type { Congruencia, DbRow } from './tcqs.ts';
 export let onExpired = () => {};
 export const setOnExpired = (f: () => void) => { onExpired = f; };
 
-export interface Carga { id: number; sesion: string; usuario: string; archivo: string; filas: number; entradas: number; primer_pase: number; primera_falla: number; segundo_pase: number; desde: string; hasta: string; guardado_en: string }
+export interface Carga { id: number; sesion: string; usuario: string; archivo: string; filas: number; entradas: number; primer_pase: number; primera_falla: number; segundo_pase: number; desde: string; hasta: string; guardado_en: string; congruencia: Congruencia | null }
 
 async function call<T>(path: string, init?: RequestInit): Promise<T> {
   // status 0 = no hay API (sin conexión, sitio estático o página de error en HTML)
@@ -57,4 +57,11 @@ export const baseAccion = (a: { accion: 'borrarCarga'; id: number } | { accion: 
 export const saveSummary = (archivo: string, filas: DbRow[], congruencia?: Congruencia) => post<{ guardadas: number }>('/api/resumen', { archivo, filas, congruencia });
 export const loadSummary = (desde?: string, hasta?: string) =>
   call<{ filas: DbRow[] }>(`/api/resumen${desde && hasta ? `?desde=${desde}&hasta=${hasta}` : ''}`).then((b) => b.filas);
+export interface Respaldo { id: number; motivo: 'borrado' | 'manual'; usuario: string; creado: string; vence: string; archivo: string; desde: string; hasta: string; filas: number }
+/** Lo que se descarga y se vuelve a cargar: la carga y sus filas del resumen. */
+export interface DatosRespaldo { tipo: 'yield-respaldo'; v: 1; carga: Carga; filas: DbRow[] }
+export const loadRespaldos = () => call<{ respaldos: Respaldo[] }>('/api/respaldos').then((b) => b.respaldos);
+export const getRespaldo = (id: number) => call<DatosRespaldo>(`/api/respaldos?id=${id}`);
+export const respaldoAccion = (a: { accion: 'crear' | 'borrar'; carga: number } | { accion: 'restaurar'; id: number } | { accion: 'cargar'; datos: unknown }) =>
+  post<{ id?: number; vence?: string; guardadas?: number }>('/api/respaldos', a);
 export const loadCargas = () => call<{ cargas: Carga[] }>('/api/cargas').then((b) => b.cargas);
