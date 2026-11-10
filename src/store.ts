@@ -27,6 +27,8 @@ interface State {
   errors: Partial<Record<FileType, string>>;
   /** Modelos del proyecto guardados en la base; null = sin lista (se usan todos los modelos del TCQS). */
   modelos: Modelos | null;
+  /** Ya se preguntó a la base por la lista (con o sin respuesta): hasta entonces no se guarda nada. */
+  modelosListos: boolean;
   reloadModelos: () => Promise<void>;
   /** Con la respuesta del servidor (POST /api/login). */
   login: (s: Sesion) => void;
@@ -60,12 +62,14 @@ export const useApp = create<State>()(
       admin: false,
       cuenta: NADA,
       modelos: null,
-      reloadModelos: () => loadModelos().then((m) => { set({ modelos: m.modelos.length ? m : null }); }),
+      modelosListos: false,
+      reloadModelos: () => loadModelos().then((m) => { set({ modelos: m.modelos.length ? m : null }); }).finally(() => set({ modelosListos: true })),
       login: (s) => { set({ user: s.nombre, session: s.sesion, admin: s.admin, cuenta: s, db: null }); useApp.getState().reloadModelos().catch(() => {}); },
       // al salir se borran también los archivos guardados: el equipo puede ser compartido
-      logout: () => { apiLogout().catch(() => {}); dropAll().catch(() => {}); set({ user: null, admin: false, cuenta: NADA, files: {}, errors: {}, savedKey: '', modelos: null }); },
+      logout: () => { apiLogout().catch(() => {}); dropAll().catch(() => {}); set({ user: null, admin: false, cuenta: NADA, files: {}, errors: {}, savedKey: '', modelos: null, modelosListos: false }); },
       setPeriod: (period) => set({ period }),
       setFile: (t, f) => { saveFile(t, f).catch(() => {}); set((s) => ({
+        db: null, // el aviso «Guardado en el historial» era del archivo anterior
         files: { ...s.files, [t]: f },
         errors: { ...s.errors, [t]: undefined },
       })); },

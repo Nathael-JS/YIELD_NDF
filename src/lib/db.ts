@@ -50,7 +50,7 @@ export const saveComentario = (grafica: string, texto: string) => post<Comentari
 
 export interface EstadoBase { bytes: number; tablas: { tabla: string; filas: number; bytes: number }[]; resumen: { desde: string | null; hasta: string | null; filas: number } }
 export const loadBase = () => call<EstadoBase>('/api/base');
-export const baseAccion = (a: { accion: 'borrarCarga'; id: number } | { accion: 'borrarRango'; desde: string; hasta: string } | { accion: 'retener'; dias: number }) =>
+export const baseAccion = (a: { accion: 'borrarRango'; desde: string; hasta: string } | { accion: 'retener'; dias: number }) =>
   post<{ borradas: number }>('/api/base', a);
 
 // quién guarda y en qué sesión lo pone el servidor a partir de la cookie

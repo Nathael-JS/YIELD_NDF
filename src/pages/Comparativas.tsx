@@ -34,6 +34,7 @@ export default function Comparativas() {
     loadSummary(prev[0], cur[1]).then(setRows).catch((e) => setFail(e.message));
   }, [prev[0], cur[1]]);
   useEffect(() => { loadCargas().then(setCargas).catch(() => {}); }, []);
+  useEffect(() => { if (to) setDay(to); }, [to]); // otro TCQS u otro rango del historial: su último día
 
   const recs = ([a, b]: [string, string]) => readTcqs(fromDb((rows ?? []).filter((r) => r.fecha >= a && r.fecha <= b))).records;
   const ra = recs(prev), rb = recs(cur), ta = totals(ra), tb = totals(rb);
@@ -45,8 +46,9 @@ export default function Comparativas() {
   const before = new Map(by(ra, (r) => r.group).map((s) => [s.name, s]));
   const stations = by(rb, (r) => r.group).filter((s) => s.input > 0).sort(byFpy);
   const orders = countOrders(rb);
-  // la revisión de congruencia más reciente que cubre el rango elegido (se guarda al cargar cada TCQS)
-  const review = cargas.find((c) => c.congruencia && c.desde <= cur[1] && c.hasta >= cur[0]);
+  // la revisión de la carga que cubre todo el rango elegido (la más reciente); si ninguna, la que más días cubre
+  const days = (c: Carga) => Math.min(Date.parse(c.hasta), Date.parse(cur[1])) - Math.max(Date.parse(c.desde), Date.parse(cur[0]));
+  const review = cargas.filter((c) => c.congruencia && days(c) >= 0).sort((a, b) => days(b) - days(a))[0];
   const campos = Object.entries(review?.congruencia?.campos ?? {}) as [keyof Congruencia['campos'], Congruencia['campos'][keyof Congruencia['campos']]][];
   const bad = campos.filter(([, c]) => c!.mal > 0);
   // cargas guardadas antes de 0.19.0 no traen ejemplos (solo n.º de fila)

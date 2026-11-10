@@ -8,6 +8,18 @@ Un cambio de componente se publica primero en el artefacto y después se copia a
 
 Los errores encontrados y cómo se corrigieron están en [ERRORES.md](ERRORES.md); las mejoras y cómo se hicieron, en [MEJORAS.md](MEJORAS.md).
 
+## [0.19.1] — 2026-11-10 · revisión de código
+
+### Corregido
+- **Historial duplicado al recargar:** el guardado ahora espera a saber si hay lista de modelos; antes, al recargar, guardaba una vez con todos los modelos (metía filas de otros proyectos) y otra con Juliet.
+- **Borrar un registro borraba datos de otra carga con el mismo nombre de archivo:** cada fila del resumen guarda qué carga la escribió (`yield_resumen.carga`) y borrar o respaldar toca solo esas filas.
+- **Base de datos borraba sin respaldo:** borrar una carga va por el mismo camino que Historial (respaldo automático de 7 días) y borrar un rango del resumen también deja respaldo.
+- **Respaldos sin límite:** máximo 20 manuales por usuario a la vez (la cuenta demo es pública).
+- **Respaldos vencidos** se purgan también al arrancar el servidor y al ver Base de datos, no solo al abrir Historial.
+- **Comparativas:** revisa la carga que cubre todo el rango elegido (no la más reciente que lo toque) y sigue al último día del archivo cargado.
+- **Yield:** el aviso «Guardado en el historial» ya no se queda del archivo anterior.
+- **Validación:** la congruencia se calcula una vez por archivo, no en cada pintada.
+
 ## [0.19.0] — 2026-11-10
 
 ### Agregado

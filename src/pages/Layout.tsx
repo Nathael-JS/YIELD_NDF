@@ -57,11 +57,12 @@ export const NeedTcqs = () => (
 
 /** Guarda en la base (historial), una sola vez por carga, el resumen en cuanto se lee el TCQS: de Juliet si hay lista de modelos, si no de todos. */
 function useAutoSave(records: ReturnType<typeof useData>['records']) {
-  const tcqs = useApp((s) => s.files.TCQS), bom = useApp((s) => s.modelos);
+  const tcqs = useApp((s) => s.files.TCQS), bom = useApp((s) => s.modelos), ready = useApp((s) => s.modelosListos);
   useEffect(() => {
     const { savedKey, user, setDb } = useApp.getState();
     // sin lista de modelos se guardan todos los del TCQS (records ya viene sin filtrar); lo que viene de la base ya está guardado
-    if (!tcqs || !records.length || tcqs.name.startsWith('Base ·') || !user) return;
+    // se espera la lista de modelos: si no, al recargar se guardaría primero con todos los modelos y luego otra vez
+    if (!ready || !tcqs || !records.length || tcqs.name.startsWith('Base ·') || !user) return;
     const key = `${tcqs.name}|${tcqs.loadedAt}|${bom?.archivo}|${bom?.guardado_en}`;
     if (key === savedKey) return;
     setDb(['info', 'Guardando en la base…'], key);
@@ -70,5 +71,5 @@ function useAutoSave(records: ReturnType<typeof useData>['records']) {
     saveSummary(tcqs.name, daily(records), congruence(tcqs, (m) => !juliet || juliet.has(modelKey(m))))
       .then((r) => setDb(['ok', `Guardado en el historial: ${r.guardadas} filas (día × modelo × estación).`]))
       .catch((e) => setDb(['bad', `No se guardó en la base: ${e.message}. Se reintenta al volver a cargar el archivo.`], ''));
-  }, [tcqs, bom, records]);
+  }, [ready, tcqs, bom, records]);
 }

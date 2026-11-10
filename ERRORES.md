@@ -96,6 +96,14 @@ Cada entrada dice qué pasaba, cómo se detectó, la causa, la corrección y con
 | E36 | El historial quedaba vacío si no se había subido el BOM | El guardado esperaba la lista de modelos | Se guarda con todos los modelos si no hay lista | Playwright sin `yield_modelos` |
 | E37 | «Todo cuadra» en un día sin ejemplos guardados aunque el archivo tenía diferencias | Solo se guardan 10 ejemplos por columna | Siempre se muestran los totales del archivo; los ejemplos, si hay | Playwright 2 y 5 nov |
 
+## 0.19.1 (revisión de código)
+
+| # | Qué pasaba | Causa | Corrección | Comprobación |
+| --- | --- | --- | --- | --- |
+| E38 | Cada recarga agregaba 2 cargas al historial, una con modelos de otros proyectos | `modelos` era `null` tanto «cargando» como «sin lista» | `modelosListos` | Playwright: 2 recargas → 1 carga, 0 filas fuera de Juliet |
+| E39 | Borrar una carga borraba datos de otra con el mismo nombre | Se borraba por rango + nombre de archivo | Columna `carga` en el resumen | Dos cargas `yield_tcqs.csv`: borrar la vieja deja las 27 filas de la nueva |
+| E40 | El servidor no arrancaba (durante el desarrollo) | `purge` usada antes de declararse | Declarada antes | Arranque local |
+
 ## Abiertos
 
 - **Ejemplos de lo que no cuadra:** se guardan 10 por columna para todo el archivo; para otros días se ven los totales, no las filas.

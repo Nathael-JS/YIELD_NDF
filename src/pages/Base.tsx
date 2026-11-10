@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Badge, Button, FileChip, HistoryList, KpiTile, Select, type HistoryItem } from '../components/ui.tsx';
-import { baseAccion, loadBase, loadCargas, loadSummary, saveModelos, type Carga, type EstadoBase } from '../lib/db.ts';
+import { baseAccion, loadBase, loadCargas, loadSummary, respaldoAccion, saveModelos, type Carga, type EstadoBase } from '../lib/db.ts';
 import { parseFile } from '../lib/files.ts';
 import { download } from '../lib/download.ts';
 import { dropAll } from '../lib/saved.ts';
@@ -22,7 +22,7 @@ export default function Base() {
   const reload = () => Promise.all([loadBase().then(setSt), loadCargas().then(setCargas)]).catch((e) => setMsg(['bad', e.message]));
   useEffect(() => { reload(); }, []);
   const act = (a: Parameters<typeof baseAccion>[0], what: string) => {
-    if (!confirm(`¿${what}? No se puede deshacer.`)) return;
+    if (!confirm(`¿${what}?`)) return;
     baseAccion(a).then((r) => { setMsg(['ok', `${what}: ${r.borradas} filas borradas.`]); reload(); }).catch((e) => setMsg(['bad', e.message]));
   };
   const exportCsv = async () => {
@@ -33,7 +33,7 @@ export default function Base() {
   const range = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const f = new FormData(e.currentTarget), desde = String(f.get('desde')), hasta = String(f.get('hasta'));
-    act({ accion: 'borrarRango', desde, hasta }, `Borrar el resumen del ${desde} al ${hasta}`);
+    act({ accion: 'borrarRango', desde, hasta }, `Borrar el resumen del ${desde} al ${hasta} (queda un respaldo de 7 días en Historial)`);
   };
   // el Excel del BOM se lee aquí; a la base solo va la lista de números de modelo
   const uploadBom = async (file: File) => {
@@ -100,7 +100,12 @@ export default function Base() {
         title="Historial de cargas"
         action={principal ? 'Borrar' : 'Ver'}
         items={cargas.map((c) => ({ carga: c, type: 'TCQS', name: c.archivo, date: shortDate(new Date(c.guardado_en)), period: `${c.usuario} · ${shortDay(c.desde)} – ${shortDay(c.hasta)} · ${c.filas} filas` }))}
-        onCompare={({ carga: c }) => principal ? act({ accion: 'borrarCarga', id: c.id }, `Borrar del historial la carga ${c.archivo}`) : setMsg(['ok', `${c.archivo}: ábrela desde Historial.`])}
+        onCompare={({ carga: c }) => {
+          if (!principal) return setMsg(['ok', `${c.archivo}: ábrela desde Historial.`]);
+          // igual que en Historial: antes de borrar se crea un respaldo automático de 7 días
+          if (confirm(`¿Borrar del historial la carga ${c.archivo} y sus datos? Se crea un respaldo automático que dura 7 días.`))
+            respaldoAccion({ accion: 'borrar', carga: c.id }).then(() => { setMsg(['ok', `${c.archivo} borrada; su respaldo está en Historial (7 días).`]); reload(); }).catch((e) => setMsg(['bad', e.message]));
+        }}
       />
       <section className="yc-card yc-pad app-sec">
         <h2 className="app-h3">En este equipo</h2>
