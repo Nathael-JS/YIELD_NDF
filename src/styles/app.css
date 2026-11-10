@@ -41,6 +41,9 @@ button.yc-nav-mark { border: 0; background: none; padding: 0; color: var(--ink);
 .app-art-bar { transform-box: fill-box; transform-origin: bottom; transition: transform 1.2s cubic-bezier(.4, 0, .2, 1); }
 .app-art-meta { stroke: var(--ink-muted); stroke-dasharray: 6 6; vector-effect: non-scaling-stroke; }
 .app-art-line { fill: none; stroke: var(--ink); stroke-width: 2.5; stroke-linejoin: round; vector-effect: non-scaling-stroke; stroke-dasharray: 1; stroke-dashoffset: 1; animation: app-draw 1.6s .8s ease-out forwards; transition: d 1.2s cubic-bezier(.4, 0, .2, 1); }
+/* escena 3D del login: misma franja inferior que la gráfica que reemplaza */
+.app-art-3d { position: absolute; left: 0; right: 0; bottom: 0; height: 42%; }
+.app-art-3d canvas { display: block; width: 100%; height: 100%; animation: app-in .8s both; }
 .app-art-cards { position: absolute; top: 50%; left: max(24px, calc(25% - 250px)); width: 250px; display: grid; gap: var(--space-3); transform: translateY(-60%); }
 .app-art-cards > * { min-width: 0; animation: app-in .5s cubic-bezier(.2, .7, .2, 1) both; }
 .app-art-cards > :nth-child(2) { animation-delay: .5s; }

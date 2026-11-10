@@ -8,6 +8,16 @@ Un cambio de componente se publica primero en el artefacto y después se copia a
 
 Los errores encontrados y cómo se corrigieron están en [ERRORES.md](ERRORES.md); las mejoras y cómo se hicieron, en [MEJORAS.md](MEJORAS.md).
 
+## [0.17.0] — 2026-11-10 · sistema de diseño v26
+
+### Agregado
+- **Fondo 3D en el login** (three.js): una línea de producción abstracta; las unidades pasan por cinco estaciones y se encienden en verde (pasa) o naranja (primera falla; se recuperan en la estación siguiente, como el retest). Reemplaza la gráfica de barras de la franja inferior; las tarjetas y el formulario no cambian.
+- Sin costo para la app: three.js va en un archivo aparte (118 KB comprimido) que se descarga solo en /login y después de pintar el formulario; el arranque sigue en ~128 KB.
+- Colores de los tokens (claro y oscuro), resolución máxima 1.5×, se pausa con la pestaña oculta y se quita al entrar. Con «reducir movimiento» o sin WebGL queda la ilustración 2D de antes (y three.js ni se descarga).
+
+### Sistema de diseño
+- `ChartCarousel` con el rebote y el gesto rápido de 0.16.0; README de `LoginPanel` con las reglas del fondo 3D.
+
 ## [0.16.0] — 2026-11-10
 
 ### Agregado
