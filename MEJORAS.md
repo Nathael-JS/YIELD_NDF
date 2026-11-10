@@ -8,6 +8,7 @@ Qué se mejoró, cómo se hizo y qué se usó; después, lo pendiente y lo que n
 
 | Versión | Mejora | Cómo se hizo | Qué se usó |
 | --- | --- | --- | --- |
+| 0.18.0 | **Congruencia, estimado real y Comparativas** | `congruence()` en `lib/tcqs.ts` (una pasada por fila, tolerancia ±0.6 pts porque el archivo da % enteros) con prueba; viaja en el mismo POST del resumen y se guarda como `jsonb`; Comparativas reutiliza `loadSummary`, `fromDb`, `totals`, `change` | `KpiTile`, `Badge`, `yc-table` |
 | 0.17.0 | **Fondo 3D del login** | three.js directo (sin react-three-fiber): una `InstancedMesh` para las unidades, color por instancia según la estación; `import()` dinámico tras el primer pintado; colores leídos de los tokens; `ResizeObserver` y pausa con `visibilitychange`. Se descartó GSAP: una sola escena no lo necesita | `three`, `LoginPanel backdrop` |
 | 0.16.0 | **Animación al ampliar y carrusel con rebote** | `document.startViewTransition` + `flushSync`: la tarjeta y la gráfica del panel comparten `view-transition-name`; `showModal` en `useLayoutEffect` para que la foto nueva ya tenga el panel; rebote con `transition` y velocidad del puntero. Se descartaron react-spring y GSAP: lo mismo sin dependencias | CSS, API del navegador |
 | 0.15.0 | **Gráfica ampliada con datos, comentarios e imagen** | `<dialog>` nativo (Esc, foco y fondo sin código propio); cada gráfica trae su tabla (`summary`); comentarios en `yield_comentarios`; la imagen se toma del panel ocultando los controles | `html-to-image` (carga diferida), `yc-table`, `Button`, `Badge` con `title` |

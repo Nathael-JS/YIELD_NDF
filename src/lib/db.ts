@@ -1,6 +1,6 @@
 // API del servidor (server/index.js): cuentas y datos en Neon. Misma dirección que la app: la sesión va en una
 // cookie que JavaScript no puede leer, y ninguna clave vive en el navegador.
-import type { DbRow } from './tcqs.ts';
+import type { Congruencia, DbRow } from './tcqs.ts';
 
 /** Lo llama la app cuando el servidor dice que la sesión ya no vale (vencida o cerrada). */
 export let onExpired = () => {};
@@ -54,7 +54,7 @@ export const baseAccion = (a: { accion: 'borrarCarga'; id: number } | { accion: 
   post<{ borradas: number }>('/api/base', a);
 
 // quién guarda y en qué sesión lo pone el servidor a partir de la cookie
-export const saveSummary = (archivo: string, filas: DbRow[]) => post<{ guardadas: number }>('/api/resumen', { archivo, filas });
+export const saveSummary = (archivo: string, filas: DbRow[], congruencia?: Congruencia) => post<{ guardadas: number }>('/api/resumen', { archivo, filas, congruencia });
 export const loadSummary = (desde?: string, hasta?: string) =>
   call<{ filas: DbRow[] }>(`/api/resumen${desde && hasta ? `?desde=${desde}&hasta=${hasta}` : ''}`).then((b) => b.filas);
 export const loadCargas = () => call<{ cargas: Carga[] }>('/api/cargas').then((b) => b.cargas);

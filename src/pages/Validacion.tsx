@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { Badge, Button, KpiTile, type Tone } from '../components/ui.tsx';
-import { by, modelKey } from '../lib/tcqs.ts';
+import { by, congruence, modelKey, pctText } from '../lib/tcqs.ts';
 import { useApp, useData } from '../store.ts';
 import { NeedTcqs, PageHead } from './Layout.tsx';
 
@@ -10,7 +10,7 @@ const CHECK: Partial<Record<Tone, string>> = { ok: 'OK', warn: 'Revisar', info: 
 export default function Validacion() {
   const { read, bom, models, all, records } = useData();
   const go = useNavigate();
-  const db = useApp((s) => s.db);
+  const db = useApp((s) => s.db), file = useApp((s) => s.files.TCQS);
   if (!read) return <><PageHead title="Validación" /><NeedTcqs /></>;
   if (read.missing.length) return (
     <>
@@ -42,6 +42,28 @@ export default function Validacion() {
         <KpiTile label="Modelos en el BOM" value={models ? n(models.size) : '—'} />
         <KpiTile label="Filas de Juliet" value={n(records.length)} />
       </div>
+      {(() => {
+        // estimado «real»: nuestras fórmulas sobre las filas de Juliet, contra lo que dicen las columnas de % del archivo.
+        // El detalle fila por fila se guarda con la carga en la base; aquí solo el resultado.
+        const c = file && congruence(file, (m) => !models || models.has(modelKey(m)));
+        if (!c || !Number.isFinite(c.reportado.fpy)) return null; // lo abierto desde la base no trae columnas de %
+        const pts = (a: number, b: number) => { const d = Math.round((a - b) * 10) / 10; return d ? `${d > 0 ? '+' : ''}${d} pts vs. archivo` : 'igual que el archivo'; };
+        return (
+          <section className="yc-card yc-pad app-sec" aria-labelledby="estimado">
+            <h2 id="estimado" className="app-h3">Estimado real</h2>
+            <p className="app-muted">Calculado con las fórmulas de la guía sobre {n(c.filas)} filas de Juliet. El archivo reporta FPY {pctText(c.reportado.fpy)} %, retest {pctText(c.reportado.retest)} % y Final {pctText(c.reportado.final)} % (sus columnas, ponderadas por entradas); la diferencia viene de retests de unidades de otro día y del tope de 100 % por fila.</p>
+            <div className="yc-grid-kpi">
+              {([['FPY', 'fpy'], ['A retest', 'retest'], ['Final Yield', 'final']] as const).map(([label, k]) => (
+                <div key={k} className="yc-kpi">
+                  <span className="yc-kpi-label">{label}</span>
+                  <span className="yc-kpi-value">{pctText(c.calculado[k])}<span className="yc-kpi-unit">%</span></span>
+                  <span className="yc-kpi-delta app-muted">{pts(c.calculado[k], c.reportado[k])}</span>
+                </div>
+              ))}
+            </div>
+          </section>
+        );
+      })()}
       <section className="yc-card yc-pad app-checks" aria-label="Comprobaciones">
         <h2 className="app-h3">Comprobaciones</h2>
         <ul>

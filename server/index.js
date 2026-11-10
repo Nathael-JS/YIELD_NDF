@@ -28,6 +28,8 @@ create table if not exists usuarios (
 -- debe_cambiar: contraseña temporal (creada por un administrador o desde Render); mfa: secreto TOTP confirmado; mfa_nuevo: en configuración
 -- órdenes (MO_NUMBER) de cada día × modelo × estación, separadas por coma: para contar órdenes distintas
 alter table yield_resumen add column if not exists ordenes text;
+-- congruencia del TCQS con las fórmulas (por campo: filas que cuadran y que no); solo para revisión, no se muestra en la app
+alter table yield_cargas add column if not exists congruencia jsonb;
 alter table usuarios add column if not exists debe_cambiar boolean not null default false;
 alter table usuarios add column if not exists mfa text;
 alter table usuarios add column if not exists mfa_nuevo text;
@@ -309,9 +311,12 @@ async function api(req, res) {
         primera_falla = excluded.primera_falla, segundo_pase = excluded.segundo_pase, ordenes = excluded.ordenes, archivo = excluded.archivo, guardado_en = now()`,
       [col('fecha'), col('modelo'), col('estacion'), col('entradas'), col('primer_pase'), col('primera_falla'), col('segundo_pase'), v.filas.map((f) => f.ordenes ?? null), v.archivo]);
     // registro de la carga para el historial por sesión
-    await c.query(`insert into yield_cargas (sesion, usuario, archivo, filas, entradas, primer_pase, primera_falla, segundo_pase, desde, hasta)
-      values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
-      [v.sesion, v.usuario, v.archivo, v.filas.length, sum('entradas'), sum('primer_pase'), sum('primera_falla'), sum('segundo_pase'), dias[0], dias.at(-1)]);
+    await c.query(`insert into yield_cargas (sesion, usuario, archivo, filas, entradas, primer_pase, primera_falla, segundo_pase, desde, hasta, congruencia)
+      values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+      [v.sesion, v.usuario, v.archivo, v.filas.length, sum('entradas'), sum('primer_pase'), sum('primera_falla'), sum('segundo_pase'), dias[0], dias.at(-1), v.congruencia]);
+    // en el registro del servidor solo si algo no cuadra (2da falla no cuenta: los retests de otro día la descuadran)
+    const mal = Object.entries(v.congruencia?.campos ?? {}).filter(([k, c]) => k !== 'segunda_falla' && c.mal).map(([k, c]) => `${k} ${c.mal}`);
+    if (mal.length) console.log(`Congruencia ${v.archivo}: no cuadran ${mal.join(', ')} filas`);
     await c.query('commit');
     return json(res, 200, { guardadas: r.rowCount });
     } catch (e) {

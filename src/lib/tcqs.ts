@@ -36,6 +36,47 @@ export function readTcqs(f: ParsedFile) {
   return { records, missing, bad };
 }
 
+/** Una comprobación del archivo contra las fórmulas: filas que cuadran, que no, y algunas de ejemplo (n.º de fila). */
+export interface Check { ok: number; mal: number; filas: number[] }
+/** Congruencia del TCQS con nuestras fórmulas, fila por fila (sin redondeos de más: el archivo da % enteros, se tolera ±0.6 pts).
+ * `reportado`: lo que dicen las columnas de % del archivo, ponderado por entradas; `calculado`: nuestras fórmulas. */
+export interface Congruencia {
+  filas: number;
+  campos: Partial<Record<'entradas' | 'segunda_falla' | 'fpy' | 'retest' | 'final', Check>>;
+  reportado: { fpy: number; retest: number; final: number };
+  calculado: { fpy: number; retest: number; final: number };
+}
+/** «75%», «75», 0.75 (Excel) → 75. */
+const rate = (v: Cell) => { const s = text(v), n = Number(s.replace('%', '')); return !s || !Number.isFinite(n) ? NaN : !s.includes('%') && n <= 1 && typeof v === 'number' ? n * 100 : n; };
+
+export function congruence(f: ParsedFile, keep: (model: string) => boolean = () => true): Congruencia {
+  const col = (c: string) => f.headers.findIndex((h) => h.toUpperCase() === c);
+  const at = { IN: col('INPUT_QTY'), FP: col('FIRST_PASS_QTY'), FF: col('FIRST_FAIL_QTY'), SP: col('SECOND_PASS_QTY'), RF: col('REFAIL_QTY'),
+    FPY: col('FPRATE'), RT: col('RETESTRATE'), FY: col('FINAL_YIELD_RATE'), M: col('MODEL_NAME') };
+  const campos: Congruencia['campos'] = {}, sum = { in: 0, fpy: 0, rt: 0, fy: 0 };
+  const mark = (k: keyof Congruencia['campos'], good: boolean, fila: number) => {
+    const c = (campos[k] ??= { ok: 0, mal: 0, filas: [] });
+    if (good) c.ok++; else { c.mal++; if (c.filas.length < 10) c.filas.push(fila); }
+  };
+  const near = (a: number, b: number) => Math.abs(a - b) <= 0.6;
+  const rs: Rec[] = [];
+  f.rows.forEach((r, i) => {
+    const IN = qty(r[at.IN]), FP = qty(r[at.FP]), FF = qty(r[at.FF]), SP = qty(r[at.SP]), fila = i + 2;
+    if (!(IN > 0) || [FP, FF, SP].some(Number.isNaN) || !keep(text(r[at.M]))) return;
+    rs.push({ date: '', model: '', mo: '', group: '', tester: '', input: IN, fp: FP, ff: FF, sp: SP });
+    mark('entradas', FP + FF === IN, fila); // fórmula 1
+    // 2da falla = 1ra falla que no pasó el retest; un retest de otro día la descuadra (esperado, no es error del archivo)
+    if (at.RF >= 0) mark('segunda_falla', qty(r[at.RF]) === Math.max(0, FF - SP), fila);
+    const fpy = rate(r[at.FPY]), rt = rate(r[at.RT]), fy = rate(r[at.FY]);
+    if (at.FPY >= 0) mark('fpy', near(fpy, (100 * FP) / IN), fila);
+    if (at.RT >= 0) mark('retest', near(rt, (100 * SP) / IN), fila);
+    if (at.FY >= 0) mark('final', near(fy, Math.min(100, (100 * (FP + SP)) / IN)), fila); // el archivo topa en 100 %
+    sum.in += IN; sum.fpy += fpy * IN; sum.rt += rt * IN; sum.fy += fy * IN;
+  });
+  const t = totals(rs);
+  return { filas: rs.length, campos, reportado: { fpy: sum.fpy / sum.in, retest: sum.rt / sum.in, final: sum.fy / sum.in }, calculado: { fpy: t.fpy, retest: t.retest, final: t.final } };
+}
+
 /** Números de modelo dentro del texto de las celdas (BOM): 920-9K33R-00MV-GS0, 699-9T363-1300-000, SA029400, MA017863… */
 export function modelsFrom(f: ParsedFile) {
   const re = /\b(?:\d{3}-[0-9A-Z]{5}-[0-9A-Z]{4}-[0-9A-Z]{3}|[A-Z]{2}\d{6})\b/g;

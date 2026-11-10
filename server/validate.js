@@ -14,5 +14,8 @@ export function validate(b) {
       && (f.ordenes == null || (typeof f.ordenes === 'string' && f.ordenes.length <= 4000));
     if (!ok) return { error: `Fila ${i + 1} inválida` };
   }
-  return { archivo: b.archivo.trim().slice(0, 200), sesion: b.sesion, usuario: b.usuario, filas: b.filas };
+  // congruencia: opcional, solo se guarda; se acepta un objeto chico y nada más
+  const c = b.congruencia, size = c == null ? 0 : JSON.stringify(c).length;
+  if (c != null && (typeof c !== 'object' || Array.isArray(c) || size > 4000)) return { error: 'Congruencia inválida' };
+  return { archivo: b.archivo.trim().slice(0, 200), sesion: b.sesion, usuario: b.usuario, filas: b.filas, congruencia: c ?? null };
 }
