@@ -17,5 +17,5 @@ test('validate acepta un resumen correcto y rechaza lo demás', () => {
   assert.equal(validate({ ...ok, filas: [fila] }).congruencia, null);
   assert.deepEqual(validate({ ...ok, filas: [fila], congruencia: { filas: 1 } }).congruencia, { filas: 1 });
   assert.match(validate({ ...ok, filas: [fila], congruencia: [1] }).error, /Congruencia/);
-  assert.match(validate({ ...ok, filas: [fila], congruencia: { x: 'a'.repeat(5000) } }).error, /Congruencia/);
+  assert.match(validate({ ...ok, filas: [fila], congruencia: { x: 'a'.repeat(17000) } }).error, /Congruencia/);
 });

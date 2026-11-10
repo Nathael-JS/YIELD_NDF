@@ -192,10 +192,12 @@ export function ChartCarousel({ slides, label = 'Gráficas' }: { slides: Carouse
 }
 
 export interface HistoryItem { type: string; name: string; period: string; date: string }
-export function HistoryList<T extends HistoryItem>({ items, title = 'Historial de la sesión', onBackup, onCompare, action = 'Comparar' }: {
+export function HistoryList<T extends HistoryItem>({ items, title = 'Historial de la sesión', onBackup, onCompare, action = 'Comparar', extra }: {
   items: T[]; title?: string; onBackup?: () => void; onCompare?: (it: T) => void;
   /** Texto del botón de cada fila. */
   action?: string;
+  /** Más acciones de cada fila (respaldar, borrar…), antes de la principal. */
+  extra?: (it: T) => ReactNode;
 }) {
   return (
     <section className="yc-history">
@@ -210,7 +212,7 @@ export function HistoryList<T extends HistoryItem>({ items, title = 'Historial d
               <span className="yc-history-type">{it.type}</span>
               <span className="yc-history-name" title={it.name}>{it.name}</span>
               <span className="yc-history-meta">{it.period} · {it.date}</span>
-              <Button variant="quiet" onClick={() => onCompare?.(it)}>{action}</Button>
+              <span className="yc-history-actions">{extra?.(it)}<Button variant="quiet" onClick={() => onCompare?.(it)}>{action}</Button></span>
             </li>
           ))}
         </ul>

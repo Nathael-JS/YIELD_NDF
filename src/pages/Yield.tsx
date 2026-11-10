@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { Badge, Button, KpiTile, PeriodTabs, Select } from '../components/ui.tsx';
 import { by, byFpy, countOrders, change, diagnose, DX_HINT, pctText, periodOf, periodsOf, rty, shortDay, toWatch, totals, type Grain, type Rec } from '../lib/tcqs.ts';
 import { useApp, useData } from '../store.ts';
@@ -23,6 +23,7 @@ export default function Yield() {
   const [pick, setPick] = useState<string>(); // clave del periodo; sin elegir = el último con datos
   const [busy, setBusy] = useState(false);
   const [fail, setFail] = useState<string>();
+  const db = useApp((s) => s.db);
   // estación que llega desde «Dónde mirar primero» (/yield#FT): se resalta y se lleva a la vista
   const focus = decodeURIComponent(useLocation().hash.slice(1));
   useEffect(() => {
@@ -82,6 +83,8 @@ export default function Yield() {
         <Button onClick={exportHtml}>Descargar reporte HTML</Button>
         <Button onClick={exportPdf} disabled={busy}>{busy ? 'Generando PDF…' : 'Descargar PDF'}</Button>
         {fail && <span className="app-muted" role="alert"><Badge tone="bad">Error</Badge> {fail}</span>}
+        {/* lo que se ve aquí ya quedó en el historial (se guarda solo al leer el TCQS) */}
+        {db && <span className="app-muted" role="status"><Badge tone={db[0]}>Historial</Badge> {db[1]} {db[0] === 'ok' && <Link to="/historial">Ver historial</Link>}</span>}
       </div>
       {chart('estaciones')}
       {table}

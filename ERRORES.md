@@ -89,7 +89,17 @@ Cada entrada dice qué pasaba, cómo se detectó, la causa, la corrección y con
 | E34 | «Entradas» no mostraba las órdenes en Yield | Solo se cambió Inicio | También en Yield (HTML y PDF salen de ahí) | Playwright |
 | E35 | Tampoco en Inicio con datos abiertos desde la base | La base no guardaba MO_NUMBER | Columna `ordenes` en `yield_resumen` | Prueba de ida y vuelta + Playwright (755 / 11 desde archivo y desde la base) |
 
+## 0.19.0
+
+| # | Qué pasaba | Causa | Corrección | Comprobación |
+| --- | --- | --- | --- | --- |
+| E36 | El historial quedaba vacío si no se había subido el BOM | El guardado esperaba la lista de modelos | Se guarda con todos los modelos si no hay lista | Playwright sin `yield_modelos` |
+| E37 | «Todo cuadra» en un día sin ejemplos guardados aunque el archivo tenía diferencias | Solo se guardan 10 ejemplos por columna | Siempre se muestran los totales del archivo; los ejemplos, si hay | Playwright 2 y 5 nov |
+
 ## Abiertos
+
+- **Ejemplos de lo que no cuadra:** se guardan 10 por columna para todo el archivo; para otros días se ven los totales, no las filas.
+- **Respaldos:** vencen a los 7 días y se purgan al consultar Historial o los respaldos (no hay tarea programada); los guardados antes de 0.19.0 no existen.
 
 - **Fondo 3D del login:** si se cambia entre tema claro y oscuro con el login abierto, la escena conserva los colores con los que cargó hasta recargar la página. No medido en un equipo real de planta (solo 60 fps en Chromium con CPU 4× más lento).
 

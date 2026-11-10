@@ -55,20 +55,20 @@ export const NeedTcqs = () => (
   <p className="yc-card app-empty">Carga el TCQS en <Link to="/carga">Carga de datos</Link> para ver esta página.</p>
 );
 
-/** Guarda en la base, una sola vez por carga, el resumen de Juliet en cuanto están el TCQS y la lista de modelos. */
+/** Guarda en la base (historial), una sola vez por carga, el resumen en cuanto se lee el TCQS: de Juliet si hay lista de modelos, si no de todos. */
 function useAutoSave(records: ReturnType<typeof useData>['records']) {
   const tcqs = useApp((s) => s.files.TCQS), bom = useApp((s) => s.modelos);
   useEffect(() => {
     const { savedKey, user, setDb } = useApp.getState();
-    // sin BOM no hay filtro de Juliet; lo que viene de Neon ya está guardado
-    if (!tcqs || !bom || !records.length || tcqs.name.startsWith('Base ·') || !user) return;
-    const key = `${tcqs.name}|${tcqs.loadedAt}|${bom.archivo}|${bom.guardado_en}`;
+    // sin lista de modelos se guardan todos los del TCQS (records ya viene sin filtrar); lo que viene de la base ya está guardado
+    if (!tcqs || !records.length || tcqs.name.startsWith('Base ·') || !user) return;
+    const key = `${tcqs.name}|${tcqs.loadedAt}|${bom?.archivo}|${bom?.guardado_en}`;
     if (key === savedKey) return;
     setDb(['info', 'Guardando en la base…'], key);
     // la congruencia del archivo con las fórmulas va con la carga y se queda en la base (no se muestra aquí)
-    const juliet = new Set(bom.modelos.map(modelKey));
-    saveSummary(tcqs.name, daily(records), congruence(tcqs, (m) => juliet.has(modelKey(m))))
-      .then((r) => setDb(['ok', `Guardado en la base: ${r.guardadas} filas (día × modelo × estación).`]))
+    const juliet = bom && new Set(bom.modelos.map(modelKey));
+    saveSummary(tcqs.name, daily(records), congruence(tcqs, (m) => !juliet || juliet.has(modelKey(m))))
+      .then((r) => setDb(['ok', `Guardado en el historial: ${r.guardadas} filas (día × modelo × estación).`]))
       .catch((e) => setDb(['bad', `No se guardó en la base: ${e.message}. Se reintenta al volver a cargar el archivo.`], ''));
   }, [tcqs, bom, records]);
 }

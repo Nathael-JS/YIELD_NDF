@@ -30,6 +30,10 @@ create table if not exists usuarios (
 alter table yield_resumen add column if not exists ordenes text;
 -- congruencia del TCQS con las fórmulas (por campo: filas que cuadran y que no); solo para revisión, no se muestra en la app
 alter table yield_cargas add column if not exists congruencia jsonb;
+-- respaldos de cargas del historial (al borrar una, o a mano): la carga y sus filas del resumen; vencen a los 7 días
+create table if not exists yield_respaldos (
+  id serial primary key, motivo text not null, usuario text not null, datos jsonb not null,
+  creado timestamptz not null default now(), vence timestamptz not null default now() + interval '7 days');
 alter table usuarios add column if not exists debe_cambiar boolean not null default false;
 alter table usuarios add column if not exists mfa text;
 alter table usuarios add column if not exists mfa_nuevo text;
@@ -162,7 +166,7 @@ async function database(req, res, me) {
       db.query('select pg_database_size(current_database())::bigint as bytes'),
       // conteo exacto (n_live_tup de pg_stat se actualiza con retraso); son tablas chicas
       db.query(`select t as tabla, (xpath('/row/c/text()', query_to_xml('select count(*) as c from ' || t, false, true, '')))[1]::text::int as filas,
-        pg_total_relation_size(t::regclass)::bigint as bytes from unnest(array['yield_resumen', 'yield_cargas', 'yield_modelos', 'yield_comentarios', 'usuarios']) as t`),
+        pg_total_relation_size(t::regclass)::bigint as bytes from unnest(array['yield_resumen', 'yield_cargas', 'yield_respaldos', 'yield_modelos', 'yield_comentarios', 'usuarios']) as t`),
       db.query(`select to_char(min(fecha), 'YYYY-MM-DD') desde, to_char(max(fecha), 'YYYY-MM-DD') hasta, count(*)::int filas from yield_resumen`),
     ]);
     return json(res, 200, { bytes: Number(g.bytes), tablas: tablas.map((t) => ({ ...t, bytes: Number(t.bytes) })), resumen: r });
@@ -262,42 +266,8 @@ async function health(res) {
   }
 }
 
-async function api(req, res) {
-  if (req.url === '/api/salud') return health(res);
-  if (!db) return json(res, 503, { error: 'Base de datos no configurada (falta DATABASE_URL)' });
-  await ready;
-  const url = new URL(req.url, 'http://x');
-  // un POST de otro sitio no puede mandar JSON sin permiso del navegador: junto con SameSite=Strict, frena CSRF
-  if (req.method === 'POST' && !req.headers['content-type']?.startsWith('application/json')) return json(res, 415, { error: 'Se esperaba JSON' });
-  if (['/api/login', '/api/login/codigo', '/api/logout', '/api/me'].includes(url.pathname)) {
-    if (url.pathname !== '/api/me' && req.method !== 'POST') return json(res, 405, { error: 'Método no permitido' });
-    return account(req, res, url.pathname);
-  }
-  const s = await current(req);
-  if (!s) return json(res, 401, { error: 'Inicia sesión' });
-  if (url.pathname.startsWith('/api/seguridad/')) return req.method === 'POST' ? security(req, res, s, url.pathname) : json(res, 405, { error: 'Método no permitido' });
-  if (s.limitado) return json(res, 403, { error: 'Completa la seguridad de tu cuenta', seguridad: true });
-  if (url.pathname === '/api/usuarios') return accounts(req, res, s);
-  if (url.pathname === '/api/base') return database(req, res, s);
-  if (url.pathname === '/api/modelos') return models(req, res, s);
-  if (url.pathname === '/api/comentarios') return comments(req, res, s, url);
-  if (req.method === 'GET' && url.pathname === '/api/cargas') {
-    const { rows } = await db.query(`select id, sesion, usuario, archivo, filas, entradas, primer_pase, primera_falla, segundo_pase,
-      to_char(desde, 'YYYY-MM-DD') desde, to_char(hasta, 'YYYY-MM-DD') hasta, guardado_en from yield_cargas order by guardado_en desc limit 200`);
-    return json(res, 200, { cargas: rows });
-  }
-  if (url.pathname !== '/api/resumen') return json(res, 404, { error: 'No encontrado' });
-  if (req.method === 'GET') {
-    // ?desde=&hasta= opcionales (las de una carga del historial)
-    const desde = url.searchParams.get('desde') ?? '0001-01-01', hasta = url.searchParams.get('hasta') ?? '9999-12-31';
-    if (!DAY.test(desde) || !DAY.test(hasta)) return json(res, 400, { error: 'Fechas inválidas' });
-    const { rows } = await db.query(`select to_char(fecha, 'YYYY-MM-DD') fecha, modelo, estacion, entradas, primer_pase, primera_falla, segundo_pase, coalesce(ordenes, '') ordenes
-      from yield_resumen where fecha between $1 and $2 order by fecha, modelo, estacion`, [desde, hasta]);
-    return json(res, 200, { filas: rows });
-  }
-  if (req.method === 'POST') {
-    const v = validate({ ...(await body(req)), sesion: s.sid, usuario: s.nombre }); // quién y en qué sesión lo pone el servidor
-    if (v.error) return json(res, 400, { error: v.error });
+/** Guarda una carga ya validada: resumen (upsert) + registro en el historial, en una transacción. Devuelve filas guardadas. */
+async function store(v) {
     const col = (k) => v.filas.map((f) => f[k]);
     const sum = (k) => v.filas.reduce((t, f) => t + f[k], 0);
     const dias = col('fecha').sort();
@@ -318,13 +288,107 @@ async function api(req, res) {
     const mal = Object.entries(v.congruencia?.campos ?? {}).filter(([k, c]) => k !== 'segunda_falla' && c.mal).map(([k, c]) => `${k} ${c.mal}`);
     if (mal.length) console.log(`Congruencia ${v.archivo}: no cuadran ${mal.join(', ')} filas`);
     await c.query('commit');
-    return json(res, 200, { guardadas: r.rowCount });
+    return r.rowCount;
     } catch (e) {
       await c.query('rollback');
       throw e;
     } finally {
       c.release();
     }
+}
+
+/** La carga `id` con sus filas del resumen (las de su rango que siguen siendo de su archivo): lo que va en un respaldo. */
+async function snapshot(id) {
+  const { rows: [carga] } = await db.query(`select id, archivo, usuario, to_char(desde, 'YYYY-MM-DD') desde, to_char(hasta, 'YYYY-MM-DD') hasta, guardado_en, congruencia
+    from yield_cargas where id = $1`, [id]);
+  if (!carga) return null;
+  const { rows: filas } = await db.query(`select to_char(fecha, 'YYYY-MM-DD') fecha, modelo, estacion, entradas, primer_pase, primera_falla, segundo_pase, ordenes
+    from yield_resumen where fecha between $1 and $2 and archivo = $3 order by fecha, modelo, estacion`, [carga.desde, carga.hasta, carga.archivo]);
+  return { tipo: 'yield-respaldo', v: 1, carga, filas: filas.map(({ ordenes, ...f }) => (ordenes ? { ...f, ordenes } : f)) };
+}
+
+/** Respaldos del historial. Vencen a los 7 días (se purgan en cada consulta). Borrar una carga: solo administradores. */
+async function backups(req, res, me, url) {
+  await db.query('delete from yield_respaldos where vence < now()');
+  if (req.method === 'GET') {
+    const id = Number(url.searchParams.get('id'));
+    if (id) {
+      const { rows: [r] } = await db.query('select datos from yield_respaldos where id = $1', [id]);
+      return r ? json(res, 200, r.datos) : json(res, 404, { error: 'El respaldo ya no existe (vencen a los 7 días)' });
+    }
+    const { rows } = await db.query(`select id, motivo, usuario, creado, vence, datos->'carga'->>'archivo' archivo, datos->'carga'->>'desde' desde,
+      datos->'carga'->>'hasta' hasta, jsonb_array_length(datos->'filas') filas from yield_respaldos order by creado desc`);
+    return json(res, 200, { respaldos: rows });
+  }
+  const b = await body(req);
+  const restore = async (d) => {
+    const v = validate({ archivo: d?.carga?.archivo, filas: d?.filas, congruencia: d?.carga?.congruencia, sesion: me.sid, usuario: me.nombre });
+    if (v.error) return json(res, 400, { error: `Respaldo inválido: ${v.error}` });
+    return json(res, 200, { guardadas: await store(v) });
+  };
+  if (b.accion === 'cargar') return restore(b.datos); // un respaldo descargado antes
+  if (b.accion === 'restaurar' && Number.isInteger(b.id)) {
+    const { rows: [r] } = await db.query('select datos from yield_respaldos where id = $1', [b.id]);
+    return r ? restore(r.datos) : json(res, 404, { error: 'El respaldo ya no existe' });
+  }
+  if ((b.accion === 'crear' || b.accion === 'borrar') && Number.isInteger(b.carga)) {
+    if (b.accion === 'borrar' && !me.admin) return json(res, 403, { error: 'Solo un administrador borra registros del historial' });
+    const d = await snapshot(b.carga);
+    if (!d) return json(res, 404, { error: 'Esa carga ya no existe' });
+    const c = await db.connect();
+    try {
+      await c.query('begin');
+      // al borrar, primero el respaldo automático: si algo falla no se pierde nada
+      const { rows: [r] } = await c.query('insert into yield_respaldos (motivo, usuario, datos) values ($1, $2, $3) returning id, vence', [b.accion === 'borrar' ? 'borrado' : 'manual', me.usuario, d]);
+      if (b.accion === 'borrar') {
+        await c.query('delete from yield_resumen where fecha between $1 and $2 and archivo = $3', [d.carga.desde, d.carga.hasta, d.carga.archivo]);
+        await c.query('delete from yield_cargas where id = $1', [b.carga]);
+      }
+      await c.query('commit');
+      return json(res, 200, r);
+    } catch (e) { await c.query('rollback'); throw e; } finally { c.release(); }
+  }
+  return json(res, 400, { error: 'Acción inválida' });
+}
+
+async function api(req, res) {
+  if (req.url === '/api/salud') return health(res);
+  if (!db) return json(res, 503, { error: 'Base de datos no configurada (falta DATABASE_URL)' });
+  await ready;
+  const url = new URL(req.url, 'http://x');
+  // un POST de otro sitio no puede mandar JSON sin permiso del navegador: junto con SameSite=Strict, frena CSRF
+  if (req.method === 'POST' && !req.headers['content-type']?.startsWith('application/json')) return json(res, 415, { error: 'Se esperaba JSON' });
+  if (['/api/login', '/api/login/codigo', '/api/logout', '/api/me'].includes(url.pathname)) {
+    if (url.pathname !== '/api/me' && req.method !== 'POST') return json(res, 405, { error: 'Método no permitido' });
+    return account(req, res, url.pathname);
+  }
+  const s = await current(req);
+  if (!s) return json(res, 401, { error: 'Inicia sesión' });
+  if (url.pathname.startsWith('/api/seguridad/')) return req.method === 'POST' ? security(req, res, s, url.pathname) : json(res, 405, { error: 'Método no permitido' });
+  if (s.limitado) return json(res, 403, { error: 'Completa la seguridad de tu cuenta', seguridad: true });
+  if (url.pathname === '/api/usuarios') return accounts(req, res, s);
+  if (url.pathname === '/api/base') return database(req, res, s);
+  if (url.pathname === '/api/modelos') return models(req, res, s);
+  if (url.pathname === '/api/comentarios') return comments(req, res, s, url);
+  if (url.pathname === '/api/respaldos') return backups(req, res, s, url);
+  if (req.method === 'GET' && url.pathname === '/api/cargas') {
+    const { rows } = await db.query(`select id, sesion, usuario, archivo, filas, entradas, primer_pase, primera_falla, segundo_pase,
+      to_char(desde, 'YYYY-MM-DD') desde, to_char(hasta, 'YYYY-MM-DD') hasta, guardado_en, congruencia from yield_cargas order by guardado_en desc limit 200`);
+    return json(res, 200, { cargas: rows });
+  }
+  if (url.pathname !== '/api/resumen') return json(res, 404, { error: 'No encontrado' });
+  if (req.method === 'GET') {
+    // ?desde=&hasta= opcionales (las de una carga del historial)
+    const desde = url.searchParams.get('desde') ?? '0001-01-01', hasta = url.searchParams.get('hasta') ?? '9999-12-31';
+    if (!DAY.test(desde) || !DAY.test(hasta)) return json(res, 400, { error: 'Fechas inválidas' });
+    const { rows } = await db.query(`select to_char(fecha, 'YYYY-MM-DD') fecha, modelo, estacion, entradas, primer_pase, primera_falla, segundo_pase, coalesce(ordenes, '') ordenes
+      from yield_resumen where fecha between $1 and $2 order by fecha, modelo, estacion`, [desde, hasta]);
+    return json(res, 200, { filas: rows });
+  }
+  if (req.method === 'POST') {
+    const v = validate({ ...(await body(req)), sesion: s.sid, usuario: s.nombre }); // quién y en qué sesión lo pone el servidor
+    if (v.error) return json(res, 400, { error: v.error });
+    return json(res, 200, { guardadas: await store(v) });
   }
   json(res, 405, { error: 'Método no permitido' });
 }

@@ -116,6 +116,7 @@ body { margin: 0; background: var(--surface-100); color: var(--ink); font: 400 1
 .yc-history-head h3 { margin: 0; font-size: 16px; line-height: 24px; font-weight: 600; }
 .yc-history-list { list-style: none; margin: 0; padding: 0; }
 .yc-history-row { display: grid; grid-template-columns: 120px 1fr auto auto; gap: var(--space-3); align-items: center; padding: var(--space-2) var(--space-4); border-bottom: 1px solid var(--line); }
+.yc-history-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--space-1); }
 .yc-history-row:last-child { border-bottom: 0; }
 .yc-history-row:hover { background: var(--surface-200); }
 .yc-history-type { font: 500 12px/18px var(--font-mono); color: var(--brand); }

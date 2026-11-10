@@ -36,8 +36,10 @@ export function readTcqs(f: ParsedFile) {
   return { records, missing, bad };
 }
 
-/** Una comprobación del archivo contra las fórmulas: filas que cuadran, que no, y algunas de ejemplo (n.º de fila). */
-export interface Check { ok: number; mal: number; filas: number[] }
+/** Fila que no cuadra: n.º de fila del archivo (con encabezado), qué dice el archivo y qué da la fórmula. */
+export interface Mismatch { fila: number; fecha: string; estacion: string; archivo: number; calculado: number }
+/** Una comprobación del archivo contra las fórmulas: filas que cuadran, que no, y hasta 10 de ejemplo. */
+export interface Check { ok: number; mal: number; ejemplos: Mismatch[] }
 /** Congruencia del TCQS con nuestras fórmulas, fila por fila (sin redondeos de más: el archivo da % enteros, se tolera ±0.6 pts).
  * `reportado`: lo que dicen las columnas de % del archivo, ponderado por entradas; `calculado`: nuestras fórmulas. */
 export interface Congruencia {
@@ -52,25 +54,27 @@ const rate = (v: Cell) => { const s = text(v), n = Number(s.replace('%', '')); r
 export function congruence(f: ParsedFile, keep: (model: string) => boolean = () => true): Congruencia {
   const col = (c: string) => f.headers.findIndex((h) => h.toUpperCase() === c);
   const at = { IN: col('INPUT_QTY'), FP: col('FIRST_PASS_QTY'), FF: col('FIRST_FAIL_QTY'), SP: col('SECOND_PASS_QTY'), RF: col('REFAIL_QTY'),
-    FPY: col('FPRATE'), RT: col('RETESTRATE'), FY: col('FINAL_YIELD_RATE'), M: col('MODEL_NAME') };
+    FPY: col('FPRATE'), RT: col('RETESTRATE'), FY: col('FINAL_YIELD_RATE'), M: col('MODEL_NAME'), D: col('WORK_DATE'), G: col('GROUP_NAME') };
   const campos: Congruencia['campos'] = {}, sum = { in: 0, fpy: 0, rt: 0, fy: 0 };
-  const mark = (k: keyof Congruencia['campos'], good: boolean, fila: number) => {
-    const c = (campos[k] ??= { ok: 0, mal: 0, filas: [] });
-    if (good) c.ok++; else { c.mal++; if (c.filas.length < 10) c.filas.push(fila); }
+  let row: Cell[] = [], fila = 0;
+  const mark = (k: keyof Congruencia['campos'], archivo: number, calculado: number, good = Math.abs(archivo - calculado) <= 0.6) => {
+    const c = (campos[k] ??= { ok: 0, mal: 0, ejemplos: [] });
+    if (good) c.ok++;
+    else if (++c.mal <= 10) c.ejemplos.push({ fila, fecha: day(row[at.D]), estacion: text(row[at.G]), archivo, calculado: Math.round(calculado * 10) / 10 });
   };
-  const near = (a: number, b: number) => Math.abs(a - b) <= 0.6;
   const rs: Rec[] = [];
   f.rows.forEach((r, i) => {
-    const IN = qty(r[at.IN]), FP = qty(r[at.FP]), FF = qty(r[at.FF]), SP = qty(r[at.SP]), fila = i + 2;
+    const IN = qty(r[at.IN]), FP = qty(r[at.FP]), FF = qty(r[at.FF]), SP = qty(r[at.SP]);
+    row = r; fila = i + 2;
     if (!(IN > 0) || [FP, FF, SP].some(Number.isNaN) || !keep(text(r[at.M]))) return;
     rs.push({ date: '', model: '', mo: '', group: '', tester: '', input: IN, fp: FP, ff: FF, sp: SP });
-    mark('entradas', FP + FF === IN, fila); // fórmula 1
+    mark('entradas', IN, FP + FF, FP + FF === IN); // fórmula 1
     // 2da falla = 1ra falla que no pasó el retest; un retest de otro día la descuadra (esperado, no es error del archivo)
-    if (at.RF >= 0) mark('segunda_falla', qty(r[at.RF]) === Math.max(0, FF - SP), fila);
+    if (at.RF >= 0) mark('segunda_falla', qty(r[at.RF]), Math.max(0, FF - SP), qty(r[at.RF]) === Math.max(0, FF - SP));
     const fpy = rate(r[at.FPY]), rt = rate(r[at.RT]), fy = rate(r[at.FY]);
-    if (at.FPY >= 0) mark('fpy', near(fpy, (100 * FP) / IN), fila);
-    if (at.RT >= 0) mark('retest', near(rt, (100 * SP) / IN), fila);
-    if (at.FY >= 0) mark('final', near(fy, Math.min(100, (100 * (FP + SP)) / IN)), fila); // el archivo topa en 100 %
+    if (at.FPY >= 0) mark('fpy', fpy, (100 * FP) / IN);
+    if (at.RT >= 0) mark('retest', rt, (100 * SP) / IN);
+    if (at.FY >= 0) mark('final', fy, Math.min(100, (100 * (FP + SP)) / IN)); // el archivo topa en 100 %
     sum.in += IN; sum.fpy += fpy * IN; sum.rt += rt * IN; sum.fy += fy * IN;
   });
   const t = totals(rs);
@@ -200,4 +204,12 @@ export function fromDb(rows: DbRow[]): ParsedFile {
     headers: [...REQUIRED],
     rows: rows.map((r) => [r.fecha, r.modelo, r.ordenes ?? '', r.estacion, '', r.entradas, r.primer_pase, r.primera_falla, r.segundo_pase]),
   };
+}
+
+const plus = (iso: string, days: number) => new Date(Date.parse(iso) + days * 864e5).toISOString().slice(0, 10);
+/** Comparativas: el rango elegido y el anterior. Semana: lunes a sábado (sin domingo) contra la semana anterior. */
+export function ranges(day: string, mode: 'dia' | 'semana'): [[string, string], [string, string]] {
+  if (mode === 'dia') return [[day, day], [plus(day, -1), plus(day, -1)]];
+  const mon = plus(day, -((new Date(day).getUTCDay() + 6) % 7));
+  return [[mon, plus(mon, 5)], [plus(mon, -7), plus(mon, -2)]];
 }
