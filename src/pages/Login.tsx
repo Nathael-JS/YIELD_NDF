@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { Badge, FileChip, KpiTile, LoginPanel } from '../components/ui.tsx';
 import { META_FPY } from '../lib/tcqs.ts';
@@ -7,7 +7,7 @@ import { useApp } from '../store.ts';
 
 // Ilustración del login: barras que crecen y siguen moviéndose como si llegaran datos, la línea de FPY que las
 // acompaña y los archivos que «se cargan». Decorativa: no muestra datos reales (solo la meta, que sí lo es).
-// Con movimiento reducido queda quieta.
+// Con movimiento reducido queda quieta. Si hay WebGL, la gráfica de abajo se cambia por la escena 3D (LoginScene.ts).
 const BARS = [64, 72, 58, 80, 70, 86, 76, 90, 84, 94, 88, 97];
 const still = () => typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -23,11 +23,21 @@ function LoginArt() {
     const loop = setInterval(() => setTick((k) => k + 1), 3500);
     return () => { t.forEach(clearTimeout); clearInterval(loop); };
   }, []);
+  // la escena 3D se descarga después de pintar el formulario; sin WebGL o con movimiento reducido queda la gráfica SVG
+  const scene = useRef<HTMLDivElement>(null);
+  const [gl, setGl] = useState(false);
+  useEffect(() => {
+    if (still()) return;
+    let off = () => {}, gone = false;
+    import('./LoginScene.ts').then((m) => { if (!gone && scene.current) { off = m.mountScene(scene.current); setGl(true); } }).catch(() => {});
+    return () => { gone = true; off(); };
+  }, []);
   const x = (i: number) => i * 100 + 50, y = (v: number) => 400 - v * 3.6;
   const line = `M${BARS.map((_, i) => `${x(i)},${y(at(tick, i)) - 24}`).join(' L')}`;
   return (
     <div className="app-art">
-      <svg className="app-art-chart" viewBox="0 0 1200 400" preserveAspectRatio="none">
+      <div ref={scene} className="app-art-3d" />
+      <svg className="app-art-chart" viewBox="0 0 1200 400" preserveAspectRatio="none" style={gl ? { display: 'none' } : undefined}>
         {BARS.map((_, i) => (
           <rect key={i} className={`app-art-bar yc-fill-${i % 4 === 3 ? 'second' : 'pass'}`} x={x(i) - 30} width={60} y={y(100)} height={400 - y(100)}
             style={{ transform: `scaleY(${at(tick, i) / 100})`, transitionDelay: `${i * 60}ms` }} />

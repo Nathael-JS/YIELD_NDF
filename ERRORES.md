@@ -91,6 +91,8 @@ Cada entrada dice qué pasaba, cómo se detectó, la causa, la corrección y con
 
 ## Abiertos
 
+- **Fondo 3D del login:** si se cambia entre tema claro y oscuro con el login abierto, la escena conserva los colores con los que cargó hasta recargar la página. No medido en un equipo real de planta (solo 60 fps en Chromium con CPU 4× más lento).
+
 - **Comentarios:** no se editan ni se borran desde la app (sí desde la base).
 
 - **Etiquetas inclinadas muy largas en muy poco ancho:** la primera puede salirse por la izquierda de la tarjeta. En el celular no pasa porque la gráfica de estaciones usa barras acostadas; si otra gráfica lo necesita, dar más margen izquierdo.

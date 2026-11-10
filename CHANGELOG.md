@@ -8,6 +8,23 @@ Un cambio de componente se publica primero en el artefacto y después se copia a
 
 Los errores encontrados y cómo se corrigieron están en [ERRORES.md](ERRORES.md); las mejoras y cómo se hicieron, en [MEJORAS.md](MEJORAS.md).
 
+## [0.18.0] — 2026-11-10
+
+### Agregado
+- **Congruencia del TCQS** (no se muestra): al guardar cada carga se compara fila por fila el archivo con las fórmulas —entradas = 1er pase + 1ra falla, FPRATE = 1er pase / entradas, RETESTRATE = 2do pase / entradas, FINAL_YIELD_RATE = (1er + 2do pase) / entradas topado a 100 %, 2da falla (REFAIL_QTY) = 1ra falla − 2do pase— y el resultado (filas que cuadran, que no y ejemplos) se guarda en `yield_cargas.congruencia`. El servidor lo anota en su registro si algo no cuadra (la 2da falla no cuenta: los retests de otro día la descuadran). Con el TCQS real: 179/179 filas de Juliet cuadran en FPY, retest, Final y entradas.
+- **Validación · Estimado real:** FPY, retest y Final con las fórmulas de la guía junto a lo que reportan las columnas del archivo (ponderadas por entradas) y la diferencia en puntos.
+- **Comparativas** (menú): un día contra el día anterior, los dos leídos de la base; KPIs con ▲/▼ y tabla por estación con el cambio de FPY y Final. Si falta alguno de los dos días (nunca se cargó o se borró), lo dice y lleva a Carga.
+
+## [0.17.0] — 2026-11-10 · sistema de diseño v26
+
+### Agregado
+- **Fondo 3D en el login** (three.js): una línea de producción abstracta; las unidades pasan por cinco estaciones y se encienden en verde (pasa) o naranja (primera falla; se recuperan en la estación siguiente, como el retest). Reemplaza la gráfica de barras de la franja inferior; las tarjetas y el formulario no cambian.
+- Sin costo para la app: three.js va en un archivo aparte (118 KB comprimido) que se descarga solo en /login y después de pintar el formulario; el arranque sigue en ~128 KB.
+- Colores de los tokens (claro y oscuro), resolución máxima 1.5×, se pausa con la pestaña oculta y se quita al entrar. Con «reducir movimiento» o sin WebGL queda la ilustración 2D de antes (y three.js ni se descarga).
+
+### Sistema de diseño
+- `ChartCarousel` con el rebote y el gesto rápido de 0.16.0; README de `LoginPanel` con las reglas del fondo 3D.
+
 ## [0.16.0] — 2026-11-10
 
 ### Agregado

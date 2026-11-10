@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { by, change, countOrders, daily, fromDb, diagnose, modelKey, modelsFrom, periodOf, periodsOf, readTcqs, rty, totals } from './tcqs.ts';
+import { by, change, congruence, countOrders, daily, fromDb, diagnose, modelKey, modelsFrom, periodOf, periodsOf, readTcqs, REQUIRED, rty, totals } from './tcqs.ts';
 
 const H = ['WORK_DATE', 'MODEL_NAME', 'SAP_MODEL_NAME', 'MO_NUMBER', 'GROUP_NAME', 'STATION_NAME', 'INPUT_QTY', 'FIRST_PASS_QTY', 'FIRST_FAIL_QTY', 'SECOND_PASS_QTY'];
 // filas con la forma del TCQS real (cantidades como texto, como las deja el lector de CSV)
@@ -88,4 +88,22 @@ test('daily y fromDb: el histórico de Neon da los mismos totales que el TCQS', 
   // las órdenes también: las mismas distintas desde el archivo y desde la base
   assert.equal(countOrders(readTcqs(fromDb(rows)).records), countOrders(rs));
   assert.ok(countOrders(rs) > 0);
+});
+
+test('congruence: el archivo contra las fórmulas, fila por fila', () => {
+  const f = { headers: [...REQUIRED, 'FPRATE', 'RETESTRATE', 'FINAL_YIELD_RATE', 'REFAIL_QTY'], rows: [
+    ['20261105', 'SA1', 'MO1', 'FT', 't1', 4, 3, 1, 1, '75%', '25%', '100%', 0], // cuadra
+    ['20261105', 'SA1', 'MO1', 'FT', 't1', 4, 2, 2, 3, '50%', '75%', '100%', 0], // retest de otro día: Final topado a 100
+    ['20261105', 'SA2', 'MO2', 'LC', 't2', 10, 9, 1, 0, '80%', '0%', '90%', 1], // FPRATE mal (90 % real)
+    ['20261105', 'SA2', 'MO2', 'LC', 't2', 0, 0, 0, 0, '', '', '', 0], // sin entradas: no cuenta
+  ] };
+  const c = congruence(f);
+  assert.equal(c.filas, 3);
+  assert.deepEqual(c.campos.fpy, { ok: 2, mal: 1, filas: [4] });
+  assert.deepEqual(c.campos.final, { ok: 3, mal: 0, filas: [] });
+  assert.deepEqual(c.campos.retest, { ok: 3, mal: 0, filas: [] });
+  assert.equal(c.campos.entradas!.mal, 0);
+  assert.equal(Math.round(c.reportado.fpy), 72); // (75·4 + 50·4 + 80·10) / 18
+  assert.equal(Math.round(c.calculado.fpy), 78); // 14 / 18
+  assert.equal(congruence(f, (m) => m === 'SA2').filas, 1);
 });

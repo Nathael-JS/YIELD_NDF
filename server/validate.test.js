@@ -13,4 +13,9 @@ test('validate acepta un resumen correcto y rechaza lo demás', () => {
   assert.match(validate({ ...ok, filas: [{ ...fila, entradas: -1 }] }).error, /Fila 1/);
   assert.match(validate({ ...ok, filas: [{ ...fila, modelo: "x'; drop table yield_resumen;--".repeat(4) }] }).error, /Fila 1/);
   assert.match(validate({ ...ok, filas: [{ ...fila, entradas: 9 }] }).error, /Fila 1/); // entradas ≠ 1er pase + 1ra falla
+  // congruencia: opcional, objeto chico
+  assert.equal(validate({ ...ok, filas: [fila] }).congruencia, null);
+  assert.deepEqual(validate({ ...ok, filas: [fila], congruencia: { filas: 1 } }).congruencia, { filas: 1 });
+  assert.match(validate({ ...ok, filas: [fila], congruencia: [1] }).error, /Congruencia/);
+  assert.match(validate({ ...ok, filas: [fila], congruencia: { x: 'a'.repeat(5000) } }).error, /Congruencia/);
 });

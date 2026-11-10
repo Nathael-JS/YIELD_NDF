@@ -1,13 +1,13 @@
 {
   "name": "yield-control",
   "private": true,
-  "version": "0.16.0",
+  "version": "0.18.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "test": "node --experimental-strip-types --no-warnings --test src/lib/*.test.ts server/*.test.js",
+    "test": "node --experimental-strip-types --no-warnings --test src/lib/*.test.ts src/pages/*.test.ts server/*.test.js",
     "start": "node server/index.js"
   },
   "dependencies": {
@@ -22,6 +22,7 @@
     "react-dom": "^18.3.1",
     "react-router-dom": "^7.18.5",
     "read-excel-file": "^9.3.14",
+    "three": "^0.170.0",
     "zustand": "^5.1.0"
   },
   "devDependencies": {
@@ -29,6 +30,7 @@
     "@types/qrcode": "^1.5.6",
     "@types/react": "^18.3.31",
     "@types/react-dom": "^18.3.7",
+    "@types/three": "^0.170.0",
     "@vitejs/plugin-react": "^5.0.0",
     "typescript": "^5.9.3",
     "vite": "^7.0.0"

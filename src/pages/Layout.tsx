@@ -1,14 +1,14 @@
 import { useEffect } from 'react';
 import { Link, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { saveSummary } from '../lib/db.ts';
-import { daily } from '../lib/tcqs.ts';
+import { congruence, daily, modelKey } from '../lib/tcqs.ts';
 import { Button, PipelineNav } from '../components/ui.tsx';
 import { useApp, useData } from '../store.ts';
 import Seguridad from './Seguridad.tsx';
 
 const STEPS = ['Carga de datos', 'Validación', 'Yield'];
 export const STEP_PATHS = ['/carga', '/validacion', '/yield'];
-const EXTRA: Record<string, string> = { Inicio: '/', Gráficos: '/graficos', Historial: '/historial', Cuentas: '/cuentas', 'Base de datos': '/base' };
+const EXTRA: Record<string, string> = { Inicio: '/', Gráficos: '/graficos', Comparativas: '/comparativas', Historial: '/historial', Cuentas: '/cuentas', 'Base de datos': '/base' };
 const ADMIN_ONLY = ['Cuentas', 'Base de datos'];
 
 export default function Layout() {
@@ -65,7 +65,9 @@ function useAutoSave(records: ReturnType<typeof useData>['records']) {
     const key = `${tcqs.name}|${tcqs.loadedAt}|${bom.archivo}|${bom.guardado_en}`;
     if (key === savedKey) return;
     setDb(['info', 'Guardando en la base…'], key);
-    saveSummary(tcqs.name, daily(records))
+    // la congruencia del archivo con las fórmulas va con la carga y se queda en la base (no se muestra aquí)
+    const juliet = new Set(bom.modelos.map(modelKey));
+    saveSummary(tcqs.name, daily(records), congruence(tcqs, (m) => juliet.has(modelKey(m))))
       .then((r) => setDb(['ok', `Guardado en la base: ${r.guardadas} filas (día × modelo × estación).`]))
       .catch((e) => setDb(['bad', `No se guardó en la base: ${e.message}. Se reintenta al volver a cargar el archivo.`], ''));
   }, [tcqs, bom, records]);
