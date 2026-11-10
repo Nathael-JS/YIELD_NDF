@@ -13,6 +13,8 @@ const TYPES = { '.ico': 'image/x-icon', '.html': 'text/html; charset=utf-8', '.j
 const LIMIT = 5 * 1024 * 1024;
 
 const db = process.env.DATABASE_URL ? new pg.Pool({ connectionString: process.env.DATABASE_URL, max: 3 }) : null;
+/** Respaldos vencidos (7 días): se borran al arrancar, al ver Base de datos y en cada uso de respaldos. */
+const purge = () => db.query('delete from yield_respaldos where vence < now()');
 const ready = db?.query(`create table if not exists yield_resumen (
   fecha date not null, modelo text not null, estacion text not null,
   entradas int not null, primer_pase int not null, primera_falla int not null, segundo_pase int not null,
@@ -28,6 +30,8 @@ create table if not exists usuarios (
 -- debe_cambiar: contraseña temporal (creada por un administrador o desde Render); mfa: secreto TOTP confirmado; mfa_nuevo: en configuración
 -- órdenes (MO_NUMBER) de cada día × modelo × estación, separadas por coma: para contar órdenes distintas
 alter table yield_resumen add column if not exists ordenes text;
+-- qué carga escribió cada fila (la última): borrar o respaldar una carga toca solo lo suyo, aunque otro archivo se llame igual
+alter table yield_resumen add column if not exists carga int;
 -- congruencia del TCQS con las fórmulas (por campo: filas que cuadran y que no); solo para revisión, no se muestra en la app
 alter table yield_cargas add column if not exists congruencia jsonb;
 -- respaldos de cargas del historial (al borrar una, o a mano): la carga y sus filas del resumen; vencen a los 7 días
@@ -58,7 +62,7 @@ create index if not exists yield_comentarios_grafica on yield_comentarios (grafi
     console.log(`Cuenta principal: ${PRINCIPAL} creada; pedirá cambiar la contraseña y configurar el MFA`);
   });
 // sin esto, una base que no responde al arrancar tumba el servidor; así sigue en pie y /api/salud lo explica
-ready?.catch((e) => console.error('No se pudo preparar la base:', e.message));
+ready?.then(purge).catch((e) => console.error('No se pudo preparar la base:', e.message));
 // sin SESSION_SECRET (Render la genera) las sesiones duran hasta que se reinicie el servidor
 const SECRET = process.env.SESSION_SECRET || randomBytes(32).toString('hex');
 const SECURE = process.env.NODE_ENV === 'production' || !!process.env.RENDER;
@@ -162,6 +166,7 @@ async function accounts(req, res, me) {
 async function database(req, res, me) {
   if (!me.admin) return json(res, 403, { error: 'Solo para administradores' });
   if (req.method === 'GET') {
+    await purge();
     const [{ rows: [g] }, { rows: tablas }, { rows: [r] }] = await Promise.all([
       db.query('select pg_database_size(current_database())::bigint as bytes'),
       // conteo exacto (n_live_tup de pg_stat se actualiza con retraso); son tablas chicas
@@ -173,13 +178,21 @@ async function database(req, res, me) {
   }
   if (!me.principal) return json(res, 403, { error: 'Solo el super administrador borra datos' });
   const b = await body(req);
-  if (b.accion === 'borrarCarga' && Number.isInteger(b.id)) {
-    const r = await db.query('delete from yield_cargas where id = $1', [b.id]);
-    return json(res, 200, { borradas: r.rowCount });
-  }
+  // borrar una carga va por /api/respaldos (con respaldo automático); un rango del resumen, también respaldado aquí
   if (b.accion === 'borrarRango' && DAY.test(b.desde) && DAY.test(b.hasta)) {
-    const r = await db.query('delete from yield_resumen where fecha between $1 and $2', [b.desde, b.hasta]);
-    return json(res, 200, { borradas: r.rowCount });
+    const { rows: filas } = await db.query(`select to_char(fecha, 'YYYY-MM-DD') fecha, modelo, estacion, entradas, primer_pase, primera_falla, segundo_pase, ordenes
+      from yield_resumen where fecha between $1 and $2 order by fecha, modelo, estacion`, [b.desde, b.hasta]);
+    if (!filas.length) return json(res, 200, { borradas: 0 });
+    const c = await db.connect();
+    try {
+      await c.query('begin');
+      const carga = { archivo: `Rango ${b.desde} a ${b.hasta}`, usuario: me.usuario, desde: b.desde, hasta: b.hasta };
+      await c.query(`insert into yield_respaldos (motivo, usuario, datos) values ('borrado', $1, $2)`,
+        [me.usuario, { tipo: 'yield-respaldo', v: 1, carga, filas: filas.map(({ ordenes, ...f }) => (ordenes ? { ...f, ordenes } : f)) }]);
+      const r = await c.query('delete from yield_resumen where fecha between $1 and $2', [b.desde, b.hasta]);
+      await c.query('commit');
+      return json(res, 200, { borradas: r.rowCount });
+    } catch (e) { await c.query('rollback'); throw e; } finally { c.release(); }
   }
   if (b.accion === 'retener' && Number.isInteger(b.dias) && b.dias >= 30) {
     const r = await db.query(`delete from yield_cargas where guardado_en < now() - make_interval(days => $1)`, [b.dias]);
@@ -274,16 +287,16 @@ async function store(v) {
     const c = await db.connect();
     try {
     await c.query('begin');
-    // la carga más reciente de un mismo día × modelo × estación reemplaza a la anterior
-    const r = await c.query(`insert into yield_resumen (fecha, modelo, estacion, entradas, primer_pase, primera_falla, segundo_pase, ordenes, archivo)
-      select f, m, e, i, p, ff, sp, o, $9 from unnest($1::date[], $2::text[], $3::text[], $4::int[], $5::int[], $6::int[], $7::int[], $8::text[]) as t(f, m, e, i, p, ff, sp, o)
-      on conflict (fecha, modelo, estacion) do update set entradas = excluded.entradas, primer_pase = excluded.primer_pase,
-        primera_falla = excluded.primera_falla, segundo_pase = excluded.segundo_pase, ordenes = excluded.ordenes, archivo = excluded.archivo, guardado_en = now()`,
-      [col('fecha'), col('modelo'), col('estacion'), col('entradas'), col('primer_pase'), col('primera_falla'), col('segundo_pase'), v.filas.map((f) => f.ordenes ?? null), v.archivo]);
-    // registro de la carga para el historial por sesión
-    await c.query(`insert into yield_cargas (sesion, usuario, archivo, filas, entradas, primer_pase, primera_falla, segundo_pase, desde, hasta, congruencia)
-      values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+    // registro de la carga para el historial por sesión (primero: sus filas del resumen llevan su id)
+    const { rows: [carga] } = await c.query(`insert into yield_cargas (sesion, usuario, archivo, filas, entradas, primer_pase, primera_falla, segundo_pase, desde, hasta, congruencia)
+      values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) returning id`,
       [v.sesion, v.usuario, v.archivo, v.filas.length, sum('entradas'), sum('primer_pase'), sum('primera_falla'), sum('segundo_pase'), dias[0], dias.at(-1), v.congruencia]);
+    // la carga más reciente de un mismo día × modelo × estación reemplaza a la anterior
+    const r = await c.query(`insert into yield_resumen (fecha, modelo, estacion, entradas, primer_pase, primera_falla, segundo_pase, ordenes, archivo, carga)
+      select f, m, e, i, p, ff, sp, o, $9, $10 from unnest($1::date[], $2::text[], $3::text[], $4::int[], $5::int[], $6::int[], $7::int[], $8::text[]) as t(f, m, e, i, p, ff, sp, o)
+      on conflict (fecha, modelo, estacion) do update set entradas = excluded.entradas, primer_pase = excluded.primer_pase,
+        primera_falla = excluded.primera_falla, segundo_pase = excluded.segundo_pase, ordenes = excluded.ordenes, archivo = excluded.archivo, carga = excluded.carga, guardado_en = now()`,
+      [col('fecha'), col('modelo'), col('estacion'), col('entradas'), col('primer_pase'), col('primera_falla'), col('segundo_pase'), v.filas.map((f) => f.ordenes ?? null), v.archivo, carga.id]);
     // en el registro del servidor solo si algo no cuadra (2da falla no cuenta: los retests de otro día la descuadran)
     const mal = Object.entries(v.congruencia?.campos ?? {}).filter(([k, c]) => k !== 'segunda_falla' && c.mal).map(([k, c]) => `${k} ${c.mal}`);
     if (mal.length) console.log(`Congruencia ${v.archivo}: no cuadran ${mal.join(', ')} filas`);
@@ -297,19 +310,21 @@ async function store(v) {
     }
 }
 
-/** La carga `id` con sus filas del resumen (las de su rango que siguen siendo de su archivo): lo que va en un respaldo. */
+/** La carga `id` con las filas del resumen que siguen siendo suyas (no las pisó otra carga): lo que va en un respaldo.
+ * Filas guardadas antes de la columna `carga`: las de su rango y su archivo. */
 async function snapshot(id) {
   const { rows: [carga] } = await db.query(`select id, archivo, usuario, to_char(desde, 'YYYY-MM-DD') desde, to_char(hasta, 'YYYY-MM-DD') hasta, guardado_en, congruencia
     from yield_cargas where id = $1`, [id]);
   if (!carga) return null;
   const { rows: filas } = await db.query(`select to_char(fecha, 'YYYY-MM-DD') fecha, modelo, estacion, entradas, primer_pase, primera_falla, segundo_pase, ordenes
-    from yield_resumen where fecha between $1 and $2 and archivo = $3 order by fecha, modelo, estacion`, [carga.desde, carga.hasta, carga.archivo]);
+    from yield_resumen where (carga = $1 or (carga is null and fecha between $2 and $3 and archivo = $4)) order by fecha, modelo, estacion`, [carga.id, carga.desde, carga.hasta, carga.archivo]);
   return { tipo: 'yield-respaldo', v: 1, carga, filas: filas.map(({ ordenes, ...f }) => (ordenes ? { ...f, ordenes } : f)) };
 }
 
+const MAX_RESPALDOS = 20;
 /** Respaldos del historial. Vencen a los 7 días (se purgan en cada consulta). Borrar una carga: solo administradores. */
 async function backups(req, res, me, url) {
-  await db.query('delete from yield_respaldos where vence < now()');
+  await purge();
   if (req.method === 'GET') {
     const id = Number(url.searchParams.get('id'));
     if (id) {
@@ -333,6 +348,9 @@ async function backups(req, res, me, url) {
   }
   if ((b.accion === 'crear' || b.accion === 'borrar') && Number.isInteger(b.carga)) {
     if (b.accion === 'borrar' && !me.admin) return json(res, 403, { error: 'Solo un administrador borra registros del historial' });
+    // tope para no llenar la base (la cuenta demo es pública): los automáticos de un borrado no cuentan
+    const { rows: [{ n }] } = await db.query(`select count(*)::int n from yield_respaldos where usuario = $1 and motivo = 'manual'`, [me.usuario]);
+    if (b.accion === 'crear' && n >= MAX_RESPALDOS) return json(res, 429, { error: `Tienes ${MAX_RESPALDOS} respaldos manuales; se liberan al vencer (7 días).` });
     const d = await snapshot(b.carga);
     if (!d) return json(res, 404, { error: 'Esa carga ya no existe' });
     const c = await db.connect();
@@ -341,7 +359,7 @@ async function backups(req, res, me, url) {
       // al borrar, primero el respaldo automático: si algo falla no se pierde nada
       const { rows: [r] } = await c.query('insert into yield_respaldos (motivo, usuario, datos) values ($1, $2, $3) returning id, vence', [b.accion === 'borrar' ? 'borrado' : 'manual', me.usuario, d]);
       if (b.accion === 'borrar') {
-        await c.query('delete from yield_resumen where fecha between $1 and $2 and archivo = $3', [d.carga.desde, d.carga.hasta, d.carga.archivo]);
+        await c.query('delete from yield_resumen where (carga = $1 or (carga is null and fecha between $2 and $3 and archivo = $4))', [b.carga, d.carga.desde, d.carga.hasta, d.carga.archivo]);
         await c.query('delete from yield_cargas where id = $1', [b.carga]);
       }
       await c.query('commit');

@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Badge, Button, KpiTile, type Tone } from '../components/ui.tsx';
 import { by, congruence, modelKey, pctText } from '../lib/tcqs.ts';
@@ -11,6 +12,9 @@ export default function Validacion() {
   const { read, bom, models, all, records } = useData();
   const go = useNavigate();
   const db = useApp((s) => s.db), file = useApp((s) => s.files.TCQS);
+  // estimado «real»: nuestras fórmulas sobre las filas de Juliet, contra lo que dicen las columnas de % del archivo.
+  // El detalle fila por fila se guarda con la carga en la base; aquí solo el resultado. Una vez por archivo, no por pintada.
+  const estimate = useMemo(() => file && congruence(file, (m) => !models || models.has(modelKey(m))), [file, models]);
   if (!read) return <><PageHead title="Validación" /><NeedTcqs /></>;
   if (read.missing.length) return (
     <>
@@ -43,9 +47,7 @@ export default function Validacion() {
         <KpiTile label="Filas de Juliet" value={n(records.length)} />
       </div>
       {(() => {
-        // estimado «real»: nuestras fórmulas sobre las filas de Juliet, contra lo que dicen las columnas de % del archivo.
-        // El detalle fila por fila se guarda con la carga en la base; aquí solo el resultado.
-        const c = file && congruence(file, (m) => !models || models.has(modelKey(m)));
+        const c = estimate;
         if (!c || !Number.isFinite(c.reportado.fpy)) return null; // lo abierto desde la base no trae columnas de %
         const pts = (a: number, b: number) => { const d = Math.round((a - b) * 10) / 10; return d ? `${d > 0 ? '+' : ''}${d} pts vs. archivo` : 'igual que el archivo'; };
         return (
