@@ -14,7 +14,8 @@ export async function parseFile(file: File): Promise<ParsedFile> {
     table = (sheet?.data ?? []) as Cell[][];
   } else if (ext === 'csv' || ext === 'txt') {
     // los avisos de papaparse (p. ej. delimitador en archivo de una columna) no impiden leer; vacío se reporta abajo
-    table = Papa.parse<string[]>(await file.text(), { skipEmptyLines: true }).data;
+    // el reporte de primeras fallas escapa las comillas como \" (no es CSV estándar) y corría columnas en ICT
+    table = Papa.parse<string[]>((await file.text()).replaceAll('\\"', '""'), { skipEmptyLines: true }).data;
   } else {
     throw new Error('Formato no soportado: usa .xlsx o .csv');
   }

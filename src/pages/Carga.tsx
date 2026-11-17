@@ -8,6 +8,7 @@ import { PageHead } from './Layout.tsx';
 const plural = (n: number, w: string) => `${n.toLocaleString('es-MX')} ${w}${n === 1 ? '' : 's'}`;
 const SLOTS: { type: FileType; label: string; accept: string; hint: string }[] = [
   { type: 'TCQS', label: 'TCQS', accept: '.csv,.xlsx', hint: 'Yield por orden, modelo y estación (.csv o .xlsx)' },
+  { type: 'FALLAS', label: 'PRIMERAS FALLAS', accept: '.csv,.xlsx', hint: 'FirstFail por unidad con su código de error (.csv o .xlsx): para NDF' },
 ];
 
 function Slot({ type, label, accept, hint }: (typeof SLOTS)[number]) {
@@ -62,7 +63,6 @@ export default function Carga() {
       <section aria-label="Pendientes">
         <h2 className="app-h3">Pendientes</h2>
         <div className="app-files">
-          <FileChip type="DATA ANALYSIS" meta="Pendiente · se cruzará por serial + estación" />
           <FileChip type="QM" meta="Pendiente · se cruzará por serial + estación" />
         </div>
       </section>
