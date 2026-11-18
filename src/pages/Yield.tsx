@@ -6,8 +6,8 @@ import { useApp, useData } from '../store.ts';
 import { NeedTcqs, PageHead } from './Layout.tsx';
 import { download } from '../lib/download.ts';
 import { slides } from './slides.tsx';
-import { NdfReport, useFails } from './Ndf.tsx';
-import { classify } from '../lib/fails.ts';
+import { codesOf, NdfReport, useFails } from './Ndf.tsx';
+import { classify, ndfStations } from '../lib/fails.ts';
 
 const ALL = 'Todos los modelos';
 const WHOLE = 'todo';
@@ -51,7 +51,12 @@ export default function Yield() {
     try {
       const { reportPdf } = await import('./pdf.tsx');
       const periods = by(rs, (r) => periodOf(r.date, period)[0]).filter((p) => p.input > 0).sort((a, b) => (a.name < b.name ? -1 : 1));
+      // NDF del mismo modelo y periodo (página 3 y anexo)
+      const inCur = (d: string) => !cur || periodOf(d, period)[0] === cur[0], pr = rs.filter((r) => inCur(r.date));
+      const pf = fallas && !fallas.missing.length ? fallas.fails.filter((x) => (!models || models.has(modelKey(x.model))) && (model === ALL || x.model === model) && inCur(x.date)) : [];
+      const mk = classify(pf, pr).marked;
       download(`${file}.pdf`, await reportPdf({
+        ndf: { stations: ndfStations(pr), codes: codesOf(mk), units: mk, input: pr.reduce((a, r) => a + r.input, 0) },
         title, sub: `${sub} · ${scope}`, kpis: kpiList, stations: st, watch: toWatch(st),
         pareto: st.filter((x) => x.ff > 0).map((x) => ({ label: x.name, value: x.ff })),
         trend: periods.map((p) => ({ label: ps.find(([k]) => k === p.name)![1], fpy: p.fpy, final: p.final })),
@@ -117,8 +122,11 @@ function view(rs: Rec[], period: Grain, key: string | undefined, prevKey: string
   };
   // órdenes distintas (MO_NUMBER) del periodo; de la base salen solo si se guardaron desde 0.15.1
   const orders = countOrders(now);
+  const nd = ndfStations(now).reduce((a, x) => a + x.ndf, 0);
   const kpiList = [{ ...kpiData(orders ? 'Entradas / órdenes' : 'Entradas', 'input'), unit: orders ? ` / ${orders.toLocaleString('es-MX')} órdenes` : undefined }, kpiData('FPY', 'fpy'), kpiData('Final Yield', 'final'),
-    kpiData('A retest', 'retest', true), kpiData('Recuperado en retest', 'recovered', true), kpiData('RTY', 'rty')];
+    kpiData('A retest', 'retest', true), kpiData('Recuperado en retest', 'recovered', true), kpiData('RTY', 'rty'),
+    // NDF = 2do pase (falló y pasó al re-probar sin reparación), sumado por estación como en la página NDF; % sobre las primeras fallas
+    { label: 'NDF', value: nd.toLocaleString('es-MX'), unit: ` · ${pctText((nd / t.ff) * 100)} % de 1ra falla`, deltaUnit: '', good: true }];
   const table = (
     <div className="yc-table-wrap">
       <table className="yc-table">

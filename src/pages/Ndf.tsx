@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Badge, Button, Select } from '../components/ui.tsx';
+import { Badge, Button, Segmented, Select, SplitBar, type SplitPart } from '../components/ui.tsx';
 import { ParetoChart } from '../components/charts.tsx';
 import { byLabel, classify, ndfStations, readFails, top80, type Estado, type Marked } from '../lib/fails.ts';
 import { modelKey, pctText, type Rec } from '../lib/tcqs.ts';
@@ -11,6 +11,9 @@ const n = (v: number) => (Number.isFinite(v) ? v.toLocaleString('es-MX', { maxim
 const ALL = '';
 /** Texto corto para títulos (los códigos de ICT traen cientos de letras). */
 const cut = (s: string) => (s.length > 40 ? `${s.slice(0, 39)}…` : s);
+/** Primeras fallas repartidas: NDF (pasó al re-probar), real (a reparación) y pendiente de re-probar. */
+export const splitParts = (ndf: number, real: number, pend: number): SplitPart[] =>
+  [{ label: 'NDF', value: ndf, tone: 'second' }, { label: 'Real', value: real, tone: 'fail' }, { label: 'Pendiente', value: pend, tone: 'neutral' }];
 const TOP = 20; // barras del Pareto de códigos: con más no se leen (el % acumulado sigue siendo sobre todas)
 const TONE: Record<Estado, 'ok' | 'bad' | 'warn' | 'info' | 'neutral'> = { NDF: 'ok', Real: 'bad', Pendiente: 'warn', Mezcla: 'info', 'Sin TCQS': 'neutral' };
 const ESTADO: Record<Estado, string> = { NDF: 'NDF', Real: 'Real', Pendiente: 'Pendiente', Mezcla: 'NDF probable', 'Sin TCQS': 'Sin TCQS' };
@@ -48,14 +51,14 @@ export function StationTable({ stations, focus, onPick }: { stations: ReturnType
 }
 
 /** Unidades de un código: serial, cuándo, dónde y qué dice el TCQS de su orden × estación. */
-export function UnitTable({ units }: { units: Marked[] }) {
+export function UnitTable({ units, code }: { units: Marked[]; code?: boolean }) {
   return (
     <div className="yc-table-wrap">
       <table className="yc-table">
-        <thead><tr><th>Serial</th><th>Fecha</th><th>Estación</th><th>Tester</th><th>Orden</th><th>Modelo</th><th>Estado</th></tr></thead>
+        <thead><tr>{code && <th>Código</th>}<th>Serial</th><th>Fecha</th><th>Estación</th><th>Tester</th><th>Orden</th><th>Modelo</th><th>Estado</th></tr></thead>
         <tbody>{units.map((u, i) => (
           <tr key={`${u.serial}|${u.group}|${i}`}>
-            <td className="code">{u.serial}</td><td className="code">{u.date}</td><td className="code">{u.group}</td><td className="code">{u.tester}</td>
+            {code && <td className="code app-cut" title={`${u.code} · ${u.desc}`}>{u.code}</td>}<td className="code">{u.serial}</td><td className="code">{u.date}</td><td className="code">{u.group}</td><td className="code">{u.tester}</td>
             <td className="code">{u.mo}</td><td className="code">{u.model}</td>
             <td><Badge tone={TONE[u.estado]} title={u.estado === 'Mezcla' ? `${Math.round(u.ndf * 100)} % de probabilidad según su orden × estación` : undefined}>{ESTADO[u.estado]}</Badge></td>
           </tr>
@@ -93,7 +96,6 @@ export default function Ndf() {
   const where = [model, station, tester].filter(Boolean).join(' · ') || 'todas las estaciones';
 
   const ndf = sum('ndf'), ff = sum('ff'), real = sum('real'), pend = sum('pend');
-  const parts = [['NDF', ndf, 'ndf'], ['Real', real, 'real'], ['Pendiente', pend, 'pend']] as const;
   const lvl2Data = lvl2 === 'tester' ? testers.map((t) => ({ label: t.name, value: t.total }))
     : testerCodes.map((c) => ({ label: c.name, value: c.total, hint: `${c.desc} · NDF estimado ${n(c.est)}` }));
 
@@ -164,13 +166,7 @@ export default function Ndf() {
             <span className="app-ndf-big">{n(ndf)}<small> de {n(ff)} primeras fallas</small></span>
             <span className="app-ndf-pct">{pctText((ndf / ff) * 100)} % se recupera al re-probar · SPY {pctText((ndf / input) * 100)} %</span>
           </div>
-          {/* reparto de las primeras fallas: cada parte crece con su valor */}
-          <div className="app-split" role="img" aria-label={parts.map(([l, v]) => `${l} ${n(v)}`).join(', ')}>
-            {parts.map(([l, v, k]) => <span key={k} className={`is-${k}`} style={{ flexGrow: Number.isFinite(v) ? v : 0 }} title={`${l}: ${n(v)}`} />)}
-          </div>
-          <ul className="app-split-legend">
-            {parts.map(([l, v, k]) => <li key={k}><i className={`is-${k}`} />{l}<b>{n(v)}</b></li>)}
-          </ul>
+          <SplitBar parts={splitParts(ndf, real, pend)} format={n} />
           <div className="app-ndf-filters">
             <Select label="Modelo" value={model} onChange={pickModel} options={[{ value: ALL, label: 'Todos los modelos' }, ...[...new Set(records.map((r) => r.model))].sort()]} />
             <Select label="Estación" value={station} onChange={pickStation} options={[{ value: ALL, label: 'Todas las estaciones' }, ...stations.map((s) => s.name).sort()]} />
@@ -178,12 +174,8 @@ export default function Ndf() {
               options={[{ value: ALL, label: 'Todos los testers' }, ...[...new Set(inStation.map((m) => m.tester))].sort()]} />
             {(model || station || tester) && <Button variant="quiet" onClick={() => pickModel(ALL)}>Quitar filtros</Button>}
           </div>
-          <div className="yc-field">2do nivel
-            <div className="app-seg" role="group" aria-label="2do nivel">
-              <button type="button" aria-pressed={lvl2 === 'tester'} onClick={() => setLvl2('tester')}>Testers del 80 %</button>
-              <button type="button" aria-pressed={lvl2 === 'codigo'} onClick={() => setLvl2('codigo')}>Códigos del 80 %</button>
-            </div>
-          </div>
+          <Segmented label="2do nivel" value={lvl2} onChange={setLvl2}
+            options={[{ value: 'tester', label: 'Testers del 80 %' }, { value: 'codigo', label: 'Códigos del 80 %' }]} />
           {marked && <p className="app-muted app-ndf-note"><Badge tone={marked.distintos ? 'warn' : 'ok'}>{marked.distintos ? 'Revisar' : 'Cuadra'}</Badge> Archivo vs. TCQS: {n(marked.grupos - marked.distintos)} de {n(marked.grupos)} grupos iguales.</p>}
         </aside>
       </div>
@@ -191,26 +183,44 @@ export default function Ndf() {
   );
 }
 
-/** Sección NDF del HTML descargable: estaciones, Pareto de códigos y, por código, sus seriales en un desplegable. */
+/** Sección NDF del HTML descargable: resumen, estaciones (compacto) y la estación con más NDF con sus Paretos y seriales.
+ * shortcut: solo esa estación (las demás, en la app), cada estación más agregaría ~10 KB de gráficas por modelo. */
 export function NdfReport({ recs, marked }: { recs: Rec[]; marked?: Marked[] }) {
-  const stations = ndfStations(recs), codes = marked ? codesOf(marked) : [];
+  const stations = ndfStations(recs);
   if (!stations.length) return null;
+  const sum = (k: 'ff' | 'ndf' | 'real' | 'pend') => stations.reduce((a, s) => a + s[k], 0), input = recs.reduce((a, r) => a + r.input, 0);
+  const best = stations[0], mine = (marked ?? []).filter((m) => m.group === best.name);
+  const codes = codesOf(mine), top = new Set(top80(codes).map((c) => c.name));
+  const testers = byLabel(mine.filter((m) => top.has(m.code)), (m) => m.tester);
   return (
     <section className="app-view" aria-label="NDF">
-      <h2 className="app-h3">NDF · no defect found</h2>
-      <StationTable stations={stations} />
+      <div className="app-ndf-report">
+        <div className="yc-card app-ndf-side">
+          <div className="app-ndf-hero">
+            <span className="yc-kpi-label">NDF · no defect found</span>
+            <span className="app-ndf-big">{n(sum('ndf'))}<small> de {n(sum('ff'))} primeras fallas</small></span>
+            <span className="app-ndf-pct">{pctText((sum('ndf') / sum('ff')) * 100)} % se recupera al re-probar · SPY {pctText((sum('ndf') / input) * 100)} %</span>
+          </div>
+          <SplitBar parts={splitParts(sum('ndf'), sum('real'), sum('pend'))} format={n} />
+        </div>
+        <section className="yc-card app-stations" aria-label="NDF por estación">
+          <h3 className="app-h3">NDF por estación <span className="app-muted">· {stations.length} con fallas</span></h3>
+          <StationTable stations={stations} focus={best.name} />
+        </section>
+      </div>
       {codes.length > 0 && (
         <>
-          <ParetoChart title="Primeras fallas por código" level={1} limit={TOP} subtitle={`Todas las estaciones${codes.length > TOP ? ` · ${TOP} de ${codes.length} códigos (todos abajo)` : ''}`}
-            data={codes.map((c) => ({ label: c.name, value: c.total, hint: c.desc }))} />
-          <div className="app-ndf-codes">
-            {codes.map((c) => (
-              <details key={c.name} className="yc-card">
-                <summary><span className="app-mono">{c.name}</span> · {n(c.total)} unidad{c.total === 1 ? '' : 'es'} · NDF estimado {n(c.est)} <span className="app-muted">{c.desc}</span></summary>
-                <UnitTable units={marked!.filter((m) => m.code === c.name)} />
-              </details>
-            ))}
+          <h3 className="app-h3">Estación con más NDF · <span className="app-mono">{best.name}</span> <span className="app-muted">({n(best.ndf)} NDF de {n(best.ff)} primeras fallas; las demás, en la app)</span></h3>
+          <div className="app-charts">
+            <ParetoChart title="Primeras fallas por código" level={1} limit={TOP} subtitle={`1er nivel · ${best.name}${codes.length > TOP ? ` · ${TOP} de ${codes.length} códigos` : ''}`}
+              data={codes.map((c) => ({ label: c.name, value: c.total, hint: c.desc }))} />
+            <ParetoChart title="Testers de los códigos del 80 %" level={2} limit={TOP} subtitle={`2do nivel · ${top.size} código${top.size === 1 ? '' : 's'}`}
+              data={testers.map((t) => ({ label: t.name, value: t.total }))} />
           </div>
+          <details className="app-codes">
+            <summary>Seriales de {best.name} ({n(mine.length)}) · por código</summary>
+            <UnitTable units={[...mine].sort((a, b) => a.code.localeCompare(b.code))} code />
+          </details>
         </>
       )}
     </section>
