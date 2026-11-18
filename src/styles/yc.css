@@ -232,7 +232,8 @@ body { margin: 0; background: var(--surface-100); color: var(--ink); font: 400 1
 .yc-seg button[aria-pressed="true"] { background: var(--surface-000); color: var(--ink); box-shadow: var(--shadow-card); }
 /* al pasar por la gráfica, los nombres del eje se desenfocan y queda nítido el de la barra señalada */
 @media (hover: hover) {
-  svg:hover :is(.yc-pareto-x, .yc-chart-x) { opacity: .3; filter: blur(1.5px); }
+  /* solo con una barra señalada y solo nombres de categoría (en un <g> con su barra): los ejes numéricos no se tocan */
+  svg:has(g:hover > :is(.yc-pareto-x, .yc-chart-x)) g:not(:hover) > :is(.yc-pareto-x, .yc-chart-x) { opacity: .3; filter: blur(1.5px); }
   svg g:hover > :is(.yc-pareto-x, .yc-chart-x) { opacity: 1; filter: none; fill: var(--ink); font-weight: 600; }
 }
 @media (prefers-reduced-motion: no-preference) { :is(.yc-pareto-x, .yc-chart-x) { transition: opacity .2s, filter .2s; } }

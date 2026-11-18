@@ -26,8 +26,8 @@ function Rail({ side, label, items, done }: { side: 'left' | 'right'; label: str
     <nav className={`app-rail is-${side}`} aria-label={label}>
       {items.map((it, i) => (
         <NavLink key={it.to} to={it.to} end className="app-rail-link">
-          <span className="app-rail-ico"><Icon d={it.icon} />{done?.[i] && <i className="app-rail-done" aria-label="hecho">✓</i>}</span>
-          <span className="app-rail-txt">{done ? `${i + 1}. ` : ''}{it.label}</span>
+          <span className="app-rail-ico"><Icon d={it.icon} />{done?.[i] && <i className="app-rail-done" aria-hidden>✓</i>}</span>
+          <span className="app-rail-txt">{done ? `${i + 1}. ` : ''}{it.label}{done?.[i] && <span className="yc-sr-only"> (hecho)</span>}</span>
         </NavLink>
       ))}
     </nav>
@@ -46,9 +46,9 @@ export default function Layout() {
     <>
       <header className="app-top">
         <Link to="/" className="yc-nav-mark">Yield Control</Link>
-        <nav className="app-top-links" aria-label="Administración">
-          {admin && ADMIN.map((it) => <NavLink key={it.to} to={it.to} className="app-top-link"><Icon d={it.icon} />{it.label}</NavLink>)}
-        </nav>
+        {admin && <nav className="app-top-links" aria-label="Administración">
+          {ADMIN.map((it) => <NavLink key={it.to} to={it.to} className="app-top-link"><Icon d={it.icon} />{it.label}</NavLink>)}
+        </nav>}
         <button type="button" className="app-user" title="Seguridad de tu cuenta" onClick={() => go('/seguridad')}>
           <span className="app-avatar" aria-hidden>{user.split(/[\s.@]+/).filter((w) => w.length > 2).map((w) => w[0]).slice(0, 2).join('').toUpperCase()}</span>
           <span className="app-user-name">{user}</span>

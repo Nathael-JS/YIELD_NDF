@@ -164,7 +164,7 @@ function BarsAndLines({ kind, categories: cats, series = [], lines = [], targets
   const lw = Math.max(56, 7 * Math.max(0, ...cats.map((c) => cut(c).length)) + 12);
   const r = niceRange(0, Math.max(...all)), g = CIW / Math.max(cats.length, 1), bw = (g * 0.7) / ns;
   // si los nombres no caben derechos van en vertical (todos visibles); solo con muchísimas categorías se salta alguno
-  const tilt = lw > g, every = tilt ? Math.max(1, Math.ceil(14 / g)) : 1, extra = tilt ? lw - 30 : 0;
+  const tilt = lw > g, every = tilt ? Math.max(1, Math.ceil(14 / g)) : 1, extra = tilt ? lw - 30 + (p.xLabel ? 14 : 0) : 0;
   const xc = (i: number) => CL + i * g + g / 2;
   const both = [...series, ...lines];
   const aria = `${p.title || kind}: ` + cats.map((c, i) => `${c} ${both.map((s) => `${s.name} ${fmt(s.values[i] || 0)}`).join(', ')}`).join('; ');

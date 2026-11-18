@@ -21,6 +21,7 @@ Los errores encontrados y cómo se corrigieron están en [ERRORES.md](ERRORES.md
 
 ### Corregido
 - El contador del carrusel («2 / 6») se partía en dos líneas en móvil.
+- Revisión de código: el desenfoque solo actúa al señalar una barra y solo en nombres de categoría (los ejes de histograma y dispersión ya no se desenfocan); el ✓ de los pasos se anuncia como «hecho» en lectores de pantalla; sin enlaces de administración no queda un menú vacío; el título del eje X ya no se encima con los nombres verticales.
 
 ## [0.24.0] — 2026-11-18 · sistema de diseño v28
 
