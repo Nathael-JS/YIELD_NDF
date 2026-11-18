@@ -8,6 +8,16 @@ Un cambio de componente se publica primero en el artefacto y después se copia a
 
 Los errores encontrados y cómo se corrigieron están en [ERRORES.md](ERRORES.md); las mejoras y cómo se hicieron, en [MEJORAS.md](MEJORAS.md).
 
+## [0.23.0] — 2026-11-18
+
+### Cambiado
+- **NDF con panel a la derecha:** las gráficas ocupan el ancho y apiladas (1er nivel, unidades del código elegido, 2do nivel). El panel fijo de la derecha reúne el resumen (NDF grande, % que se recupera, SPY y una barra NDF / real / pendiente), los filtros Modelo, Estación y Tester con «Quitar filtros», el selector del 2do nivel y el aviso de cuadre con el TCQS. En pantallas de menos de 1100 px el panel va arriba.
+- **Lista de códigos guardada** en un desplegable («Todos los códigos (N)»): las gráficas ya muestran los principales; la lista queda para buscar uno y como acceso con teclado.
+- 2do nivel por tester también limitado a 20 barras.
+
+### Corregido
+- Con códigos de ICT de cientos de letras, la tabla de códigos se ensanchaba y las demás columnas quedaban fuera de la vista. La celda del código se corta con «…» (completo al pasar el mouse).
+
 ## [0.22.0] — 2026-11-18
 
 ### Cambiado
