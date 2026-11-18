@@ -179,3 +179,56 @@ button.yc-nav-mark { border: 0; background: none; padding: 0; color: var(--ink);
 .app-ndf-report { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: var(--space-4); align-items: start; }
 .app-ndf-report .app-ndf-side { position: static; }
 @media (max-width: 900px) { .app-ndf-report { grid-template-columns: 1fr; } }
+
+/* Menú: barra superior (administración y cuenta) + rieles a la izquierda (flujo) y a la derecha (consulta).
+   Cada riel se abre hacia el contenido desde su propio borde: no chocan entre sí. */
+.app-top { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; gap: var(--space-4); height: 56px; padding: 0 var(--space-4); background: var(--surface-000); border-bottom: 1px solid var(--line); }
+.app-top .yc-nav-mark { color: var(--ink); text-decoration: none; }
+.app-top-links { display: flex; gap: var(--space-1); margin-left: auto; }
+.app-top-link { display: inline-flex; align-items: center; gap: var(--space-2); height: 34px; padding: 0 var(--space-3); border-radius: var(--radius-md); color: var(--ink-muted); text-decoration: none; font-size: 13px; }
+.app-top-link:hover { background: var(--surface-200); color: var(--ink); }
+.app-top-link[aria-current="page"] { background: var(--brand-tint); color: var(--brand); }
+.app-top svg, .app-rail svg { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.app-rail { position: fixed; top: 56px; bottom: 0; z-index: 15; width: 56px; display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-3) 8px; background: var(--surface-000); overflow: hidden; transition: width .22s cubic-bezier(.2, .7, .2, 1), box-shadow .22s; }
+.app-rail.is-left { left: 0; border-right: 1px solid var(--line); }
+.app-rail.is-right { right: 0; border-left: 1px solid var(--line); }
+.app-rail:hover, .app-rail:has(:focus-visible) { width: 216px; box-shadow: var(--shadow-panel); }
+.app-rail-link { position: relative; display: flex; align-items: center; gap: var(--space-3); height: 40px; padding: 0 10px; border-radius: var(--radius-md); color: var(--ink-muted); text-decoration: none; white-space: nowrap; font-size: 14px; }
+.app-rail.is-right .app-rail-link { flex-direction: row-reverse; }
+.app-rail-link:hover { background: var(--surface-200); color: var(--ink); }
+.app-rail-link[aria-current="page"] { background: var(--brand-tint); color: var(--brand); font-weight: 600; }
+.app-rail-link[aria-current="page"]::before { content: ""; position: absolute; top: 8px; bottom: 8px; width: 3px; border-radius: 2px; background: var(--brand); }
+.is-left .app-rail-link[aria-current="page"]::before { left: -8px; } .is-right .app-rail-link[aria-current="page"]::before { right: -8px; }
+.app-rail-ico { position: relative; display: grid; place-items: center; width: 20px; }
+.app-rail-done { position: absolute; right: -7px; bottom: -6px; display: grid; place-items: center; width: 13px; height: 13px; border-radius: 50%; background: var(--brand); color: var(--on-brand); font: 700 8px/1 var(--font-sans); font-style: normal; }
+.app-rail-txt { opacity: 0; transition: opacity .15s; }
+.app-rail:hover .app-rail-txt, .app-rail:has(:focus-visible) .app-rail-txt { opacity: 1; transition-delay: .06s; }
+.app-body { padding: 0 56px; }
+/* celular: los rieles pasan a dos tiras horizontales bajo la barra superior */
+@media (max-width: 768px) {
+  .app-rail { position: static; width: auto; flex-direction: row; overflow-x: auto; scrollbar-width: none; padding: var(--space-1) var(--space-3); border: 0; border-bottom: 1px solid var(--line); }
+  .app-rail:hover, .app-rail:has(:focus-visible) { width: auto; box-shadow: none; }
+  .app-rail.is-right .app-rail-link { flex-direction: row; }
+  .app-rail-txt { opacity: 1; }
+  .app-rail-link[aria-current="page"]::before { display: none; }
+  .app-body { padding: 0; }
+  .app-top-link { font-size: 0; gap: 0; } /* solo íconos */
+}
+@media (prefers-reduced-motion: reduce) { .app-rail, .app-rail-txt { transition: none; } }
+
+.app-hero-actions { align-items: flex-end; }
+/* Gráficos: la gráfica ocupa el alto visible (la proporción se mantiene; el SVG se centra) */
+.app-graficos .yc-carousel-body { display: grid; align-content: center; min-height: calc(100dvh - 340px); }
+.app-graficos .yc-carousel-body :is(.yc-chart, .yc-pareto) > svg { max-height: calc(100dvh - 400px); }
+.app-graficos .yc-chart-sub, .app-graficos .yc-pareto-level { display: block; }
+
+/* Profundidad sutil: las páginas entran escalonadas y las tarjetas se levantan con el mouse */
+@media (prefers-reduced-motion: no-preference) {
+  .app-main > * { animation: app-in .45s cubic-bezier(.2, .7, .2, 1) both; }
+  .app-main > :nth-child(2) { animation-delay: .05s; } .app-main > :nth-child(3) { animation-delay: .1s; }
+  .app-main > :nth-child(4) { animation-delay: .15s; } .app-main > :nth-child(n + 5) { animation-delay: .2s; }
+  :is(.yc-kpi, .app-watch-card, .yc-file, .app-ndf-side) { transition: transform .2s cubic-bezier(.2, .7, .2, 1), box-shadow .2s; }
+  :is(.yc-kpi, .app-watch-card, .yc-file):hover { transform: perspective(600px) translateY(-3px) rotateX(2deg); box-shadow: var(--shadow-panel); }
+}
+/* en el carrusel la gráfica no tiene padding de tarjeta: «Ampliar» va a la altura del título */
+.app-graficos .app-zoom-btn { top: 0; right: 0; }

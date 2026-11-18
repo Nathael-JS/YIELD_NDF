@@ -105,7 +105,7 @@ body { margin: 0; background: var(--surface-100); color: var(--ink); font: 400 1
 .yc-carousel-kind { font-size: 11px; line-height: 16px; font-weight: 600; letter-spacing: .6px; text-transform: uppercase; color: var(--brand); }
 .yc-carousel-title { margin: 0; font-size: 20px; line-height: 28px; font-weight: 600; }
 .yc-carousel-ctrl { display: flex; align-items: center; gap: var(--space-2); }
-.yc-carousel-count { font: 400 12px/18px var(--font-mono); color: var(--ink-muted); }
+.yc-carousel-count { font: 400 12px/18px var(--font-mono); color: var(--ink-muted); white-space: nowrap; }
 .yc-icon-btn { display: grid; place-items: center; width: 32px; height: 32px; border: 1px solid var(--line-strong); border-radius: var(--radius-md); background: var(--surface-000); font-size: 18px; line-height: 1; cursor: pointer; }
 .yc-icon-btn:hover { background: var(--surface-200); }
 .yc-carousel-body { min-height: 160px; }
@@ -230,3 +230,9 @@ body { margin: 0; background: var(--surface-100); color: var(--ink); font: 400 1
 .yc-seg button { min-height: 32px; padding: 0 var(--space-2); border: 0; border-radius: var(--radius-sm); background: none; color: var(--ink-muted); font: 500 12px var(--font-sans); cursor: pointer; }
 .yc-seg button:hover { color: var(--ink); }
 .yc-seg button[aria-pressed="true"] { background: var(--surface-000); color: var(--ink); box-shadow: var(--shadow-card); }
+/* al pasar por la gráfica, los nombres del eje se desenfocan y queda nítido el de la barra señalada */
+@media (hover: hover) {
+  svg:hover :is(.yc-pareto-x, .yc-chart-x) { opacity: .3; filter: blur(1.5px); }
+  svg g:hover > :is(.yc-pareto-x, .yc-chart-x) { opacity: 1; filter: none; fill: var(--ink); font-weight: 600; }
+}
+@media (prefers-reduced-motion: no-preference) { :is(.yc-pareto-x, .yc-chart-x) { transition: opacity .2s, filter .2s; } }

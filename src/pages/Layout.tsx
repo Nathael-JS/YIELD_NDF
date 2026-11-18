@@ -1,42 +1,64 @@
 import { useEffect } from 'react';
-import { Link, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { Link, Navigate, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { saveSummary } from '../lib/db.ts';
 import { congruence, daily, modelKey } from '../lib/tcqs.ts';
-import { Button, PipelineNav } from '../components/ui.tsx';
+import { Button } from '../components/ui.tsx';
 import { useApp, useData } from '../store.ts';
 import Seguridad from './Seguridad.tsx';
 
-const STEPS = ['Carga de datos', 'Validación', 'Yield'];
-export const STEP_PATHS = ['/carga', '/validacion', '/yield'];
-const EXTRA: Record<string, string> = { Inicio: '/', Gráficos: '/graficos', Comparativas: '/comparativas', NDF: '/ndf', Historial: '/historial', Cuentas: '/cuentas', 'Base de datos': '/base' };
-const ADMIN_ONLY = ['Cuentas', 'Base de datos'];
+type Item = { label: string; to: string; icon: string };
+// íconos de trazo (24×24): uno por página, para los rieles cerrados
+const I = {
+  carga: 'M12 16V4m0 0-4 4m4-4 4 4M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3', valid: 'M9 12l2 2 4-4M5 4h14a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z',
+  yield: 'M4 19h16M7 16V9m5 7V5m5 11v-5', inicio: 'M4 11l8-7 8 7v8a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1z', graf: 'M4 20V10m6 10V4m6 16v-8m4 8H2',
+  comp: 'M7 7h13m0 0-3-3m3 3-3 3M17 17H4m0 0 3-3m-3 3 3 3', ndf: 'M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5', hist: 'M12 7v5l3 3M12 21a9 9 0 1 0-9-9',
+  cuentas: 'M16 19v-1a4 4 0 0 0-8 0v1M12 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM20 19v-1a3 3 0 0 0-2-2.8M17 5.2a3 3 0 0 1 0 5.6', base: 'M4 6c0-1.7 3.6-3 8-3s8 1.3 8 3-3.6 3-8 3-8-1.3-8-3zm0 0v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3',
+};
+const FLOW: Item[] = [{ label: 'Carga de datos', to: '/carga', icon: I.carga }, { label: 'Validación', to: '/validacion', icon: I.valid }, { label: 'Yield', to: '/yield', icon: I.yield }];
+const VIEWS: Item[] = [{ label: 'Inicio', to: '/', icon: I.inicio }, { label: 'Gráficos', to: '/graficos', icon: I.graf }, { label: 'Comparativas', to: '/comparativas', icon: I.comp },
+  { label: 'NDF', to: '/ndf', icon: I.ndf }, { label: 'Historial', to: '/historial', icon: I.hist }];
+const ADMIN: Item[] = [{ label: 'Cuentas', to: '/cuentas', icon: I.cuentas }, { label: 'Base de datos', to: '/base', icon: I.base }];
+const Icon = ({ d }: { d: string }) => <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden><path d={d} /></svg>;
+
+/** Riel lateral: íconos siempre a la vista; al pasar el mouse o con el foco se desliza y muestra los nombres encima del contenido. */
+function Rail({ side, label, items, done }: { side: 'left' | 'right'; label: string; items: Item[]; done?: boolean[] }) {
+  return (
+    <nav className={`app-rail is-${side}`} aria-label={label}>
+      {items.map((it, i) => (
+        <NavLink key={it.to} to={it.to} end className="app-rail-link">
+          <span className="app-rail-ico"><Icon d={it.icon} />{done?.[i] && <i className="app-rail-done" aria-label="hecho">✓</i>}</span>
+          <span className="app-rail-txt">{done ? `${i + 1}. ` : ''}{it.label}</span>
+        </NavLink>
+      ))}
+    </nav>
+  );
+}
 
 export default function Layout() {
   const user = useApp((s) => s.user), logout = useApp((s) => s.logout), admin = useApp((s) => s.admin);
   // contraseña temporal o administrador sin MFA: no se usa nada más hasta resolverlo
   const blocked = useApp((s) => s.cuenta.debeCambiar || s.cuenta.mfaPendiente);
-  const { pathname } = useLocation();
   const go = useNavigate();
   const { read, records } = useData();
   useAutoSave(records);
   if (!user) return <Navigate to="/login" replace />;
   return (
     <>
-      <PipelineNav
-        steps={STEPS}
-        current={STEP_PATHS.indexOf(pathname)}
-        done={[!!read, records.length > 0]} // Carga: TCQS leído · Validación: hay filas válidas de Juliet
-        active={Object.keys(EXTRA).find((k) => EXTRA[k] === pathname) ?? null}
-        extra={Object.keys(EXTRA).filter((k) => admin || !ADMIN_ONLY.includes(k))}
-        onSelect={(t) => go(typeof t === 'number' ? (t < 0 ? '/' : STEP_PATHS[t]) : EXTRA[t])}
-      >
+      <header className="app-top">
+        <Link to="/" className="yc-nav-mark">Yield Control</Link>
+        <nav className="app-top-links" aria-label="Administración">
+          {admin && ADMIN.map((it) => <NavLink key={it.to} to={it.to} className="app-top-link"><Icon d={it.icon} />{it.label}</NavLink>)}
+        </nav>
         <button type="button" className="app-user" title="Seguridad de tu cuenta" onClick={() => go('/seguridad')}>
           <span className="app-avatar" aria-hidden>{user.split(/[\s.@]+/).filter((w) => w.length > 2).map((w) => w[0]).slice(0, 2).join('').toUpperCase()}</span>
           <span className="app-user-name">{user}</span>
         </button>
         <Button variant="quiet" onClick={logout}>Salir</Button>
-      </PipelineNav>
-      <main className="app-main">{blocked ? <Seguridad /> : <Outlet />}</main>
+      </header>
+      {/* izquierda: el flujo de trabajo (✓ = paso hecho); derecha: las páginas de consulta */}
+      <Rail side="left" label="Flujo de trabajo" items={FLOW} done={[!!read, records.length > 0, false]} />
+      <Rail side="right" label="Consulta" items={VIEWS} />
+      <div className="app-body"><main className="app-main">{blocked ? <Seguridad /> : <Outlet />}</main></div>
     </>
   );
 }
