@@ -132,7 +132,6 @@ button.yc-nav-mark { border: 0; background: none; padding: 0; color: var(--ink);
 /* NDF: descripciones de error largas (las de ICT traen varias líneas) en una sola línea con «…» */
 .yc-table .app-desc { max-width: 360px; overflow: hidden; text-overflow: ellipsis; }
 /* NDF: unidades del código elegido y desplegables del HTML descargable */
-.app-units { padding: var(--space-4); border: 1px solid var(--brand); border-radius: var(--radius-lg); background: var(--surface-100); }
 .app-ndf-codes { display: grid; gap: var(--space-2); }
 .app-ndf-codes summary { padding: var(--space-3) var(--space-4); cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .app-ndf-codes details[open] summary { border-bottom: 1px solid var(--line); }
@@ -154,3 +153,38 @@ button.yc-nav-mark { border: 0; background: none; padding: 0; color: var(--ink);
   .app-anim [role="img"] :is(.yc-pareto-dot, .yc-line-dot) { animation: yc-fade .3s .5s both; }
   .yc-pareto-bar.is-pickable { transition: opacity .15s, fill .2s; }
 }
+
+/* NDF: gráficas a lo ancho y panel de opciones a la derecha (arriba en pantallas angostas) */
+.app-ndf { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: var(--space-6); align-items: start; }
+.app-ndf-main, .app-ndf-charts { display: grid; gap: var(--space-6); min-width: 0; }
+.app-ndf-side { position: sticky; top: 72px; display: grid; gap: var(--space-4); padding: var(--space-5, 20px); border-top: 3px solid var(--brand); }
+@media (max-width: 1100px) { .app-ndf { grid-template-columns: 1fr; } .app-ndf-side { position: static; order: -1; } }
+.app-ndf-hero { display: grid; gap: 2px; }
+.app-ndf-big { font: 500 44px/48px var(--font-mono); letter-spacing: -1px; color: var(--brand); }
+.app-ndf-big small { margin-left: var(--space-1); font: 400 14px var(--font-sans); letter-spacing: 0; color: var(--ink-muted); }
+.app-ndf-pct { font-size: 13px; color: var(--ink-muted); }
+/* barra del reparto NDF / real / pendiente */
+.app-split { display: flex; gap: 2px; height: 14px; border-radius: var(--radius-pill); overflow: hidden; background: var(--surface-200); }
+.app-split span { min-width: 0; transition: flex-grow .5s cubic-bezier(.2, .7, .2, 1); }
+:is(.app-split span, .app-split-legend i).is-ndf { background: var(--data-second); }
+:is(.app-split span, .app-split-legend i).is-real { background: var(--data-fail); }
+:is(.app-split span, .app-split-legend i).is-pend { background: var(--line-strong); }
+.app-split-legend { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-1); font-size: 13px; }
+.app-split-legend li { display: flex; align-items: center; gap: var(--space-2); }
+.app-split-legend i { width: 10px; height: 10px; border-radius: 3px; }
+.app-split-legend b { margin-left: auto; font: 500 13px var(--font-mono); }
+.app-ndf-filters { display: grid; gap: var(--space-3); padding-top: var(--space-4); border-top: 1px solid var(--line); }
+.app-ndf-filters .yc-select, .app-ndf-filters .yc-field { width: 100%; min-width: 0; }
+.app-ndf-filters .yc-btn { justify-self: start; }
+.app-ndf-note { margin: 0; font-size: 12px; }
+/* selector de 2 opciones (segmentado) */
+.app-seg { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; padding: 2px; background: var(--surface-200); border-radius: var(--radius-md); }
+.app-seg button { min-height: 32px; padding: 0 var(--space-2); border: 0; border-radius: var(--radius-sm); background: none; color: var(--ink-muted); font: 500 12px var(--font-sans); cursor: pointer; }
+.app-seg button[aria-pressed="true"] { background: var(--surface-000); color: var(--ink); box-shadow: var(--shadow-card); }
+/* lista completa de códigos, guardada en un desplegable */
+.app-codes { border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface-000); }
+.app-codes summary { padding: var(--space-3) var(--space-4); cursor: pointer; font-weight: 500; }
+.app-codes[open] summary { border-bottom: 1px solid var(--line); }
+.app-codes .yc-table-wrap { border: 0; max-height: 420px; overflow: auto; }
+.yc-table .app-cut { max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
+.app-units { padding: var(--space-4); border: 1px solid var(--brand); border-radius: var(--radius-lg); background: var(--surface-100); display: grid; gap: var(--space-3); }

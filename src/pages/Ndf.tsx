@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Badge, Button, KpiTile, Select } from '../components/ui.tsx';
+import { Badge, Button, Select } from '../components/ui.tsx';
 import { ParetoChart } from '../components/charts.tsx';
 import { byLabel, classify, ndfStations, readFails, top80, type Estado, type Marked } from '../lib/fails.ts';
 import { modelKey, pctText, type Rec } from '../lib/tcqs.ts';
@@ -9,6 +9,8 @@ import { NeedTcqs, PageHead } from './Layout.tsx';
 
 const n = (v: number) => (Number.isFinite(v) ? v.toLocaleString('es-MX', { maximumFractionDigits: 1 }) : '—');
 const ALL = '';
+/** Texto corto para títulos (los códigos de ICT traen cientos de letras). */
+const cut = (s: string) => (s.length > 40 ? `${s.slice(0, 39)}…` : s);
 const TOP = 20; // barras del Pareto de códigos: con más no se leen (el % acumulado sigue siendo sobre todas)
 const TONE: Record<Estado, 'ok' | 'bad' | 'warn' | 'info' | 'neutral'> = { NDF: 'ok', Real: 'bad', Pendiente: 'warn', Mezcla: 'info', 'Sin TCQS': 'neutral' };
 const ESTADO: Record<Estado, string> = { NDF: 'NDF', Real: 'Real', Pendiente: 'Pendiente', Mezcla: 'NDF probable', 'Sin TCQS': 'Sin TCQS' };
@@ -90,87 +92,101 @@ export default function Ndf() {
   const units = picked ? view.filter((m) => m.code === code) : [];
   const where = [model, station, tester].filter(Boolean).join(' · ') || 'todas las estaciones';
 
+  const ndf = sum('ndf'), ff = sum('ff'), real = sum('real'), pend = sum('pend');
+  const parts = [['NDF', ndf, 'ndf'], ['Real', real, 'real'], ['Pendiente', pend, 'pend']] as const;
+  const lvl2Data = lvl2 === 'tester' ? testers.map((t) => ({ label: t.name, value: t.total }))
+    : testerCodes.map((c) => ({ label: c.name, value: c.total, hint: `${c.desc} · NDF estimado ${n(c.est)}` }));
+
   return (
     <>
-      <PageHead title="NDF" sub="No defect found: fallaron la primera vez y pasaron al re-probar sin reparación (2do pase del TCQS). Los códigos vienen del reporte de primeras fallas.">
-        <Select label="Modelo" value={model} onChange={pickModel} options={[{ value: ALL, label: 'Todos los modelos' }, ...[...new Set(records.map((r) => r.model))].sort()]} />
-        <Select label="Estación" value={station} onChange={pickStation} options={[{ value: ALL, label: 'Todas las estaciones' }, ...stations.map((s) => s.name).sort()]} />
-        <Select label="Tester" value={tester} onChange={(t) => { setTester(t); setCode(undefined); }} disabled={!marked}
-          options={[{ value: ALL, label: 'Todos los testers' }, ...[...new Set(inStation.map((m) => m.tester))].sort()]} />
-      </PageHead>
-      <div className="yc-grid-kpi">
-        <KpiTile label="Primeras fallas" value={n(sum('ff'))} />
-        <KpiTile label="NDF" value={n(sum('ndf'))} unit={` · ${pctText((sum('ndf') / sum('ff')) * 100)} % de las fallas`} />
-        <KpiTile label="Reales (a reparación)" value={n(sum('real'))} />
-        <KpiTile label="Pendientes de re-probar" value={n(sum('pend'))} />
-        <KpiTile label="SPY (NDF / entradas)" value={pctText((sum('ndf') / input) * 100)} unit="%" />
-      </div>
-      <section className="yc-card yc-pad app-sec" aria-labelledby="codigos">
-        <h2 id="codigos" className="app-h3">Por qué fallan · <span className="app-mono">{where}</span></h2>
-        {!read ? (
-          <p className="app-muted">Carga el reporte de <strong>primeras fallas</strong> (FirstFail) en <Link to="/carga">Carga de datos</Link> para ver los códigos de error, los testers y los seriales.</p>
-        ) : !marked ? (
-          <p className="app-muted"><Badge tone="bad">Faltan columnas</Badge> El archivo no trae <span className="app-mono">{read.missing.join(', ')}</span>.</p>
-        ) : (
-          <>
-            <p className="app-muted">
-              <Badge tone={marked.distintos ? 'warn' : 'ok'}>{marked.distintos ? 'Revisar' : 'Cuadra'}</Badge>{' '}
-              El archivo cuadra con FIRST_FAIL_QTY del TCQS en {n(marked.grupos - marked.distintos)} de {n(marked.grupos)} grupos (día × orden × estación × tester).
-              {' '}Clic en una barra o en «Ver unidades» para ver los seriales.
-            </p>
-            {!codes.length ? <p className="app-muted">Sin primeras fallas en el archivo para {where}.</p> : (
+      <PageHead title="NDF" sub="No defect found: fallaron la primera vez y pasaron al re-probar sin reparación (2do pase del TCQS). Los códigos vienen del reporte de primeras fallas." />
+      <div className="app-ndf">
+        <div className="app-ndf-main">
+          <section className="yc-card yc-pad app-sec" aria-labelledby="codigos">
+            <h2 id="codigos" className="app-h3">Por qué fallan · <span className="app-mono">{where}</span></h2>
+            {!read ? (
+              <p className="app-muted">Carga el reporte de <strong>primeras fallas</strong> (FirstFail) en <Link to="/carga">Carga de datos</Link> para ver los códigos de error, los testers y los seriales.</p>
+            ) : !marked ? (
+              <p className="app-muted"><Badge tone="bad">Faltan columnas</Badge> El archivo no trae <span className="app-mono">{read.missing.join(', ')}</span>.</p>
+            ) : !codes.length ? <p className="app-muted">Sin primeras fallas en el archivo para {where}.</p> : (
               <>
-                {/* vista del 2do nivel, arriba de las gráficas para que las dos queden a la misma altura */}
-                <div className="yc-row app-switch" role="group" aria-label="2do nivel">
-                      <Button variant={lvl2 === 'tester' ? 'secondary' : 'quiet'} aria-pressed={lvl2 === 'tester'} onClick={() => setLvl2('tester')}>Testers de los códigos del 80 %</Button>
-                      <Button variant={lvl2 === 'codigo' ? 'secondary' : 'quiet'} aria-pressed={lvl2 === 'codigo'} onClick={() => setLvl2('codigo')}>Códigos de los testers del 80 %</Button>
-                    </div>
-                {/* key: con cada filtro la gráfica vuelve a entrar (barras que crecen, línea que se dibuja) */}
-                <div className="app-charts app-anim" key={`${where}|${lvl2}`}>
+                {/* key: con cada filtro las gráficas vuelven a entrar (barras que crecen, línea que se dibuja) */}
+                <div className="app-ndf-charts app-anim" key={`${where}|${lvl2}`}>
                   <ParetoChart title="Primeras fallas por código" level={1} limit={TOP} picked={code} onPick={setCode}
-                    subtitle={`1er nivel · ${where}${codes.length > TOP ? ` · ${TOP} de ${codes.length} códigos (todos en la tabla)` : ''}`}
+                    subtitle={`1er nivel · ${where}${codes.length > TOP ? ` · ${TOP} de ${codes.length} códigos` : ''} · clic en una barra para ver sus unidades`}
                     data={codes.map((c) => ({ label: c.name, value: c.total, hint: `${c.desc} · NDF estimado ${n(c.est)}` }))} />
-                    {lvl2 === 'tester' ? (
-                      <ParetoChart title="Testers de los códigos del 80 %" level={2} subtitle={`2do nivel · ${top.size} código${top.size === 1 ? '' : 's'} · clic para filtrar por tester`} picked={tester} onPick={(t) => { setTester(t); setCode(undefined); }}
-                        data={testers.map((t) => ({ label: t.name, value: t.total }))} />
-                    ) : (
-                      <ParetoChart title="Códigos de los testers del 80 %" level={2} limit={TOP} picked={code} onPick={setCode}
-                        subtitle={`2do nivel · ${topTesters.size} tester${topTesters.size === 1 ? '' : 's'}: ${[...topTesters].slice(0, 4).join(', ')}${topTesters.size > 4 ? '…' : ''} · clic para ver unidades`}
-                        data={testerCodes.map((c) => ({ label: c.name, value: c.total, hint: `${c.desc} · NDF estimado ${n(c.est)}` }))} />
-                    )}
+                  {picked && (
+                    <section className="app-units" aria-labelledby="unidades">
+                      <div className="app-zoom-head">
+                        <div><h3 id="unidades" className="app-h3"><span className="app-mono" title={picked.name}>{cut(picked.name)}</span> · {n(units.length)} unidad{units.length === 1 ? '' : 'es'}</h3>
+                          <p className="app-muted">{picked.desc} · NDF estimado {n(picked.est)} de {n(picked.total)}{codes.indexOf(picked) >= TOP ? ` · fuera de las ${TOP} barras de la gráfica` : ''}</p></div>
+                        <Button variant="quiet" onClick={() => setCode(undefined)}>Cerrar</Button>
+                      </div>
+                      <UnitTable units={units} />
+                    </section>
+                  )}
+                  {lvl2 === 'tester' ? (
+                    <ParetoChart title="Testers de los códigos del 80 %" level={2} limit={TOP} data={lvl2Data} picked={tester} onPick={(t) => { setTester(t); setCode(undefined); }}
+                      subtitle={`2do nivel · ${top.size} código${top.size === 1 ? '' : 's'} · clic para filtrar por tester`} />
+                  ) : (
+                    <ParetoChart title="Códigos de los testers del 80 %" level={2} limit={TOP} data={lvl2Data} picked={code} onPick={setCode}
+                      subtitle={`2do nivel · ${topTesters.size} tester${topTesters.size === 1 ? '' : 's'}: ${[...topTesters].slice(0, 4).join(', ')}${topTesters.size > 4 ? '…' : ''}`} />
+                  )}
                 </div>
-                {picked && (
-                  <section className="app-sec app-units" aria-labelledby="unidades">
-                    <div className="app-zoom-head">
-                      <div><h3 id="unidades" className="app-h3"><span className="app-mono">{picked.name}</span> · {n(units.length)} unidad{units.length === 1 ? '' : 'es'}</h3>
-                        <p className="app-muted">{picked.desc} · NDF estimado {n(picked.est)} de {n(picked.total)}{codes.indexOf(picked) >= TOP ? ` · fuera de las ${TOP} barras de la gráfica` : ''}</p></div>
-                      <Button variant="quiet" onClick={() => setCode(undefined)}>Cerrar</Button>
-                    </div>
-                    <UnitTable units={units} />
-                  </section>
-                )}
-                <div className="yc-table-wrap">
-                  <table className="yc-table">
-                    <thead><tr><th>Código</th><th>Descripción</th><th className="num">Unidades</th><th className="num">NDF estimado</th><th className="num">NDF seguro</th><th className="num">Real seguro</th><th>Pareto 80 %</th><th /></tr></thead>
-                    <tbody>{codes.map((c) => (
-                      <tr key={c.name} className={c.name === code ? 'is-focus' : undefined}>
-                        <td className="code">{c.name}</td><td className="app-desc" title={c.desc}>{c.desc}</td>
-                        <td className="num">{n(c.total)}</td><td className="num">{n(c.est)}</td><td className="num">{n(c.NDF)}</td><td className="num">{n(c.Real)}</td>
-                        <td>{top.has(c.name) ? <Badge tone="warn">Sí</Badge> : <span className="app-muted">No</span>}</td>
-                        <td><Button variant="quiet" onClick={() => setCode(c.name)}>Ver unidades</Button></td>
-                      </tr>
-                    ))}</tbody>
-                  </table>
-                </div>
+                {/* la lista completa queda guardada: las gráficas ya muestran los principales y es el acceso con teclado */}
+                <details className="app-codes">
+                  <summary>Todos los códigos ({n(codes.length)}) · descripción, NDF estimado y unidades</summary>
+                  <div className="yc-table-wrap">
+                    <table className="yc-table">
+                      <thead><tr><th>Código</th><th>Descripción</th><th className="num">Unidades</th><th className="num">NDF estimado</th><th>80 %</th><th /></tr></thead>
+                      <tbody>{codes.map((c) => (
+                        <tr key={c.name} className={c.name === code ? 'is-focus' : undefined}>
+                          <td className="code app-cut" title={c.name}>{c.name}</td><td className="app-desc" title={c.desc}>{c.desc}</td>
+                          <td className="num">{n(c.total)}</td><td className="num">{n(c.est)}</td>
+                          <td>{top.has(c.name) ? <Badge tone="warn">Sí</Badge> : <span className="app-muted">No</span>}</td>
+                          <td><Button variant="quiet" onClick={() => setCode(c.name)}>Ver unidades</Button></td>
+                        </tr>
+                      ))}</tbody>
+                    </table>
+                  </div>
+                </details>
               </>
             )}
-          </>
-        )}
-      </section>
-      <section className="yc-card app-stations" aria-labelledby="estaciones">
-        <h2 id="estaciones" className="app-h3">NDF por estación <span className="app-muted">· {stations.length} con fallas · clic en «Ver códigos» para filtrar</span></h2>
-        <StationTable stations={stations} focus={station} onPick={pickStation} />
-      </section>
+          </section>
+          <section className="yc-card app-stations" aria-labelledby="estaciones">
+            <h2 id="estaciones" className="app-h3">NDF por estación <span className="app-muted">· {stations.length} con fallas · «Ver códigos» filtra la página</span></h2>
+            <StationTable stations={stations} focus={station} onPick={pickStation} />
+          </section>
+        </div>
+        <aside className="yc-card app-ndf-side" aria-label="Opciones y resumen">
+          <div className="app-ndf-hero">
+            <span className="yc-kpi-label">NDF · {where}</span>
+            <span className="app-ndf-big">{n(ndf)}<small> de {n(ff)} primeras fallas</small></span>
+            <span className="app-ndf-pct">{pctText((ndf / ff) * 100)} % se recupera al re-probar · SPY {pctText((ndf / input) * 100)} %</span>
+          </div>
+          {/* reparto de las primeras fallas: cada parte crece con su valor */}
+          <div className="app-split" role="img" aria-label={parts.map(([l, v]) => `${l} ${n(v)}`).join(', ')}>
+            {parts.map(([l, v, k]) => <span key={k} className={`is-${k}`} style={{ flexGrow: Number.isFinite(v) ? v : 0 }} title={`${l}: ${n(v)}`} />)}
+          </div>
+          <ul className="app-split-legend">
+            {parts.map(([l, v, k]) => <li key={k}><i className={`is-${k}`} />{l}<b>{n(v)}</b></li>)}
+          </ul>
+          <div className="app-ndf-filters">
+            <Select label="Modelo" value={model} onChange={pickModel} options={[{ value: ALL, label: 'Todos los modelos' }, ...[...new Set(records.map((r) => r.model))].sort()]} />
+            <Select label="Estación" value={station} onChange={pickStation} options={[{ value: ALL, label: 'Todas las estaciones' }, ...stations.map((s) => s.name).sort()]} />
+            <Select label="Tester" value={tester} onChange={(t) => { setTester(t); setCode(undefined); }} disabled={!marked}
+              options={[{ value: ALL, label: 'Todos los testers' }, ...[...new Set(inStation.map((m) => m.tester))].sort()]} />
+            {(model || station || tester) && <Button variant="quiet" onClick={() => pickModel(ALL)}>Quitar filtros</Button>}
+          </div>
+          <div className="yc-field">2do nivel
+            <div className="app-seg" role="group" aria-label="2do nivel">
+              <button type="button" aria-pressed={lvl2 === 'tester'} onClick={() => setLvl2('tester')}>Testers del 80 %</button>
+              <button type="button" aria-pressed={lvl2 === 'codigo'} onClick={() => setLvl2('codigo')}>Códigos del 80 %</button>
+            </div>
+          </div>
+          {marked && <p className="app-muted app-ndf-note"><Badge tone={marked.distintos ? 'warn' : 'ok'}>{marked.distintos ? 'Revisar' : 'Cuadra'}</Badge> Archivo vs. TCQS: {n(marked.grupos - marked.distintos)} de {n(marked.grupos)} grupos iguales.</p>}
+        </aside>
+      </div>
     </>
   );
 }
