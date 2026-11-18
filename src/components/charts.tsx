@@ -107,9 +107,9 @@ export function ParetoChart({ data, title = 'Pareto', level = 1, subtitle, onPic
   const m = useSvgWidth();
   const all = [...data].sort((a, b) => b.value - a.value), sorted = limit ? all.slice(0, limit) : all;
   const total = all.reduce((s, d) => s + d.value, 0) || 1;
-  // como en BarChart: si los nombres no caben derechos se inclinan (mono 11px ≈ 7px por letra)
+  // como en BarChart: si los nombres no caben derechos van en vertical (mono 11px ≈ 7px por letra)
   const lw = Math.max(48, 7 * Math.max(0, ...sorted.map((d) => cut(d.label).length)) + 12);
-  const bw0 = (m.w - 84) / Math.max(sorted.length, 1), tilt = lw > bw0, extra = tilt ? Math.ceil((lw - 12) * 0.64) - 18 : 0;
+  const bw0 = (m.w - 84) / Math.max(sorted.length, 1), tilt = lw > bw0, extra = tilt ? lw - 30 : 0;
   const W = m.w, H = 280 + extra, L = 40, R = 44, T = 12, B = 36 + extra, iw = W - L - R, ih = H - T - B;
   const max = sorted[0]?.value || 1, bw = iw / Math.max(sorted.length, 1), every = tilt ? Math.max(1, Math.ceil(14 / bw)) : 1;
   let cum = 0;
@@ -135,7 +135,7 @@ export function ParetoChart({ data, title = 'Pareto', level = 1, subtitle, onPic
                 <title>{`${d.label}: ${d.value} (${Math.round((d.value / total) * 100)}%)${d.hint ? `\n${d.hint}` : ''}${onPick ? '\nClic para ver las unidades' : ''}`}</title>
               </rect>
               {i % every === 0 && (tilt
-                ? <text className="yc-pareto-x" x={x + bw / 2} y={H - B + 14} textAnchor="end" transform={`rotate(-40 ${x + bw / 2} ${H - B + 14})`}>{cut(d.label)}<title>{d.label}</title></text>
+                ? <text className="yc-pareto-x" x={x + bw / 2 + 4} y={H - B + 8} textAnchor="end" transform={`rotate(-90 ${x + bw / 2 + 4} ${H - B + 8})`}>{cut(d.label)}<title>{d.label}</title></text>
                 : <text className="yc-pareto-x" x={x + bw / 2} y={H - B + 18} textAnchor="middle">{cut(d.label)}<title>{d.label}</title></text>)}
             </g>
           );
@@ -163,8 +163,8 @@ function BarsAndLines({ kind, categories: cats, series = [], lines = [], targets
   // cada cuántas etiquetas del eje X cabe una, según la más larga (mono 11px ≈ 7px por letra)
   const lw = Math.max(56, 7 * Math.max(0, ...cats.map((c) => cut(c).length)) + 12);
   const r = niceRange(0, Math.max(...all)), g = CIW / Math.max(cats.length, 1), bw = (g * 0.7) / ns;
-  // si los nombres no caben derechos se inclinan (todos visibles); solo con muchísimas categorías se salta alguno
-  const tilt = lw > g, every = tilt ? Math.max(1, Math.ceil(14 / g)) : 1, extra = tilt ? Math.ceil((lw - 12) * 0.64) - 18 : 0;
+  // si los nombres no caben derechos van en vertical (todos visibles); solo con muchísimas categorías se salta alguno
+  const tilt = lw > g, every = tilt ? Math.max(1, Math.ceil(14 / g)) : 1, extra = tilt ? lw - 30 + (p.xLabel ? 14 : 0) : 0;
   const xc = (i: number) => CL + i * g + g / 2;
   const both = [...series, ...lines];
   const aria = `${p.title || kind}: ` + cats.map((c, i) => `${c} ${both.map((s) => `${s.name} ${fmt(s.values[i] || 0)}`).join(', ')}`).join('; ');
@@ -187,7 +187,7 @@ function BarsAndLines({ kind, categories: cats, series = [], lines = [], targets
             );
           })}
           {i % every === 0 && (tilt
-            ? <text className="yc-chart-x" x={xc(i)} y={CT + CIH + 14} textAnchor="end" transform={`rotate(-40 ${xc(i)} ${CT + CIH + 14})`}>{cut(c)}<title>{c}</title></text>
+            ? <text className="yc-chart-x" x={xc(i) + 4} y={CT + CIH + 8} textAnchor="end" transform={`rotate(-90 ${xc(i) + 4} ${CT + CIH + 8})`}>{cut(c)}<title>{c}</title></text>
             : <text className="yc-chart-x" x={xc(i)} y={CT + CIH + 18} textAnchor="middle">{cut(c)}<title>{c}</title></text>)}
         </g>
       ))}

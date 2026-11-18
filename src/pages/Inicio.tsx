@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Badge, Button, ChartCarousel, KpiTile } from '../components/ui.tsx';
+import { Badge, Button, ChartCarousel, KpiTile, Select } from '../components/ui.tsx';
 import { ACTION, by, countOrders, pctText, rty, shortDay, toWatch, totals } from '../lib/tcqs.ts';
 import { useData } from '../store.ts';
 import { PageHead } from './Layout.tsx';
@@ -8,9 +9,11 @@ import { slides } from './slides.tsx';
 const n = (v: number) => v.toLocaleString('es-MX');
 
 export default function Inicio() {
-  const { records, models, from, to } = useData();
+  const { records: all, models, from, to } = useData();
+  const [model, setModel] = useState(''); // '' = todos los modelos
+  const records = model ? all.filter((r) => r.model === model) : all;
   const go = useNavigate();
-  if (!records.length) return (
+  if (!all.length) return (
     <>
       <PageHead title="Yield Control" sub="Carga el TCQS y el Excel de modelos del proyecto para ver yield, fallas y tendencias." />
       <section className="yc-card app-start">
@@ -32,10 +35,11 @@ export default function Inicio() {
   return (
     <>
       <section className="app-hero">
-        <span className="app-eyebrow">Proyecto Juliet · {shortDay(from!)} – {shortDay(to!)}</span>
+        <span className="app-eyebrow">Proyecto Juliet{model && ` · ${model}`} · {shortDay(from!)} – {shortDay(to!)}</span>
         <h1>FPY de <span className="app-hero-num">{pctText(t.fpy)}%</span> en {n(t.input)} entradas</h1>
         <p>Final Yield {pctText(t.final)} %: {pctText(t.retest)} % se recupera en retest. {watch.length ? `${watch.length === 1 ? 'Una estación pide' : `${watch.length} estaciones piden`} atención.` : 'Todas las estaciones con datos suficientes están en meta.'}</p>
-        <div className="yc-row">
+        <div className="yc-row app-hero-actions">
+          <Select label="Modelo" value={model} onChange={setModel} options={[{ value: '', label: 'Todos los modelos' }, ...[...new Set(all.map((r) => r.model))].sort()]} />
           <Button variant="primary" onClick={() => go('/yield')}>Ver yield por estación</Button>
           <Button onClick={() => go('/carga')}>Cargar otro TCQS</Button>
           {!models && <Badge tone="warn">Sin filtro de proyecto</Badge>}
@@ -67,7 +71,7 @@ export default function Inicio() {
 
       <section aria-labelledby="charts">
         <h2 id="charts" className="app-section-title">Gráficas</h2>
-        <ChartCarousel slides={slides(records, 'dia', 'todas las estaciones')} />
+        <ChartCarousel key={model} slides={slides(records, 'dia', model || 'todas las estaciones')} />
       </section>
     </>
   );

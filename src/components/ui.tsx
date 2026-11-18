@@ -148,7 +148,8 @@ export function ChartCarousel({ slides, label = 'Gráficas' }: { slides: Carouse
   const keys = (e: KeyboardEvent) => { if (e.key === 'ArrowRight') go(i + 1); if (e.key === 'ArrowLeft') go(i - 1); };
   // arrastrar más de 60 px (o un gesto rápido de 20 px) cambia de gráfica; uno corto regresa con rebote;
   // un clic sin arrastrar avanza o retrocede según el lado
-  const down = (e: PointerEvent<HTMLDivElement>) => { from.current = e.clientX; last.current = { x: e.clientX, t: e.timeStamp, v: 0 }; e.currentTarget.setPointerCapture(e.pointerId); };
+  // un botón o enlace dentro de la gráfica (p. ej. «Ampliar») se usa normal: no inicia arrastre ni cambia de gráfica
+  const down = (e: PointerEvent<HTMLDivElement>) => { if ((e.target as Element).closest('button, a, input, select')) return; from.current = e.clientX; last.current = { x: e.clientX, t: e.timeStamp, v: 0 }; e.currentTarget.setPointerCapture(e.pointerId); };
   const move = (e: PointerEvent) => {
     if (from.current == null) return;
     const l = last.current, dt = e.timeStamp - l.t;

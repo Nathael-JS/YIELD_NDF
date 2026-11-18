@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
+import { ChartCarousel } from '../components/ui.tsx';
 import { shortDay } from '../lib/tcqs.ts';
 import { useData } from '../store.ts';
 import ChartZoom from './ChartZoom.tsx';
@@ -25,13 +26,14 @@ export default function Graficos() {
     <>
       <PageHead title="Gráficos" sub="Pareto · Barras · Líneas · Histograma · Dispersión, con los datos de Juliet. «Ampliar» abre la gráfica con sus datos y comentarios." />
       {list.length ? (
-        <div className="app-charts">
-          {list.map((s) => (
-            <div key={s.id} ref={(el) => { cards.current[s.id] = el; }} className="app-zoomable">
+        // una gráfica a la vez, a la escala de la pantalla; «Ampliar» sigue abriendo datos y comentarios
+        <div className="app-graficos">
+          <ChartCarousel label="Gráficos" slides={list.map((s) => ({ ...s, content: (
+            <div ref={(el) => { cards.current[s.id] = el; }} className="app-zoomable">
               {s.content}
               <button type="button" className="yc-btn yc-btn-secondary app-zoom-btn" onClick={() => zoomIn(s)} aria-label={`Ampliar: ${s.title}`}>⤢ Ampliar</button>
             </div>
-          ))}
+          ) }))} />
         </div>
       ) : <NeedTcqs />}
       {/* los comentarios van por gráfica y rango de fechas: con otro TCQS son otros datos */}

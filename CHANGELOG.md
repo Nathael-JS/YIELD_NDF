@@ -8,6 +8,21 @@ Un cambio de componente se publica primero en el artefacto y después se copia a
 
 Los errores encontrados y cómo se corrigieron están en [ERRORES.md](ERRORES.md); las mejoras y cómo se hicieron, en [MEJORAS.md](MEJORAS.md).
 
+## [0.25.0] — 2026-11-18
+
+### Cambiado
+- **Menú nuevo:** barra superior solo con Cuentas, Base de datos (administrador) y el perfil. A la izquierda un **riel** con el flujo (Carga, Validación, Yield, con ✓ en los pasos hechos); a la derecha otro con las consultas (Inicio, Gráficos, Comparativas, NDF, Historial). Cada riel muestra solo íconos (56 px) y se desliza a 216 px sobre el contenido al pasar el mouse o con el teclado; los dos son independientes y no se empujan. En móvil son dos franjas horizontales.
+- **Gráficos:** una gráfica a la vez en un carrusel a la escala de la pantalla; «Ampliar» sigue abriendo datos y comentarios.
+- **Nombres de las gráficas en vertical** (estaciones, códigos de error) cuando no caben derechos; al pasar por la gráfica se desenfocan y queda nítido el de la barra señalada. Aplica a Pareto y barras/líneas en todo el proyecto.
+- Entrada suave de las secciones y tarjetas con relieve al pasar el mouse (CSS; respeta «reducir movimiento»).
+
+### Agregado
+- **Inicio por modelo:** selector «Modelo» que filtra el FPY, las tarjetas y el carrusel.
+
+### Corregido
+- El contador del carrusel («2 / 6») se partía en dos líneas en móvil.
+- Revisión de código: el desenfoque solo actúa al señalar una barra y solo en nombres de categoría (los ejes de histograma y dispersión ya no se desenfocan); el ✓ de los pasos se anuncia como «hecho» en lectores de pantalla; sin enlaces de administración no queda un menú vacío; el título del eje X ya no se encima con los nombres verticales.
+
 ## [0.24.0] — 2026-11-18 · sistema de diseño v28
 
 ### Agregado
