@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { byLabel, classify, readFails, top80 } from './fails.ts';
+import { byLabel, classify, ndfStations, readFails, top80 } from './fails.ts';
 import type { Rec } from './tcqs.ts';
 
 const H = ['MO_NUMBER', 'MODEL_NAME', 'SERIAL_NUMBER', 'GROUP_NAME', 'STATION_NAME', 'ERROR_CODE', 'ERROR_DESC', 'IN_STATION_TIME'];
@@ -18,11 +18,18 @@ test('classify: cada primera falla con lo que dice el TCQS de su orden × estaci
   assert.equal(marked[4].ndf, 0.5);
   assert.equal(grupos, 5); assert.equal(distintos, 2); // M4: 1 falla en el archivo y 2 en el TCQS; M5 no está en el TCQS
   const codes = byLabel(marked, (m) => m.code);
-  assert.deepEqual(codes.map((c) => [c.name, c.total, c.NDF]), [['X', 4, 2], ['Y', 1, 0], ['Z', 1, 0]]);
+  assert.deepEqual(codes.map((c) => [c.name, c.total, c.NDF, c.est]), [['X', 4, 2, 2], ['Y', 1, 0, 0], ['Z', 1, 0, 0.5]]);
   assert.deepEqual(top80(codes).map((c) => c.name), ['X']); // X 4/6 = 67 %; con Y llega a 83 % > 80 %
 });
 
 test('top80: siempre la primera; luego mientras el acumulado no pase de 80 %', () => {
   assert.deepEqual(top80([{ total: 9 }, { total: 1 }]).length, 1);
   assert.deepEqual(top80([{ total: 4 }, { total: 4 }, { total: 2 }]).length, 2);
+});
+
+test('ndfStations: NDF = 2do pase, real = FAIL_QTY, pendiente = el resto; sin FAIL_QTY no se inventa', () => {
+  const [ft] = ndfStations([rec('M1', 4, 2, 1), rec('M2', 3, 1, 0)]);
+  assert.deepEqual([ft.name, ft.ff, ft.ndf, ft.real, ft.pend], ['FT', 7, 3, 1, 3]);
+  const [db] = ndfStations([{ ...rec('M1', 4, 2, 1), fail: undefined }]);
+  assert.ok(Number.isNaN(db.real) && Number.isNaN(db.pend));
 });

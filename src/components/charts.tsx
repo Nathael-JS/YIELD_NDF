@@ -94,15 +94,21 @@ function ChartFrame({ p, legend, aria, m, children, h = CH }: {
   );
 }
 
-export interface ParetoDatum { label: string; value: number }
-export function ParetoChart({ data, title = 'Pareto', level = 1, subtitle }: {
-  data: ParetoDatum[]; title?: string; level?: 1 | 2; subtitle?: string;
+/** `hint`: más detalle en el tooltip (p. ej. la descripción del error). */
+/** Etiqueta del eje: máx. 24 letras (códigos de error de ICT traen cientos); la completa va en el tooltip. */
+const cut = (s: string) => (s.length > 24 ? `${s.slice(0, 23)}…` : s);
+
+export interface ParetoDatum { label: string; value: number; hint?: string }
+/** `onPick`: clic en una barra (la elegida va en `picked`). La tabla de la página debe ofrecer lo mismo con teclado.
+ * `limit`: solo las primeras barras; el % acumulado sigue siendo sobre el total (la línea no llega a 100 %). */
+export function ParetoChart({ data, title = 'Pareto', level = 1, subtitle, onPick, picked, limit }: {
+  data: ParetoDatum[]; title?: string; level?: 1 | 2; subtitle?: string; onPick?: (label: string) => void; picked?: string; limit?: number;
 }) {
   const m = useSvgWidth();
-  const sorted = [...data].sort((a, b) => b.value - a.value);
-  const total = sorted.reduce((s, d) => s + d.value, 0) || 1;
+  const all = [...data].sort((a, b) => b.value - a.value), sorted = limit ? all.slice(0, limit) : all;
+  const total = all.reduce((s, d) => s + d.value, 0) || 1;
   // como en BarChart: si los nombres no caben derechos se inclinan (mono 11px ≈ 7px por letra)
-  const lw = Math.max(48, 7 * Math.max(0, ...sorted.map((d) => d.label.length)) + 12);
+  const lw = Math.max(48, 7 * Math.max(0, ...sorted.map((d) => cut(d.label).length)) + 12);
   const bw0 = (m.w - 84) / Math.max(sorted.length, 1), tilt = lw > bw0, extra = tilt ? Math.ceil((lw - 12) * 0.64) - 18 : 0;
   const W = m.w, H = 280 + extra, L = 40, R = 44, T = 12, B = 36 + extra, iw = W - L - R, ih = H - T - B;
   const max = sorted[0]?.value || 1, bw = iw / Math.max(sorted.length, 1), every = tilt ? Math.max(1, Math.ceil(14 / bw)) : 1;
@@ -124,12 +130,13 @@ export function ParetoChart({ data, title = 'Pareto', level = 1, subtitle }: {
           const x = L + i * bw, bh = (d.value / max) * ih;
           return (
             <g key={d.label}>
-              <rect className={`yc-pareto-bar${i === 0 ? ' is-top' : ''}`} x={x + bw * 0.15} y={T + ih - bh} width={bw * 0.7} height={bh} rx={2}>
-                <title>{`${d.label}: ${d.value} (${Math.round((d.value / total) * 100)}%)`}</title>
+              <rect className={`yc-pareto-bar${i === 0 ? ' is-top' : ''}${onPick ? ' is-pickable' : ''}${d.label === picked ? ' is-picked' : ''}`}
+                x={x + bw * 0.15} y={T + ih - bh} width={bw * 0.7} height={bh} rx={2} onClick={onPick && (() => onPick(d.label))}>
+                <title>{`${d.label}: ${d.value} (${Math.round((d.value / total) * 100)}%)${d.hint ? `\n${d.hint}` : ''}${onPick ? '\nClic para ver las unidades' : ''}`}</title>
               </rect>
               {i % every === 0 && (tilt
-                ? <text className="yc-pareto-x" x={x + bw / 2} y={H - B + 14} textAnchor="end" transform={`rotate(-40 ${x + bw / 2} ${H - B + 14})`}>{d.label}</text>
-                : <text className="yc-pareto-x" x={x + bw / 2} y={H - B + 18} textAnchor="middle">{d.label}</text>)}
+                ? <text className="yc-pareto-x" x={x + bw / 2} y={H - B + 14} textAnchor="end" transform={`rotate(-40 ${x + bw / 2} ${H - B + 14})`}>{cut(d.label)}<title>{d.label}</title></text>
+                : <text className="yc-pareto-x" x={x + bw / 2} y={H - B + 18} textAnchor="middle">{cut(d.label)}<title>{d.label}</title></text>)}
             </g>
           );
         })}
@@ -154,7 +161,7 @@ function BarsAndLines({ kind, categories: cats, series = [], lines = [], targets
   const m = useSvgWidth(), CW = m.w, CIW = CW - CL - CR, ns = Math.max(series.length, 1);
   const all = [0, ...series.flatMap((s) => s.values), ...lines.flatMap((s) => s.values), ...targets.map((t) => t.value)];
   // cada cuántas etiquetas del eje X cabe una, según la más larga (mono 11px ≈ 7px por letra)
-  const lw = Math.max(56, 7 * Math.max(0, ...cats.map((c) => c.length)) + 12);
+  const lw = Math.max(56, 7 * Math.max(0, ...cats.map((c) => cut(c).length)) + 12);
   const r = niceRange(0, Math.max(...all)), g = CIW / Math.max(cats.length, 1), bw = (g * 0.7) / ns;
   // si los nombres no caben derechos se inclinan (todos visibles); solo con muchísimas categorías se salta alguno
   const tilt = lw > g, every = tilt ? Math.max(1, Math.ceil(14 / g)) : 1, extra = tilt ? Math.ceil((lw - 12) * 0.64) - 18 : 0;
@@ -180,8 +187,8 @@ function BarsAndLines({ kind, categories: cats, series = [], lines = [], targets
             );
           })}
           {i % every === 0 && (tilt
-            ? <text className="yc-chart-x" x={xc(i)} y={CT + CIH + 14} textAnchor="end" transform={`rotate(-40 ${xc(i)} ${CT + CIH + 14})`}>{c}</text>
-            : <text className="yc-chart-x" x={xc(i)} y={CT + CIH + 18} textAnchor="middle">{c}</text>)}
+            ? <text className="yc-chart-x" x={xc(i)} y={CT + CIH + 14} textAnchor="end" transform={`rotate(-40 ${xc(i)} ${CT + CIH + 14})`}>{cut(c)}<title>{c}</title></text>
+            : <text className="yc-chart-x" x={xc(i)} y={CT + CIH + 18} textAnchor="middle">{cut(c)}<title>{c}</title></text>)}
         </g>
       ))}
       {targets.map((t, k) => {

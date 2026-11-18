@@ -47,7 +47,7 @@ const SCRIPT = `(() => {
 
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
 
-export interface ReportView { name: string; kpis: ReactNode; slides: Slide[]; table: ReactNode }
+export interface ReportView { name: string; kpis: ReactNode; slides: Slide[]; table: ReactNode; ndf?: ReactNode }
 
 /** Un archivo con todos los modelos; se ve el primero de `views` y se cambia con la lista «Modelo». */
 export function reportHtml({ title, sub, views }: { title: string; sub: string; views: ReportView[] }) {
@@ -64,7 +64,7 @@ export function reportHtml({ title, sub, views }: { title: string; sub: string; 
           <label className="yc-field">Buscar estación<input className="yc-input" data-filter placeholder="FT, J_TAG, Crítico…" /></label>
         </div>
       </header>
-      {views.map(({ name, kpis, slides, table }, n) => (
+      {views.map(({ name, kpis, slides, table, ndf }, n) => (
         <section key={name} className="app-view" data-view={name} hidden={n > 0} aria-label={name}>
           <div className="yc-grid-kpi">{kpis}</div>
           <section className="yc-carousel" aria-roledescription="carrusel" aria-label="Gráficas: arrastra, haz clic a un lado o usa ← →" tabIndex={0}>
@@ -83,6 +83,7 @@ export function reportHtml({ title, sub, views }: { title: string; sub: string; 
             </div>
           </section>
           {table}
+          {ndf}
         </section>
       ))}
       <p className="app-muted">Generado el {new Date().toLocaleString('es-MX')} · Fórmulas según la guía YieldRateSFC y RetestRate.</p>

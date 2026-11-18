@@ -4,7 +4,7 @@
 // registrado otro día u en otro tester que la primera falla. El conteo fino (día × orden × estación × tester) solo
 // comprueba que el archivo cuadre con FIRST_FAIL_QTY.
 import type { Cell, ParsedFile } from './files.ts';
-import type { Rec } from './tcqs.ts';
+import { by, type Rec } from './tcqs.ts';
 
 export const FAIL_REQUIRED = ['MO_NUMBER', 'MODEL_NAME', 'SERIAL_NUMBER', 'GROUP_NAME', 'STATION_NAME', 'ERROR_CODE', 'ERROR_DESC', 'IN_STATION_TIME'] as const;
 
@@ -61,13 +61,22 @@ export function classify(fails: Fail[], recs: Rec[]) {
   return { marked, grupos: keys.size, distintos };
 }
 
+/** Por estación: NDF = 2do pase, real = FAIL_QTY (falló el retest), pendiente = lo que falta re-probar; más NDF primero.
+ * Sin FAIL_QTY (lo leído de la base) real y pendiente quedan en NaN («—»). */
+export function ndfStations(recs: Rec[]) {
+  return by(recs, (r) => r.group).filter((s) => s.ff > 0).map((s) => {
+    const real = recs.reduce((a, r) => (r.group === s.name ? a + (r.fail ?? NaN) : a), 0);
+    return { ...s, ndf: s.sp, real, pend: Math.max(0, s.ff - s.sp - real) };
+  }).sort((a, b) => b.ndf - a.ndf);
+}
+
 /** Cuenta por `label` con el desglose por estado, de mayor a menor (para Pareto y tabla). */
 export function byLabel(ms: Marked[], label: (m: Marked) => string) {
-  const m = new Map<string, Record<Estado | 'total', number> & { name: string; desc: string }>();
+  const m = new Map<string, Record<Estado | 'total' | 'est', number> & { name: string; desc: string }>();
   for (const x of ms) {
     const k = label(x);
-    const c = m.get(k) ?? m.set(k, { name: k, desc: x.desc, total: 0, NDF: 0, Mezcla: 0, Real: 0, Pendiente: 0, 'Sin TCQS': 0 }).get(k)!;
-    c.total++; c[x.estado]++;
+    const c = m.get(k) ?? m.set(k, { name: k, desc: x.desc, total: 0, est: 0, NDF: 0, Mezcla: 0, Real: 0, Pendiente: 0, 'Sin TCQS': 0 }).get(k)!;
+    c.total++; c[x.estado]++; c.est += x.ndf; // est: NDF estimado (suma de probabilidades)
   }
   return [...m.values()].sort((a, b) => b.total - a.total);
 }
