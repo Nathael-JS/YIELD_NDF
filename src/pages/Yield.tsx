@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Badge, Button, KpiTile, PeriodTabs, Select } from '../components/ui.tsx';
-import { by, byFpy, countOrders, change, diagnose, DX_HINT, pctText, periodOf, periodsOf, rty, shortDay, toWatch, totals, type Grain, type Rec } from '../lib/tcqs.ts';
+import { by, byFpy, countOrders, change, diagnose, DX_HINT, modelKey, pctText, periodOf, periodsOf, rty, shortDay, toWatch, totals, type Grain, type Rec } from '../lib/tcqs.ts';
 import { useApp, useData } from '../store.ts';
 import { NeedTcqs, PageHead } from './Layout.tsx';
 import { download } from '../lib/download.ts';
 import { slides } from './slides.tsx';
+import { NdfReport, useFails } from './Ndf.tsx';
+import { classify } from '../lib/fails.ts';
 
 const ALL = 'Todos los modelos';
 const WHOLE = 'todo';
@@ -17,13 +19,14 @@ const GRAINS = [
 ];
 
 export default function Yield() {
-  const { records, from, to } = useData();
+  const { records, from, to, models } = useData();
   const period = useApp((s) => s.period), setPeriod = useApp((s) => s.setPeriod);
   const [model, setModel] = useState(ALL);
   const [pick, setPick] = useState<string>(); // clave del periodo; sin elegir = el último con datos
   const [busy, setBusy] = useState(false);
   const [fail, setFail] = useState<string>();
   const db = useApp((s) => s.db);
+  const { read: fallas } = useFails(records, models); // primeras fallas (si se cargaron) para la sección NDF del HTML
   // estación que llega desde «Dónde mirar primero» (/yield#FT): se resalta y se lleva a la vista
   const focus = decodeURIComponent(useLocation().hash.slice(1));
   useEffect(() => {
@@ -67,7 +70,11 @@ export default function Yield() {
       // como en pantalla: se compara con el periodo anterior con datos de ese modelo
       const mrs = m === ALL ? records : records.filter((r) => r.model === m), keys = periodsOf(mrs, period), at = cur ? keys.findIndex(([k]) => k === cur[0]) : -1;
       const v = view(mrs, period, cur?.[0], at > 0 ? keys[at - 1][0] : undefined, m === ALL ? 'todas las estaciones' : m);
-      return { name: m, kpis: <>{v.kpiList.map((k) => <KpiTile key={k.label} {...k} />)}</>, slides: v.sl, table: v.table, input: v.t.input };
+      // NDF del mismo modelo y periodo que el resto de la vista
+      const inCur = (d: string) => !cur || periodOf(d, period)[0] === cur[0];
+      const pr = mrs.filter((r) => inCur(r.date)), pf = fallas && !fallas.missing.length ? fallas.fails.filter((x) => (!models || models.has(modelKey(x.model))) && (m === ALL || x.model === m) && inCur(x.date)) : undefined;
+      const ndf = <NdfReport recs={pr} marked={pf && classify(pf, pr).marked} />;
+      return { name: m, kpis: <>{v.kpiList.map((k) => <KpiTile key={k.label} {...k} />)}</>, slides: v.sl, table: v.table, ndf, input: v.t.input };
     }).filter((v) => v.input > 0).sort((a, b) => Number(b.name === model) - Number(a.name === model));
     download(`${file}.html`, new Blob([reportHtml({ title, sub, views })], { type: 'text/html' }));
   };

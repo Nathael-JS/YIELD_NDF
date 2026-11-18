@@ -111,7 +111,17 @@ Cada entrada dice qué pasaba, cómo se detectó, la causa, la corrección y con
 | E41 | 6 filas del reporte FirstFail con columnas corridas | Comillas escapadas como `\\"` dentro de descripciones de varias líneas | Se convierten a `""` antes de leer | 257/257 filas con los archivos reales |
 | E42 | Casi todas las fallas salían «Pendiente» al clasificarlas | El retest queda registrado otro día o en otro tester | Clasificación por orden × estación en todo el rango | Prueba `classify` + archivos reales |
 
+## 0.21.0
+
+| # | Qué pasaba | Causa | Corrección | Comprobación |
+| --- | --- | --- | --- | --- |
+| E43 | Pareto de códigos de 14 000 px de alto | Códigos de error de ICT de cientos de letras y etiquetas inclinadas | Etiquetas cortadas a 24 letras (completa en el tooltip) | Altura medida en el HTML: 473 px |
+| E44 | Gráficas del HTML escaladas de más | Un `summary` sin salto de línea ensanchaba la cuadrícula | `min-width: 0` en los hijos | Carrusel 4 032 → 650 px |
+| E45 | SPY total de NDF inflado | Entradas solo de estaciones con fallas | Entradas de todas las estaciones | 1.1 %, igual que Yield |
+
 ## Abiertos
+
+- **HTML con seriales:** cada modelo repite sus tablas de seriales (≈660 KB con 257 fallas). Con miles de fallas convendría guardar los seriales una vez como datos y filtrarlos en el script.
 
 - **NDF por unidad:** el TCQS da cuántas pasaron al re-probar por orden × estación, no cuáles; por código se muestra un estimado. Un reporte de 2do pase por serial lo haría exacto.
 - **Código `100` / «Test passed»** en PHD_AOI y ELECTRICAL_TEST aparece como primera falla; por confirmar con planta si se excluye.

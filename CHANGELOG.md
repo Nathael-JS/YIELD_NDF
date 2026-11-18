@@ -8,6 +8,24 @@ Un cambio de componente se publica primero en el artefacto y después se copia a
 
 Los errores encontrados y cómo se corrigieron están en [ERRORES.md](ERRORES.md); las mejoras y cómo se hicieron, en [MEJORAS.md](MEJORAS.md).
 
+## [0.21.0] — 2026-11-18 · sistema de diseño v27
+
+### Agregado
+- **NDF interactivo:** clic en una barra del Pareto (o «Ver unidades» en la tabla) abre las unidades de ese código: serial, fecha, estación, tester, orden, modelo y estado (NDF, NDF probable con su %, real, pendiente). El tooltip trae la descripción del error y el NDF estimado; clic en un tester del 2do nivel filtra por ese tester.
+- **Filtros desplegables:** Modelo, Estación y Tester (todos o uno). Cada filtro reinicia los de abajo. KPIs, tablas y Paretos siguen la selección.
+- **NDF por modelo** (general o por separado).
+- **HTML descargable · sección NDF** en cada modelo: estaciones, Pareto de códigos y, por código, sus seriales en un desplegable (funciona sin internet). Mismo periodo y modelo que el resto del reporte.
+
+### Cambiado
+- `ParetoChart`: `onPick`/`picked` (clic en barra), `limit` (solo las primeras N barras; el % acumulado sigue sobre el total) y `hint` en el tooltip. Las etiquetas del eje se cortan a 24 letras (también en `BarChart`): un código de ICT de cientos de letras hacía la gráfica de 14 000 px de alto.
+- Pareto de códigos limitado a 20 barras (todas en la tabla).
+
+### Corregido (revisión de código)
+- SPY total de NDF sin las entradas de estaciones sin fallas (salía 1.3 % en vez de 1.1 %).
+- El HTML clasificaba las fallas contra todo el rango y no contra el periodo del reporte.
+- El archivo del TCQS se leía dos veces en NDF y Yield; el NDF estimado por código recorría todas las fallas una vez por código.
+- Un resumen largo en el HTML ensanchaba la columna y con ella las gráficas (carrusel de 4 000 px).
+
 ## [0.20.0] — 2026-11-17
 
 ### Agregado

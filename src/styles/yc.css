@@ -90,6 +90,9 @@ body { margin: 0; background: var(--surface-100); color: var(--ink); font: 400 1
 .yc-pareto svg, .yc-chart > svg { display: block; width: 100%; height: auto; overflow: visible; }
 .yc-pareto-bar { fill: var(--data-fail); }
 .yc-pareto-bar.is-top { fill: var(--accent); }
+.yc-pareto-bar.is-pickable { cursor: pointer; }
+.yc-pareto-bar.is-pickable:hover { opacity: .8; }
+.yc-pareto-bar.is-picked { fill: var(--brand); }
 .yc-pareto-line { fill: none; stroke: var(--ink); stroke-width: 2; }
 .yc-pareto-dot { fill: var(--surface-000); stroke: var(--ink); stroke-width: 2; }
 .yc-pareto-axis, .yc-chart-axis { stroke: var(--line-strong); }

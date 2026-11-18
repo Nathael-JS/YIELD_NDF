@@ -131,3 +131,11 @@ button.yc-nav-mark { border: 0; background: none; padding: 0; color: var(--ink);
 .app-soon h2 { margin-top: 0; }
 /* NDF: descripciones de error largas (las de ICT traen varias líneas) en una sola línea con «…» */
 .yc-table .app-desc { max-width: 360px; overflow: hidden; text-overflow: ellipsis; }
+/* NDF: unidades del código elegido y desplegables del HTML descargable */
+.app-units { padding: var(--space-4); border: 1px solid var(--brand); border-radius: var(--radius-lg); background: var(--surface-100); }
+.app-ndf-codes { display: grid; gap: var(--space-2); }
+.app-ndf-codes summary { padding: var(--space-3) var(--space-4); cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.app-ndf-codes details[open] summary { border-bottom: 1px solid var(--line); }
+.app-ndf-codes .yc-table-wrap { border: 0; border-radius: 0; }
+/* sin esto, un resumen largo (descripciones de ICT) ensancha la columna de la cuadrícula y con ella las gráficas */
+.app-view > *, .app-ndf-codes > * { min-width: 0; }
