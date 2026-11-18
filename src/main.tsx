@@ -18,6 +18,7 @@ import Historial from './pages/Historial.tsx';
 import Inicio from './pages/Inicio.tsx';
 import Layout from './pages/Layout.tsx';
 import Login from './pages/Login.tsx';
+import Ndf from './pages/Ndf.tsx';
 import Seguridad from './pages/Seguridad.tsx';
 import Validacion from './pages/Validacion.tsx';
 import Yield from './pages/Yield.tsx';
@@ -33,6 +34,7 @@ const router = createBrowserRouter([
       { path: '/yield', element: <Yield /> },
       { path: '/graficos', element: <Graficos /> },
       { path: '/comparativas', element: <Comparativas /> },
+      { path: '/ndf', element: <Ndf /> },
       { path: '/historial', element: <Historial /> },
       { path: '/cuentas', element: <Cuentas /> },
       { path: '/base', element: <Base /> },

@@ -129,3 +129,5 @@ button.yc-nav-mark { border: 0; background: none; padding: 0; color: var(--ink);
 .app-soon { width: min(420px, 92vw); padding: var(--space-6); border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface-000); color: var(--ink); box-shadow: var(--shadow-panel); }
 .app-soon::backdrop { background: var(--overlay); }
 .app-soon h2 { margin-top: 0; }
+/* NDF: descripciones de error largas (las de ICT traen varias líneas) en una sola línea con «…» */
+.yc-table .app-desc { max-width: 360px; overflow: hidden; text-overflow: ellipsis; }

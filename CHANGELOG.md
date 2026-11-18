@@ -8,6 +8,16 @@ Un cambio de componente se publica primero en el artefacto y después se copia a
 
 Los errores encontrados y cómo se corrigieron están en [ERRORES.md](ERRORES.md); las mejoras y cómo se hicieron, en [MEJORAS.md](MEJORAS.md).
 
+## [0.20.0] — 2026-11-17
+
+### Agregado
+- **NDF** (menú): primeras fallas, NDF, reales y pendientes por estación con el método validado contra el Excel «Yield TE – NDF»: NDF = 2do pase del TCQS (falló y pasó al re-probar sin reparación), real = FAIL_QTY, pendiente = lo que falta re-probar. El Excel contaba como NDF las pendientes (FT wk44: 11 en vez de 7).
+- **Primeras fallas** en Carga (reporte FirstFail, .csv o .xlsx): códigos de error por unidad. Pareto por código (marca de 80 %) y por tester, filtrados por estación (el Excel no filtraba el 2do nivel). «NDF estimado» por código: el TCQS dice cuántas pasaron al re-probar por orden × estación, no cuáles.
+- Al cargarlo se comprueba que cuadre con FIRST_FAIL_QTY por día × orden × estación × tester (con los archivos reales del 9–14 nov: 101 de 105 grupos; las 4 diferencias son de WC_KIT_PRESSURE).
+
+### Corregido
+- CSV con comillas escapadas como `\"` (reporte FirstFail): se corrían columnas en las descripciones de varias líneas de ICT; ahora se leen las 257 filas.
+
 ## [0.19.1] — 2026-11-10 · revisión de código
 
 ### Corregido

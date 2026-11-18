@@ -7,7 +7,8 @@ export const REQUIRED = ['WORK_DATE', 'MODEL_NAME', 'MO_NUMBER', 'GROUP_NAME', '
 export const META_FPY = 95;
 const MIN_SAMPLE = 10; // menos entradas que esto no basta para juzgar una estación
 
-export interface Rec { date: string; model: string; mo: string; group: string; tester: string; input: number; fp: number; ff: number; sp: number }
+/** `fail`: FAIL_QTY (falló también el retest → reparación); no viene en lo leído de la base. */
+export interface Rec { date: string; model: string; mo: string; group: string; tester: string; input: number; fp: number; ff: number; sp: number; fail?: number }
 
 const text = (v: Cell) => (v == null ? '' : String(v).trim());
 const qty = (v: Cell) => { const n = Number(text(v)); return Number.isFinite(n) && n >= 0 ? n : NaN; };
@@ -22,7 +23,7 @@ function day(v: Cell) {
  * cantidades inválidas, o que rompen la fórmula 1 de la guía: INPUT = FIRST_PASS + FIRST_FAIL. */
 export function readTcqs(f: ParsedFile) {
   const at = Object.fromEntries(REQUIRED.map((c) => [c, f.headers.findIndex((h) => h.toUpperCase() === c)])) as Record<(typeof REQUIRED)[number], number>;
-  const missing = REQUIRED.filter((c) => at[c] < 0);
+  const missing = REQUIRED.filter((c) => at[c] < 0), failAt = f.headers.findIndex((h) => h.toUpperCase() === 'FAIL_QTY');
   const records: Rec[] = [], bad: number[] = [];
   if (missing.length) return { records, missing, bad };
   f.rows.forEach((r, i) => {
@@ -30,6 +31,7 @@ export function readTcqs(f: ParsedFile) {
       date: day(r[at.WORK_DATE]), model: text(r[at.MODEL_NAME]), mo: text(r[at.MO_NUMBER]), group: text(r[at.GROUP_NAME]), tester: text(r[at.STATION_NAME]),
       input: qty(r[at.INPUT_QTY]), fp: qty(r[at.FIRST_PASS_QTY]), ff: qty(r[at.FIRST_FAIL_QTY]), sp: qty(r[at.SECOND_PASS_QTY]),
     };
+    if (failAt >= 0) rec.fail = qty(r[failAt]);
     if (!rec.date || !rec.model || !rec.group || [rec.input, rec.fp, rec.ff, rec.sp].some(Number.isNaN) || rec.fp + rec.ff !== rec.input) bad.push(i + 2);
     else records.push(rec);
   });

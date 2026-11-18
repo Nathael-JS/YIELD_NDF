@@ -8,7 +8,7 @@ import Seguridad from './Seguridad.tsx';
 
 const STEPS = ['Carga de datos', 'Validación', 'Yield'];
 export const STEP_PATHS = ['/carga', '/validacion', '/yield'];
-const EXTRA: Record<string, string> = { Inicio: '/', Gráficos: '/graficos', Comparativas: '/comparativas', Historial: '/historial', Cuentas: '/cuentas', 'Base de datos': '/base' };
+const EXTRA: Record<string, string> = { Inicio: '/', Gráficos: '/graficos', Comparativas: '/comparativas', NDF: '/ndf', Historial: '/historial', Cuentas: '/cuentas', 'Base de datos': '/base' };
 const ADMIN_ONLY = ['Cuentas', 'Base de datos'];
 
 export default function Layout() {

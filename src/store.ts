@@ -9,7 +9,8 @@ import { dropAll, dropFile, loadFiles, saveFile } from './lib/saved.ts';
 import { modelKey, readTcqs } from './lib/tcqs.ts';
 
 // Los modelos de Juliet (BOM) viven en la base (`modelos`); DATA ANALYSIS y QM: pendientes.
-export const FILE_TYPES = ['TCQS'] as const;
+// FALLAS = reporte de primeras fallas por unidad (códigos de error), para la página NDF
+export const FILE_TYPES = ['TCQS', 'FALLAS'] as const;
 export type FileType = (typeof FILE_TYPES)[number];
 
 export interface LoadedFile extends ParsedFile { name: string; loadedAt: string }
@@ -90,7 +91,7 @@ if (useApp.getState().user) apiMe().then((s) => useApp.getState().login(s)).catc
 // Fallar aquí solo significa volver a cargarlos.
 if (typeof indexedDB !== 'undefined') {
   loadFiles().then((saved) => {
-    if (useApp.getState().user) useApp.setState((s) => ({ files: { ...(saved.TCQS && { TCQS: saved.TCQS }), ...s.files } }));
+    if (useApp.getState().user) useApp.setState((s) => ({ files: { ...Object.fromEntries(FILE_TYPES.filter((t) => saved[t]).map((t) => [t, saved[t]])), ...s.files } }));
   }).catch(() => {});
 }
 

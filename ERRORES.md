@@ -104,7 +104,17 @@ Cada entrada dice qué pasaba, cómo se detectó, la causa, la corrección y con
 | E39 | Borrar una carga borraba datos de otra con el mismo nombre | Se borraba por rango + nombre de archivo | Columna `carga` en el resumen | Dos cargas `yield_tcqs.csv`: borrar la vieja deja las 27 filas de la nueva |
 | E40 | El servidor no arrancaba (durante el desarrollo) | `purge` usada antes de declararse | Declarada antes | Arranque local |
 
+## 0.20.0
+
+| # | Qué pasaba | Causa | Corrección | Comprobación |
+| --- | --- | --- | --- | --- |
+| E41 | 6 filas del reporte FirstFail con columnas corridas | Comillas escapadas como `\\"` dentro de descripciones de varias líneas | Se convierten a `""` antes de leer | 257/257 filas con los archivos reales |
+| E42 | Casi todas las fallas salían «Pendiente» al clasificarlas | El retest queda registrado otro día o en otro tester | Clasificación por orden × estación en todo el rango | Prueba `classify` + archivos reales |
+
 ## Abiertos
+
+- **NDF por unidad:** el TCQS da cuántas pasaron al re-probar por orden × estación, no cuáles; por código se muestra un estimado. Un reporte de 2do pase por serial lo haría exacto.
+- **Código `100` / «Test passed»** en PHD_AOI y ELECTRICAL_TEST aparece como primera falla; por confirmar con planta si se excluye.
 
 - **Ejemplos de lo que no cuadra:** se guardan 10 por columna para todo el archivo; para otros días se ven los totales, no las filas.
 - **Respaldos:** vencen a los 7 días y se purgan al consultar Historial o los respaldos (no hay tarea programada); los guardados antes de 0.19.0 no existen.
