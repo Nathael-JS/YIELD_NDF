@@ -8,6 +8,14 @@ Un cambio de componente se publica primero en el artefacto y después se copia a
 
 Los errores encontrados y cómo se corrigieron están en [ERRORES.md](ERRORES.md); las mejoras y cómo se hicieron, en [MEJORAS.md](MEJORAS.md).
 
+## [0.24.0] — 2026-11-18 · sistema de diseño v28
+
+### Agregado
+- **Tarjeta NDF** junto a las de yield (Yield, HTML y PDF): NDF y su % de las primeras fallas, sumado por estación igual que en la página NDF.
+- **PDF · página 3 NDF:** resumen (NDF de las primeras fallas, % recuperado, SPY, barra NDF / real / pendiente), las 15 estaciones con más NDF, Pareto de los 10 códigos principales (% acumulado sobre todos) y los códigos del 80 % con descripción y testers principales. **Anexo** con los seriales de los códigos del 80 % (filas compactas). En la tabla de estaciones de la página 2, columna NDF. Tarjetas 4 por fila.
+- **HTML · sección NDF nueva:** resumen con la barra de reparto junto a las estaciones (cuadro compacto) y la **estación con más NDF** de cada modelo con su Pareto de códigos, el 2do nivel y sus seriales en un desplegable. El archivo bajó de ~680 KB a ~510 KB.
+- Sistema de diseño: **`SplitBar`** (reparto de un total) y **`Segmented`** (opciones excluyentes a la vista), usados en la página NDF y el HTML.
+
 ## [0.23.0] — 2026-11-18
 
 ### Cambiado

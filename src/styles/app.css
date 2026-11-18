@@ -163,24 +163,10 @@ button.yc-nav-mark { border: 0; background: none; padding: 0; color: var(--ink);
 .app-ndf-big { font: 500 44px/48px var(--font-mono); letter-spacing: -1px; color: var(--brand); }
 .app-ndf-big small { margin-left: var(--space-1); font: 400 14px var(--font-sans); letter-spacing: 0; color: var(--ink-muted); }
 .app-ndf-pct { font-size: 13px; color: var(--ink-muted); }
-/* barra del reparto NDF / real / pendiente */
-.app-split { display: flex; gap: 2px; height: 14px; border-radius: var(--radius-pill); overflow: hidden; background: var(--surface-200); }
-.app-split span { min-width: 0; transition: flex-grow .5s cubic-bezier(.2, .7, .2, 1); }
-:is(.app-split span, .app-split-legend i).is-ndf { background: var(--data-second); }
-:is(.app-split span, .app-split-legend i).is-real { background: var(--data-fail); }
-:is(.app-split span, .app-split-legend i).is-pend { background: var(--line-strong); }
-.app-split-legend { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-1); font-size: 13px; }
-.app-split-legend li { display: flex; align-items: center; gap: var(--space-2); }
-.app-split-legend i { width: 10px; height: 10px; border-radius: 3px; }
-.app-split-legend b { margin-left: auto; font: 500 13px var(--font-mono); }
 .app-ndf-filters { display: grid; gap: var(--space-3); padding-top: var(--space-4); border-top: 1px solid var(--line); }
 .app-ndf-filters .yc-select, .app-ndf-filters .yc-field { width: 100%; min-width: 0; }
 .app-ndf-filters .yc-btn { justify-self: start; }
 .app-ndf-note { margin: 0; font-size: 12px; }
-/* selector de 2 opciones (segmentado) */
-.app-seg { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; padding: 2px; background: var(--surface-200); border-radius: var(--radius-md); }
-.app-seg button { min-height: 32px; padding: 0 var(--space-2); border: 0; border-radius: var(--radius-sm); background: none; color: var(--ink-muted); font: 500 12px var(--font-sans); cursor: pointer; }
-.app-seg button[aria-pressed="true"] { background: var(--surface-000); color: var(--ink); box-shadow: var(--shadow-card); }
 /* lista completa de códigos, guardada en un desplegable */
 .app-codes { border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface-000); }
 .app-codes summary { padding: var(--space-3) var(--space-4); cursor: pointer; font-weight: 500; }
@@ -188,3 +174,8 @@ button.yc-nav-mark { border: 0; background: none; padding: 0; color: var(--ink);
 .app-codes .yc-table-wrap { border: 0; max-height: 420px; overflow: auto; }
 .yc-table .app-cut { max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
 .app-units { padding: var(--space-4); border: 1px solid var(--brand); border-radius: var(--radius-lg); background: var(--surface-100); display: grid; gap: var(--space-3); }
+
+/* HTML descargable: resumen NDF junto a las estaciones */
+.app-ndf-report { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: var(--space-4); align-items: start; }
+.app-ndf-report .app-ndf-side { position: static; }
+@media (max-width: 900px) { .app-ndf-report { grid-template-columns: 1fr; } }

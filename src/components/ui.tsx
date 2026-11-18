@@ -277,3 +277,33 @@ export function LoginPanel({ defaultOpen = false, defaultMode = 'login', signup 
     </div>
   );
 }
+
+export interface SplitPart { label: string; value: number; tone: 'pass' | 'second' | 'fail' | 'ndf' | 'neutral' }
+/** Reparto de un total en partes (p. ej. primeras fallas → NDF / real / pendiente): barra proporcional y leyenda con conteos.
+ * Una parte sin dato (NaN) no ocupa barra y se muestra «—». */
+export function SplitBar({ parts, format = (v) => v.toLocaleString('es-MX') }: { parts: SplitPart[]; format?: (v: number) => string }) {
+  const txt = (v: number) => (Number.isFinite(v) ? format(v) : '—');
+  return (
+    <div className="yc-split">
+      <div className="yc-split-bar" role="img" aria-label={parts.map((p) => `${p.label} ${txt(p.value)}`).join(', ')}>
+        {parts.map((p) => <span key={p.label} className={`yc-split-${p.tone}`} style={{ flexGrow: Number.isFinite(p.value) ? p.value : 0 }} title={`${p.label}: ${txt(p.value)}`} />)}
+      </div>
+      <ul className="yc-split-legend">
+        {parts.map((p) => <li key={p.label}><i className={`yc-split-${p.tone}`} />{p.label}<b>{txt(p.value)}</b></li>)}
+      </ul>
+    </div>
+  );
+}
+
+/** Selector de 2–4 opciones excluyentes, todas a la vista (vista de una gráfica, modo). Botones con aria-pressed. */
+export function Segmented<T extends string>({ label, options, value, onChange }: {
+  label?: string; options: { value: T; label: string }[]; value: T; onChange: (v: T) => void;
+}) {
+  return (
+    <div className="yc-field">{label}
+      <div className="yc-seg" role="group" aria-label={label} style={{ gridTemplateColumns: `repeat(${options.length}, 1fr)` }}>
+        {options.map((o) => <button key={o.value} type="button" aria-pressed={o.value === value} onClick={() => onChange(o.value)}>{o.label}</button>)}
+      </div>
+    </div>
+  );
+}

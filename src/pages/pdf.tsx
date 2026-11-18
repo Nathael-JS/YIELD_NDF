@@ -2,6 +2,7 @@
 // Colores = tokens del tema claro; letras Helvetica/Courier (incluidas en el PDF, sin descargar fuentes).
 import { Document, Font, G, Line, Page, pdf, Polyline, Rect, StyleSheet, Svg, Text, View } from '@react-pdf/renderer';
 import { ACTION, diagnose, META_FPY, pctText, type Totals } from '../lib/tcqs.ts';
+import type { byLabel, Estado, Marked, ndfStations } from '../lib/fails.ts';
 
 const C = {
   ink: '#18201c', muted: '#535d57', line: '#d2d6cc', strong: '#8a9389', sunk: '#e6e8e2', brand: '#0d6157',
@@ -18,7 +19,7 @@ const s = StyleSheet.create({
   sub: { color: C.muted, marginTop: 2, marginBottom: 14 },
   h2: { fontSize: 12, fontFamily: 'Helvetica-Bold', marginTop: 16, marginBottom: 6 },
   kpis: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  kpi: { width: (W - 12) / 3, borderWidth: 1, borderColor: C.line, borderRadius: 6, padding: 8 },
+  kpi: { width: (W - 18) / 4, borderWidth: 1, borderColor: C.line, borderRadius: 6, padding: 8 },
   kLabel: { fontSize: 6.5, letterSpacing: 0.6, color: C.muted, fontFamily: 'Helvetica-Bold', textTransform: 'uppercase' },
   kValue: { fontSize: 18, fontFamily: 'Courier', marginTop: 2 },
   kDelta: { fontSize: 7, marginTop: 2 },
@@ -30,7 +31,7 @@ const s = StyleSheet.create({
   th: { flexDirection: 'row', backgroundColor: C.sunk, paddingVertical: 4, fontSize: 6.5, fontFamily: 'Helvetica-Bold', color: C.muted, textTransform: 'uppercase' },
   foot: { position: 'absolute', bottom: 20, left: 36, right: 36, flexDirection: 'row', justifyContent: 'space-between', fontSize: 7, color: C.muted },
 });
-const COLS = [160, 50, 50, 50, 55, 50, 108]; // estación, entradas, 1ra falla, FPY, final, retest, diagnóstico
+const COLS = [140, 50, 50, 45, 45, 45, 40, 108]; // estación, entradas, 1ra falla, FPY, final, retest, NDF, diagnóstico
 const num = { textAlign: 'right' as const, fontFamily: 'Courier', paddingRight: 6 };
 
 export interface Kpi { label: string; value: string; unit?: string; delta?: number; deltaUnit: string; good: boolean }
@@ -38,6 +39,8 @@ export type Station = Totals & { name: string };
 export interface PdfData {
   title: string; sub: string; kpis: Kpi[]; stations: Station[]; watch: (Station & { dx: [string, string] })[];
   pareto: { label: string; value: number }[]; trend: { label: string; fpy: number; final: number }[];
+  /** Página 3 y anexo (si hay TCQS con 2do pase; códigos y seriales solo si se cargó el reporte de primeras fallas). */
+  ndf?: { stations: ReturnType<typeof ndfStations>; codes: ReturnType<typeof byLabel>; units: Marked[]; input: number };
 }
 
 const Badge = ({ text, tone }: { text: string; tone: string }) => {
@@ -65,8 +68,9 @@ function Stations({ st }: { st: Station[] }) {
 }
 
 /** Pareto de primeras fallas: barras de mayor a menor y línea acumulada, con el 80 %. */
-function Pareto({ data }: { data: PdfData['pareto'] }) {
-  const d = [...data].sort((a, b) => b.value - a.value), total = d.reduce((t, x) => t + x.value, 0) || 1, max = d[0]?.value || 1;
+/** `total`: base del % acumulado cuando solo se dibujan las primeras barras. */
+function Pareto({ data, total: base }: { data: PdfData['pareto']; total?: number }) {
+  const d = [...data].sort((a, b) => b.value - a.value), total = base || d.reduce((t, x) => t + x.value, 0) || 1, max = d[0]?.value || 1;
   const L = 24, R = 28, T = 8, H = 170, B = 40, ih = H - T - B, bw = (W - L - R) / Math.max(d.length, 1);
   let cum = 0;
   const pts = d.map((x, i) => { cum += x.value; return `${L + i * bw + bw / 2},${T + ih - (cum / total) * ih}`; }).join(' ');
@@ -118,6 +122,76 @@ const Legend = ({ items }: { items: [string, string][] }) => (
   </View>
 );
 
+const cutTo = (t: string, k: number) => (t.length > k ? `${t.slice(0, k - 1)}…` : t);
+const ESTADO: Record<Estado, [string, string]> = { NDF: ['NDF', 'ok'], Mezcla: ['NDF probable', 'neutral'], Real: ['Real', 'bad'], Pendiente: ['Pendiente', 'warn'], 'Sin TCQS': ['Sin TCQS', 'neutral'] };
+
+/** Tabla simple: encabezado que se repite en cada hoja y filas que no se parten. */
+/** `dense`: letra y filas más chicas (anexo de seriales). */
+function Table({ cols, head, rows, dense }: { cols: number[]; head: string[]; rows: (string | number)[][]; dense?: boolean }) {
+  const isNum = (v: string | number) => typeof v === 'number';
+  return (
+    <View>
+      <View style={s.th} fixed>{head.map((h, i) => <Text key={h} style={[{ width: cols[i], paddingLeft: 4 }, isNum(rows[0]?.[i]) ? num : {}]}>{h}</Text>)}</View>
+      {rows.map((r, k) => (
+        <View key={k} style={[s.tr, dense ? { paddingVertical: 1.5, fontSize: 7 } : {}]} wrap={false}>
+          {r.map((v, i) => <Text key={i} style={[{ width: cols[i], paddingLeft: 4 }, isNum(v) ? num : i === 0 ? s.mono : {}]}>{isNum(v) ? (v as number).toLocaleString('es-MX', { maximumFractionDigits: 1 }) : v}</Text>)}
+        </View>
+      ))}
+    </View>
+  );
+}
+
+/** Página 3 (NDF) y anexo con los seriales de los códigos del 80 %. */
+function NdfPages({ stations, codes, units, input, date }: NonNullable<PdfData['ndf']> & { date: string }) {
+  const sum = (k: 'ff' | 'ndf' | 'real' | 'pend') => stations.reduce((a, x) => a + x[k], 0);
+  const [ff, nd, real, pend] = [sum('ff'), sum('ndf'), sum('real'), sum('pend')];
+  let cum = 0;
+  const all = codes.reduce((a, c) => a + c.total, 0);
+  const top = codes.filter((c, i) => { cum += c.total; return i === 0 || cum / all <= 0.8 + 1e-9; }), topSet = new Set(top.map((c) => c.name));
+  const annex = units.filter((u) => topSet.has(u.code)).sort((a, b) => a.code.localeCompare(b.code) || a.group.localeCompare(b.group));
+  const testersOf = (code: string) => [...units.filter((u) => u.code === code).reduce((m, u) => m.set(u.tester, (m.get(u.tester) ?? 0) + 1), new Map<string, number>())]
+    .sort((a, b) => b[1] - a[1]).slice(0, 3).map(([t, k]) => `${t} (${k})`).join(', ');
+  const bar = [[nd, C.second], [real, C.fail], [pend, C.strong]] as const, tot = bar.reduce((a, [v]) => a + (Number.isFinite(v) ? v : 0), 0) || 1;
+  let x = 0;
+  return (
+    <>
+      <Page size="A4" style={s.page}>
+        <Text style={s.eyebrow}>NDF · no defect found</Text>
+        <Text style={s.h1}>{`${nd.toLocaleString('es-MX')} NDF de ${ff.toLocaleString('es-MX')} primeras fallas`}</Text>
+        <Text style={s.sub}>{`${pctText((nd / ff) * 100)} % pasó al re-probar sin reparación (2do pase del TCQS) · SPY ${pctText((nd / input) * 100)} % de las entradas`}</Text>
+        <Svg width={W} height={12}>
+          {bar.map(([v, col], i) => { const w = Number.isFinite(v) ? (v / tot) * W : 0, r = <Rect key={i} x={x} y={0} width={Math.max(0, w - 1)} height={10} fill={col} />; x += w; return r; })}
+        </Svg>
+        <Legend items={[[`NDF ${nd}`, C.second], [`Real (a reparación) ${Number.isFinite(real) ? real : '—'}`, C.fail], [`Pendiente de re-probar ${Number.isFinite(pend) ? pend : '—'}`, C.strong]]} />
+        <Text style={s.h2}>NDF por estación</Text>
+        <Table cols={[170, 60, 60, 55, 55, 55, 68]} head={['Estación', 'Entradas', '1ra falla', 'NDF', 'Real', 'Pendiente', 'SPY %']}
+          rows={stations.slice(0, 15).map((r) => [r.name, r.input, r.ff, r.ndf, r.real, r.pend, Math.round((r.ndf / r.input) * 1000) / 10])} />
+        {stations.length > 15 && <Text style={{ color: C.muted, fontSize: 7, marginTop: 3 }}>{`Las 15 con más NDF de ${stations.length}; todas en la app y en el HTML.`}</Text>}
+        {codes.length > 0 && (
+          <>
+            <Text style={s.h2}>{`Pareto · primeras fallas por código (10 de ${codes.length})`}</Text>
+            <Pareto data={codes.slice(0, 10).map((c) => ({ label: c.name, value: c.total }))} total={all} />
+            <Text style={s.h2}>{`Códigos del 80 % (${Math.min(15, top.length)} de ${top.length})`}</Text>
+            <Table cols={[80, 205, 45, 48, 145]} head={['Código', 'Descripción', 'Unidades', 'NDF est.', 'Testers principales']}
+              rows={top.slice(0, 15).map((c) => [cutTo(c.name, 14), cutTo(c.desc, 44), c.total, c.est, cutTo(testersOf(c.name), 36)])} />
+          </>
+        )}
+        <Foot date={date} />
+      </Page>
+      {annex.length > 0 && (
+        <Page size="A4" style={s.page}>
+          <Text style={s.eyebrow}>Anexo</Text>
+          <Text style={[s.h2, { marginTop: 4 }]}>{`Seriales de los códigos del 80 % (${annex.length})`}</Text>
+          <Text style={{ color: C.muted, fontSize: 7.5, marginBottom: 6 }}>Estado según el TCQS de su orden × estación: NDF probable = el grupo tuvo NDF y reales y no se sabe cuál es esta unidad.</Text>
+          <Table dense cols={[80, 150, 40, 90, 95, 68]} head={['Código', 'Serial', 'Fecha', 'Estación', 'Tester', 'Estado']}
+            rows={annex.map((u) => [cutTo(u.code, 14), cutTo(u.serial, 30), u.date.slice(5), cutTo(u.group, 18), cutTo(u.tester, 18), ESTADO[u.estado][0]])} />
+          <Foot date={date} />
+        </Page>
+      )}
+    </>
+  );
+}
+
 const Foot = ({ date }: { date: string }) => (
   <View style={s.foot} fixed>
     <Text>{`Yield Control · generado el ${date} · fórmulas de la guía YieldRateSFC y RetestRate`}</Text>
@@ -125,7 +199,7 @@ const Foot = ({ date }: { date: string }) => (
   </View>
 );
 
-function Report({ title, sub, kpis, stations, watch, pareto, trend }: PdfData) {
+function Report({ title, sub, kpis, stations, watch, pareto, trend, ndf }: PdfData) {
   const date = new Date().toLocaleString('es-MX');
   return (
     <Document title={title} author="Yield Control" subject="Reporte de yield del proyecto Juliet">
@@ -164,7 +238,7 @@ function Report({ title, sub, kpis, stations, watch, pareto, trend }: PdfData) {
         {trend.length > 1 && <><Text style={s.h2}>Evolución del yield</Text><Legend items={[['FPY', C.pass], ['Final Yield', C.second]]} /><Trend data={trend} /></>}
         <Text style={s.h2}>Estaciones</Text>
         <View style={s.th} fixed>
-          {['Estación', 'Entradas', '1ra falla', 'FPY', 'Final', 'Retest', 'Diagnóstico'].map((h, i) => <Text key={h} style={[{ width: COLS[i], paddingLeft: 4 }, i && i < 6 ? num : {}]}>{h}</Text>)}
+          {['Estación', 'Entradas', '1ra falla', 'FPY', 'Final', 'Retest', 'NDF', 'Diagnóstico'].map((h, i) => <Text key={h} style={[{ width: COLS[i], paddingLeft: 4 }, i && i < 7 ? num : {}]}>{h}</Text>)}
         </View>
         {stations.map((r) => {
           const [text, tone] = diagnose(r);
@@ -176,12 +250,14 @@ function Report({ title, sub, kpis, stations, watch, pareto, trend }: PdfData) {
               <Text style={[num, { width: COLS[3] }]}>{pctText(r.fpy)}</Text>
               <Text style={[num, { width: COLS[4] }]}>{pctText(r.final)}</Text>
               <Text style={[num, { width: COLS[5] }]}>{pctText(r.retest)}</Text>
-              <View style={{ width: COLS[6], paddingLeft: 4 }}><Badge text={text} tone={tone} /></View>
+              <Text style={[num, { width: COLS[6] }]}>{r.sp}</Text>
+              <View style={{ width: COLS[7], paddingLeft: 4 }}><Badge text={text} tone={tone} /></View>
             </View>
           );
         })}
         <Foot date={date} />
       </Page>
+      {ndf && ndf.stations.length > 0 && <NdfPages {...ndf} date={date} />}
     </Document>
   );
 }
