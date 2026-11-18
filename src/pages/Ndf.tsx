@@ -66,7 +66,7 @@ export function UnitTable({ units }: { units: Marked[] }) {
 /** NDF (no defect found): cuántas del TCQS y por qué, con los códigos del reporte de primeras fallas. Filtra por modelo, estación y tester. */
 export default function Ndf() {
   const { records, models } = useData();
-  const [model, setModel] = useState(ALL), [station, setStation] = useState(ALL), [tester, setTester] = useState(ALL), [code, setCode] = useState<string>();
+  const [model, setModel] = useState(ALL), [station, setStation] = useState(ALL), [tester, setTester] = useState(ALL), [code, setCode] = useState<string>(), [lvl2, setLvl2] = useState<'tester' | 'codigo'>('tester');
   const recs = useMemo(() => (model ? records.filter((r) => r.model === model) : records), [records, model]);
   const stations = useMemo(() => ndfStations(recs), [recs]);
   const { read, marked } = useFails(recs, models, model);
@@ -83,6 +83,9 @@ export default function Ndf() {
   const view = inStation.filter((m) => !tester || m.tester === tester);
   const codes = codesOf(view), top = new Set(top80(codes).map((c) => c.name));
   const testers = byLabel(view.filter((m) => top.has(m.code)), (m) => m.tester);
+  // 2do nivel al revés: los testers que suman el 80 % de las fallas y qué códigos les salen
+  const topTesters = new Set(top80(byLabel(view, (m) => m.tester)).map((t) => t.name));
+  const testerCodes = byLabel(view.filter((m) => topTesters.has(m.tester)), (m) => m.code);
   const picked = code && codes.find((c) => c.name === code);
   const units = picked ? view.filter((m) => m.code === code) : [];
   const where = [model, station, tester].filter(Boolean).join(' · ') || 'todas las estaciones';
@@ -102,7 +105,6 @@ export default function Ndf() {
         <KpiTile label="Pendientes de re-probar" value={n(sum('pend'))} />
         <KpiTile label="SPY (NDF / entradas)" value={pctText((sum('ndf') / input) * 100)} unit="%" />
       </div>
-      <StationTable stations={stations} focus={station} onPick={pickStation} />
       <section className="yc-card yc-pad app-sec" aria-labelledby="codigos">
         <h2 id="codigos" className="app-h3">Por qué fallan · <span className="app-mono">{where}</span></h2>
         {!read ? (
@@ -118,12 +120,24 @@ export default function Ndf() {
             </p>
             {!codes.length ? <p className="app-muted">Sin primeras fallas en el archivo para {where}.</p> : (
               <>
-                <div className="app-charts">
+                {/* vista del 2do nivel, arriba de las gráficas para que las dos queden a la misma altura */}
+                <div className="yc-row app-switch" role="group" aria-label="2do nivel">
+                      <Button variant={lvl2 === 'tester' ? 'secondary' : 'quiet'} aria-pressed={lvl2 === 'tester'} onClick={() => setLvl2('tester')}>Testers de los códigos del 80 %</Button>
+                      <Button variant={lvl2 === 'codigo' ? 'secondary' : 'quiet'} aria-pressed={lvl2 === 'codigo'} onClick={() => setLvl2('codigo')}>Códigos de los testers del 80 %</Button>
+                    </div>
+                {/* key: con cada filtro la gráfica vuelve a entrar (barras que crecen, línea que se dibuja) */}
+                <div className="app-charts app-anim" key={`${where}|${lvl2}`}>
                   <ParetoChart title="Primeras fallas por código" level={1} limit={TOP} picked={code} onPick={setCode}
                     subtitle={`1er nivel · ${where}${codes.length > TOP ? ` · ${TOP} de ${codes.length} códigos (todos en la tabla)` : ''}`}
                     data={codes.map((c) => ({ label: c.name, value: c.total, hint: `${c.desc} · NDF estimado ${n(c.est)}` }))} />
-                  <ParetoChart title="Testers de los códigos del 80 %" level={2} subtitle={`2do nivel · ${top.size} código${top.size === 1 ? '' : 's'} · clic para filtrar`} picked={tester} onPick={(t) => { setTester(t); setCode(undefined); }}
-                    data={testers.map((t) => ({ label: t.name, value: t.total }))} />
+                    {lvl2 === 'tester' ? (
+                      <ParetoChart title="Testers de los códigos del 80 %" level={2} subtitle={`2do nivel · ${top.size} código${top.size === 1 ? '' : 's'} · clic para filtrar por tester`} picked={tester} onPick={(t) => { setTester(t); setCode(undefined); }}
+                        data={testers.map((t) => ({ label: t.name, value: t.total }))} />
+                    ) : (
+                      <ParetoChart title="Códigos de los testers del 80 %" level={2} limit={TOP} picked={code} onPick={setCode}
+                        subtitle={`2do nivel · ${topTesters.size} tester${topTesters.size === 1 ? '' : 's'}: ${[...topTesters].slice(0, 4).join(', ')}${topTesters.size > 4 ? '…' : ''} · clic para ver unidades`}
+                        data={testerCodes.map((c) => ({ label: c.name, value: c.total, hint: `${c.desc} · NDF estimado ${n(c.est)}` }))} />
+                    )}
                 </div>
                 {picked && (
                   <section className="app-sec app-units" aria-labelledby="unidades">
@@ -152,6 +166,10 @@ export default function Ndf() {
             )}
           </>
         )}
+      </section>
+      <section className="yc-card app-stations" aria-labelledby="estaciones">
+        <h2 id="estaciones" className="app-h3">NDF por estación <span className="app-muted">· {stations.length} con fallas · clic en «Ver códigos» para filtrar</span></h2>
+        <StationTable stations={stations} focus={station} onPick={pickStation} />
       </section>
     </>
   );

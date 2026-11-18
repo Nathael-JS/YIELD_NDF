@@ -8,6 +8,14 @@ Un cambio de componente se publica primero en el artefacto y después se copia a
 
 Los errores encontrados y cómo se corrigieron están en [ERRORES.md](ERRORES.md); las mejoras y cómo se hicieron, en [MEJORAS.md](MEJORAS.md).
 
+## [0.22.0] — 2026-11-18
+
+### Cambiado
+- **NDF · gráficas primero:** el orden es filtros → KPIs → gráficas y códigos → estaciones. La lista de estaciones va en un contenedor compacto (320 px, desplazamiento propio con encabezado fijo).
+- **Gráficas que se animan:** en NDF, cada cambio de modelo, estación, tester o vista vuelve a dibujar las barras (crecen) y la línea acumulada, como en el carrusel; con «reducir movimiento» no hay animación.
+- **2do nivel con dos vistas:** «Testers de los códigos del 80 %» (como el Excel) y «Códigos de los testers del 80 %» (al revés: los testers que suman el 80 % de las fallas y qué códigos les salen). Clic en una barra abre sus unidades.
+- Ancho máximo de las páginas: 1920 px (antes 1600) para monitores anchos; probado sin desplazamiento horizontal de 390 a 2560 px.
+
 ## [0.21.0] — 2026-11-18 · sistema de diseño v27
 
 ### Agregado
