@@ -1,5 +1,5 @@
 /* Maquetación de páginas; los componentes usan yc.css (sistema de diseño). */
-.app-main { max-width: 1600px; margin: 0 auto; padding: var(--space-8) var(--space-6) var(--space-12); display: grid; gap: var(--space-6); }
+.app-main { max-width: 1920px; margin: 0 auto; padding: var(--space-8) var(--space-6) var(--space-12); display: grid; gap: var(--space-6); }
 .app-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: var(--space-4); }
 .app-head h1 { margin: 0; font-size: 28px; line-height: 34px; font-weight: 600; letter-spacing: -.3px; }
 .app-head p { margin: var(--space-1) 0 0; max-width: 60ch; color: var(--ink-muted); }
@@ -139,3 +139,18 @@ button.yc-nav-mark { border: 0; background: none; padding: 0; color: var(--ink);
 .app-ndf-codes .yc-table-wrap { border: 0; border-radius: 0; }
 /* sin esto, un resumen largo (descripciones de ICT) ensancha la columna de la cuadrícula y con ella las gráficas */
 .app-view > *, .app-ndf-codes > * { min-width: 0; }
+
+/* NDF: estaciones en un contenedor compacto con desplazamiento propio (el encabezado queda fijo) */
+.app-stations { display: grid; gap: var(--space-2); padding: var(--space-4) var(--space-4) 0; }
+.app-stations h2 { margin: 0; }
+.app-stations .yc-table-wrap { max-height: 320px; overflow: auto; border: 0; border-top: 1px solid var(--line); border-radius: 0; margin: 0 calc(-1 * var(--space-4)); }
+.app-stations .yc-table td { padding-block: 6px; }
+.app-switch { justify-content: flex-end; }
+.app-switch .yc-btn { min-height: 30px; font-size: 13px; }
+/* gráficas de NDF: entran como en el carrusel cada vez que cambia un filtro */
+@media (prefers-reduced-motion: no-preference) {
+  .app-anim :is(.yc-bar, .yc-pareto-bar) { transform-box: fill-box; transform-origin: bottom; animation: yc-grow-y .45s .08s cubic-bezier(.2, .7, .2, 1) both; }
+  .app-anim [role="img"] polyline { stroke-dasharray: 1; stroke-dashoffset: 1; animation: yc-draw .6s .2s ease-out forwards; }
+  .app-anim [role="img"] :is(.yc-pareto-dot, .yc-line-dot) { animation: yc-fade .3s .5s both; }
+  .yc-pareto-bar.is-pickable { transition: opacity .15s, fill .2s; }
+}
