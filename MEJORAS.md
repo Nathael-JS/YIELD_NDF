@@ -8,6 +8,7 @@ Qué se mejoró, cómo se hizo y qué se usó; después, lo pendiente y lo que n
 
 | Versión | Mejora | Cómo se hizo | Qué se usó |
 | --- | --- | --- | --- |
+| 0.26.0 | **WIP** | `lib/wip.ts` con pruebas: lectura del reporte por pieza (una por serial), estado por el nombre de la estación (HOLD-, R_, B28M…), corte = llegada + horas, ventanas hora/turno/día/semana respecto al corte; cruce con el TCQS por orden y estación con `by()`. La página reutiliza `Select`, `Segmented`, `KpiTile`, `Badge` y `yc-table`; animaciones solo con CSS | `read-excel-file` (ya instalado) |
 | 0.25.0 | **Menú con rieles y gráficas a pantalla** | `NavLink` (marca la página con `aria-current`) en dos rieles fijos; abrir con `:hover` y `:has(:focus-visible)` (no `:focus-within`: tras un clic el riel se quedaba abierto tapando el contenido); el carrusel ignora el arrastre que empieza en un botón; nombres verticales y desenfoque solo con CSS (`g:hover`) | `NavLink`, `ChartCarousel`, `Select` |
 | 0.20.0 | **NDF** | `lib/fails.ts` (leer, clasificar contra el TCQS, Pareto 80 %) con pruebas; el TCQS ya traía la respuesta (2do pase / FAIL / pendiente); reutiliza `ParetoChart`, `KpiTile`, `yc-table` | papaparse con arreglo de `\\"` |
 | 0.19.0 | **Respaldos, semana y datos que no cuadran** | `store()` en el servidor: una sola transacción para guardar una carga, usada también al restaurar; respaldo = la carga y sus filas del resumen en `jsonb`, purgados al consultar (sin tareas programadas); `ranges()` con prueba | `<dialog>` nativo, `HistoryList extra`, `PeriodTabs`, `FileChip` |

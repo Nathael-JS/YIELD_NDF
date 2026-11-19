@@ -18,6 +18,10 @@
   --data-pass: #0d6157;
   --data-second: #4f75ab;
   --data-fail: #cf6a10;
+  /* semáforo de tiempo (WIP): verde, naranja, rojo */
+  --sem-ok: #1f8a4c;
+  --sem-warn: #e07b00;
+  --sem-bad: #d0342c;
   --data-ndf: #b9bfb4;
   --ok-bg: #dcefe9;
   --ok-fg: #0b5a4f;
@@ -63,6 +67,9 @@
     --data-pass: #3fb3a6;
     --data-second: #6f93cc;
     --data-fail: #f7ab62;
+    --sem-ok: #4cc97f;
+    --sem-warn: #f5a524;
+    --sem-bad: #ff6b5b;
     --data-ndf: #5d6760;
     --ok-bg: #173b36;
     --ok-fg: #8fe0d2;
@@ -95,6 +102,9 @@
   --data-pass: #3fb3a6;
   --data-second: #6f93cc;
   --data-fail: #f7ab62;
+    --sem-ok: #4cc97f;
+    --sem-warn: #f5a524;
+    --sem-bad: #ff6b5b;
   --data-ndf: #5d6760;
   --ok-bg: #173b36;
   --ok-fg: #8fe0d2;

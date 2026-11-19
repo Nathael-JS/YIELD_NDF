@@ -77,8 +77,8 @@ export default function Base() {
         </div>
       )}
       <section className="yc-card yc-pad app-sec">
-        <h2 className="app-h3">Modelos de Juliet</h2>
-        <p className="app-muted">La lista filtra el TCQS de todos los usuarios. Sube el Excel del build con el BOM para reemplazarla.</p>
+        <h2 className="app-h3">Actualizar modelos</h2>
+        <p className="app-muted">La lista filtra el TCQS de todos los usuarios. Sube el Excel del build con el BOM para actualizarla.</p>
         <FileChip type="MODELOS · JULIET" accept=".xlsx" onFile={uploadBom} status={busy ? 'comparing' : modelos ? 'loaded' : 'empty'}
           meta={busy ? 'Leyendo…' : modelos ? `${modelos.modelos.length.toLocaleString('es-MX')} modelos · ${modelos.archivo} · ${modelos.usuario} · ${shortDate(new Date(modelos.guardado_en!))}` : 'Sin lista: se usan todos los modelos del TCQS'} />
       </section>
