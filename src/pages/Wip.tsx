@@ -20,7 +20,13 @@ const Hours = ({ h }: { h: number }) => (
   <span className={`app-wip-h is-${nivel(h)}${urgente(h) ? ' is-urgent' : ''}`} title={urgente(h) ? 'Urgente: más de 100 h en la estación' : undefined}>{dur(h)}</span>
 );
 
+/** Con otro archivo los filtros vuelven a empezar (la orden o el modelo elegidos pueden no existir en él). */
 export default function Wip() {
+  const file = useApp((s) => s.files.WIP);
+  return <WipView key={file ? `${file.name}|${file.loadedAt}` : ''} />;
+}
+
+function WipView() {
   const file = useApp((s) => s.files.WIP);
   const { records, models } = useData();
   const read = useMemo(() => file && readWip(file), [file]);

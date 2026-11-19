@@ -4,12 +4,12 @@
 import type { Cell, ParsedFile } from './files.ts';
 import { by, META_FPY, type Rec } from './tcqs.ts';
 
-export const WIP_REQUIRED = ['SERIAL_NUMBER', 'MODEL_NAME', 'MO_NUMBER', 'TARGET_QTY', 'SECTION_NAME', 'WIP_GROUP', 'IN_STATION_TIME', 'HOUR', 'ERROR_FLAG'] as const;
+export const WIP_REQUIRED = ['SERIAL_NUMBER', 'MODEL_NAME', 'MO_NUMBER', 'SECTION_NAME', 'WIP_GROUP', 'IN_STATION_TIME', 'HOUR', 'ERROR_FLAG'] as const;
 
 /** Línea: en proceso · Hold: retenida · Reparación: R_… o REPAIR · Bonpile: B28M/B30M/B31M (pila de falladas). */
 export type Estado = 'Línea' | 'Hold' | 'Reparación' | 'Bonpile';
 export interface Pieza {
-  serial: string; model: string; mo: string; target: number; section: string; station: string;
+  serial: string; model: string; mo: string; section: string; station: string;
   /** Llegada a la estación actual, «2026-11-19 08:14:59». */
   at: string; hours: number; blocked: boolean; estado: Estado;
 }
@@ -25,7 +25,7 @@ const stamp = (d: Date) => `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${
 /** «2026/05/21 14:58:21», fecha de Excel o número de serie de Excel → «2026-05-21 14:58:21» (hora de planta, sin zona). */
 function when(v: Cell) {
   if (v instanceof Date) return stamp(v);
-  if (typeof v === 'number') return stamp(new Date(Date.UTC(1899, 11, 30) + v * 864e5));
+  if (typeof v === 'number') return stamp(new Date(Date.UTC(1899, 11, 30) + Math.round(v * 86400) * 1000)); // al segundo: la fracción del día no es exacta
   const m = text(v).match(/^(\d{4})[-/](\d{2})[-/](\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?/);
   return m ? `${m[1]}-${m[2]}-${m[3]} ${m[4]}:${m[5]}:${m[6] ?? '00'}` : '';
 }
@@ -48,8 +48,8 @@ export function readWip(f: ParsedFile) {
   let corte = 0;
   f.rows.forEach((r, i) => {
     const p: Pieza = {
-      serial: text(r[at.SERIAL_NUMBER]), model: text(r[at.MODEL_NAME]), mo: text(r[at.MO_NUMBER]), target: Number(r[at.TARGET_QTY]) || 0,
-      section: text(r[at.SECTION_NAME]), station: text(r[at.WIP_GROUP]), at: when(r[at.IN_STATION_TIME]), hours: Number(r[at.HOUR]),
+      serial: text(r[at.SERIAL_NUMBER]), model: text(r[at.MODEL_NAME]), mo: text(r[at.MO_NUMBER]),
+      section: text(r[at.SECTION_NAME]), station: text(r[at.WIP_GROUP]), at: when(r[at.IN_STATION_TIME]), hours: Number(text(r[at.HOUR]).replace(',', '.')), // CSV en español: «20,5»
       blocked: !['', '0'].includes(text(r[at.ERROR_FLAG])), estado: 'Línea',
     };
     if (!p.serial || !p.station || !p.at || !Number.isFinite(p.hours)) { out.bad.push(i + 2); return; }
@@ -87,6 +87,8 @@ export function desde(corte: string, v: Ventana) {
   return '';
 }
 
+const mostCommon = (xs: string[]) => { const c = new Map<string, number>(); for (const x of xs) c.set(x, (c.get(x) ?? 0) + 1); return [...c].sort((a, b) => b[1] - a[1])[0][0]; };
+
 /** Por estación, en el orden del flujo: piezas por nivel, la más antigua, bloqueadas y el FPY del TCQS (si la prueba ahí). */
 export function stations(ps: Pieza[], recs: Rec[]) {
   const fpy = new Map(by(recs, (r) => r.group).map((s) => [s.name, s.fpy]));
@@ -96,7 +98,7 @@ export function stations(ps: Pieza[], recs: Rec[]) {
   return [...m].map(([name, list]) => {
     const f = fpy.get(name) ?? NaN;
     return {
-      name, section: list[0].section, n: list.length, estado: list[0].estado,
+      name, section: mostCommon(list.map((p) => p.section)), n: list.length, estado: list[0].estado,
       ok: list.filter((p) => nivel(p.hours) === 'ok').length, warn: list.filter((p) => nivel(p.hours) === 'warn').length,
       bad: list.filter((p) => nivel(p.hours) === 'bad').length, urgent: list.filter((p) => urgente(p.hours)).length,
       blocked: list.filter((p) => p.blocked).length, max: Math.max(...list.map((p) => p.hours)), fpy: f,

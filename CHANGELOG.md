@@ -16,6 +16,8 @@ Los errores encontrados y cómo se corrigieron están en [ERRORES.md](ERRORES.md
 - Cruce con el TCQS: órdenes con piezas en proceso sin TCQS y órdenes del TCQS sin piezas en proceso.
 - Tokens `--sem-ok`, `--sem-warn`, `--sem-bad` (semáforo, claro y oscuro).
 
+- **App más ligera al abrir:** cada página se descarga al visitarla; la carga inicial bajó de 427 kB a 289 kB (141 → 97 kB comprimido).
+- WIP: horas con coma decimal («20,5») en CSV; horas de Excel redondeadas al segundo (también en primeras fallas); los filtros se reinician al cargar otro archivo; la estación va en la sección de la mayoría de sus piezas; TARGET_QTY ya no se exige.
 - Terminadas y empaque se cuentan con los mismos filtros de la página; la barra de tiempo se anuncia en lectores de pantalla; secciones nuevas del MES quedan juntas.
 
 ### Cambiado

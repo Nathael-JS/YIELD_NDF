@@ -12,7 +12,9 @@ test('readWip: sin repetidas, sin terminadas ni empaque, corte = llegada + horas
     row('b', 'R_WC_KIT_PRESSURE', '2026/11/14 08:00:00', 120.2, '1'), row('c', 'STOCKIN', '2026/11/18 08:00:00', 24.2),
     row('d', 'PACK_CTN', '2026/11/19 08:00:00', 0.2), row('e', 'B28M', '2026/11/19 07:00:00', 1.2, '0', 'SMT'), ['', 'SA1', 'M1', 10, 'SI', 'FT', '', '', '0'],
   ] });
-  assert.deepEqual(r.bad, [8]); // fila 8 del Excel (con el encabezado)
+  assert.deepEqual(r.bad, [8]);
+  assert.equal(readWip({ headers: H, rows: [row('x', 'FT', '2026/11/19 08:00:00', '0,5' as never)] }).piezas[0].hours, 0.5); // coma decimal
+  assert.equal(readWip({ headers: H, rows: [row('x', 'FT', 46345.34374 as never, 0)] }).piezas[0].at, '2026-11-19 08:14:59'); // serial de Excel, al segundo // fila 8 del Excel (con el encabezado)
   assert.deepEqual(r.piezas.map((p) => [p.serial, p.estado, p.blocked]), [['a', 'Línea', false], ['b', 'Reparación', true], ['e', 'Bonpile', false]]);
   assert.deepEqual([r.terminadas.map((p) => p.serial), r.ocultas.map((p) => p.serial)], [['c'], ['d']]);
   assert.equal(r.corte, '2026-11-19 08:12:00');
