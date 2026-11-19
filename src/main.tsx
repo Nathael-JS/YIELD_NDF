@@ -21,6 +21,7 @@ import Login from './pages/Login.tsx';
 import Ndf from './pages/Ndf.tsx';
 import Seguridad from './pages/Seguridad.tsx';
 import Validacion from './pages/Validacion.tsx';
+import Wip from './pages/Wip.tsx';
 import Yield from './pages/Yield.tsx';
 
 const router = createBrowserRouter([
@@ -32,6 +33,7 @@ const router = createBrowserRouter([
       { path: '/carga', element: <Carga /> },
       { path: '/validacion', element: <Validacion /> },
       { path: '/yield', element: <Yield /> },
+      { path: '/wip', element: <Wip /> },
       { path: '/graficos', element: <Graficos /> },
       { path: '/comparativas', element: <Comparativas /> },
       { path: '/ndf', element: <Ndf /> },

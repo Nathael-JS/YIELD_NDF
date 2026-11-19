@@ -8,6 +8,19 @@ Un cambio de componente se publica primero en el artefacto y después se copia a
 
 Los errores encontrados y cómo se corrigieron están en [ERRORES.md](ERRORES.md); las mejoras y cómo se hicieron, en [MEJORAS.md](MEJORAS.md).
 
+## [0.26.0] — 2026-11-19
+
+### Agregado
+- **WIP** (riel izquierdo, paso 4): se carga el reporte WIP del MES por pieza (`wip_total.xlsx`). Se quitan las filas repetidas del MES y se cuentan solo las piezas en proceso: las terminadas (STOCKIN) y las de empaque (FG, PACK_CTN, PACK_PALT) no se muestran. Filtros por modelo, orden, serial y por llegada a la estación (última hora, turno, día, semana).
+- **Flujo por estación** agrupado por sección (SMT → … → SI): piezas, barra por tiempo en la estación (verde < 2 h, naranja < 20 h, rojo desde 20 h), la más antigua, FPY de la estación según el TCQS y avisos de hold, reparación, bonpile, bloqueadas (ERROR_FLAG) y **cuello de botella** (FPY bajo meta con 10 o más piezas). Las piezas de más de 100 h laten como urgentes. «Ver piezas» abre las piezas de esa estación, las más antiguas primero.
+- Cruce con el TCQS: órdenes con piezas en proceso sin TCQS y órdenes del TCQS sin piezas en proceso.
+- Tokens `--sem-ok`, `--sem-warn`, `--sem-bad` (semáforo, claro y oscuro).
+
+- Terminadas y empaque se cuentan con los mismos filtros de la página; la barra de tiempo se anuncia en lectores de pantalla; secciones nuevas del MES quedan juntas.
+
+### Cambiado
+- **Carga:** se quitan la tarjeta de modelos de Juliet y QM; la lista de modelos se actualiza solo en Base de datos («Actualizar modelos»).
+
 ## [0.25.0] — 2026-11-18
 
 ### Cambiado

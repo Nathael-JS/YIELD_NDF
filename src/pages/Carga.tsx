@@ -9,6 +9,7 @@ const plural = (n: number, w: string) => `${n.toLocaleString('es-MX')} ${w}${n =
 const SLOTS: { type: FileType; label: string; accept: string; hint: string }[] = [
   { type: 'TCQS', label: 'TCQS', accept: '.csv,.xlsx', hint: 'Yield por orden, modelo y estación (.csv o .xlsx)' },
   { type: 'FALLAS', label: 'PRIMERAS FALLAS', accept: '.csv,.xlsx', hint: 'FirstFail por unidad con su código de error (.csv o .xlsx): para NDF' },
+  { type: 'WIP', label: 'WIP', accept: '.xlsx,.csv', hint: 'Reporte WIP del MES por pieza (.xlsx): dónde está cada una y desde hace cuánto' },
 ];
 
 function Slot({ type, label, accept, hint }: (typeof SLOTS)[number]) {
@@ -50,22 +51,14 @@ export default function Carga() {
   const go = useNavigate();
   return (
     <>
-      <PageHead title="Carga de datos" sub="El TCQS se lee en este equipo. Con la lista de modelos de Juliet, el resumen por día × modelo × estación se guarda solo en la base." />
+      <PageHead title="Carga de datos" sub="Los archivos se leen en este equipo. El resumen del TCQS por día × modelo × estación se guarda solo en la base, con los modelos de Juliet que se actualizan en Base de datos." />
       <section className="app-files app-files-lg" aria-label="Archivos">
         {SLOTS.map((s) => <Slot key={s.type} {...s} />)}
-        <FileChip type="MODELOS · JULIET" status={modelos ? 'loaded' : 'empty'}
-          meta={modelos ? `En la base · ${plural(modelos.modelos.length, 'modelo')} · ${modelos.archivo}` : 'Sin lista en la base: un administrador sube el BOM en Base de datos'} />
       </section>
       <div className="yc-row">
         <Button variant="primary" disabled={!files.TCQS} onClick={() => go('/validacion')}>Validar datos</Button>
         <span className="app-muted">{files.TCQS ? (modelos ? 'Listo para validar.' : 'Sin lista de modelos se usan todos los modelos del TCQS.') : 'Carga el TCQS para continuar.'}</span>
       </div>
-      <section aria-label="Pendientes">
-        <h2 className="app-h3">Pendientes</h2>
-        <div className="app-files">
-          <FileChip type="QM" meta="Pendiente · se cruzará por serial + estación" />
-        </div>
-      </section>
     </>
   );
 }
