@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { Suspense, useEffect } from 'react';
 import { Link, Navigate, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { saveSummary } from '../lib/db.ts';
 import { congruence, daily, modelKey } from '../lib/tcqs.ts';
@@ -58,7 +58,7 @@ export default function Layout() {
       {/* izquierda: el flujo de trabajo (✓ = paso hecho); derecha: las páginas de consulta */}
       <Rail side="left" label="Flujo de trabajo" items={FLOW} done={[!!read, records.length > 0, false, false]} />
       <Rail side="right" label="Consulta" items={VIEWS} />
-      <div className="app-body"><main className="app-main">{blocked ? <Seguridad /> : <Outlet />}</main></div>
+      <div className="app-body"><main className="app-main">{blocked ? <Seguridad /> : <Suspense fallback={<p className="app-muted">Cargando…</p>}><Outlet /></Suspense>}</main></div>
     </>
   );
 }
