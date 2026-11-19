@@ -14,10 +14,11 @@ test('readWip: sin repetidas, sin terminadas ni empaque, corte = llegada + horas
   ] });
   assert.deepEqual(r.bad, [8]); // fila 8 del Excel (con el encabezado)
   assert.deepEqual(r.piezas.map((p) => [p.serial, p.estado, p.blocked]), [['a', 'Línea', false], ['b', 'Reparación', true], ['e', 'Bonpile', false]]);
-  assert.equal(r.terminadas, 1); assert.equal(r.ocultas, 1);
+  assert.deepEqual([r.terminadas.map((p) => p.serial), r.ocultas.map((p) => p.serial)], [['c'], ['d']]);
   assert.equal(r.corte, '2026-11-19 08:12:00');
   const st = stations(r.piezas, [{ date: '2026-11-18', model: 'SA1', mo: 'M1', group: 'WC_KIT_PRESSURE', tester: 't', input: 10, fp: 8, ff: 2, sp: 1 }]);
   assert.deepEqual(st.map((s) => [s.name, s.fpy]), [['B28M', NaN], ['WC_KIT_PRESSURE', 80], ['R_WC_KIT_PRESSURE', NaN]]); // SMT antes que SI
+  assert.deepEqual(stations([{ ...r.piezas[0], section: 'ZZ' }, { ...r.piezas[1], section: 'AA' }, { ...r.piezas[2], section: 'ZZ', station: 'X' }], []).map((s) => s.section), ['AA', 'ZZ', 'ZZ']); // secciones desconocidas juntas
   assert.deepEqual(cruce(r.piezas, [{ mo: 'M2' } as Rec]), { soloWip: ['M1'], soloTcqs: ['M2'] });
 });
 

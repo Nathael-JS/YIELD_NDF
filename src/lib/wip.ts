@@ -41,7 +41,7 @@ export function estadoOf(g: string): Estado {
 export function readWip(f: ParsedFile) {
   const at = Object.fromEntries(WIP_REQUIRED.map((c) => [c, f.headers.findIndex((h) => h.toUpperCase() === c)])) as Record<(typeof WIP_REQUIRED)[number], number>;
   const missing = WIP_REQUIRED.filter((c) => at[c] < 0);
-  const out = { piezas: [] as Pieza[], missing, bad: [] as number[], corte: '', terminadas: 0, ocultas: 0 };
+  const out = { piezas: [] as Pieza[], missing, bad: [] as number[], corte: '', terminadas: [] as Pieza[], ocultas: [] as Pieza[] }; // aparte, para contarlas con los mismos filtros
   if (missing.length) return out;
   // el reporte del MES repite filas idénticas: una pieza por serial (la llegada más reciente)
   const seen = new Map<string, Pieza>();
@@ -58,8 +58,8 @@ export function readWip(f: ParsedFile) {
     if (!old || old.at < p.at) seen.set(p.serial, { ...p, estado: estadoOf(p.station) });
   });
   for (const p of seen.values()) {
-    if (/STOCKIN|SHIP/.test(p.station)) out.terminadas++;
-    else if (OCULTAS.has(p.station)) out.ocultas++;
+    if (/STOCKIN|SHIP/.test(p.station)) out.terminadas.push(p);
+    else if (OCULTAS.has(p.station)) out.ocultas.push(p);
     else out.piezas.push(p);
   }
   out.corte = corte ? stamp(new Date(Math.round(corte / 6e4) * 6e4)) : '';
@@ -104,7 +104,7 @@ export function stations(ps: Pieza[], recs: Rec[]) {
       cuello: f < META_FPY && list.length >= 10,
       piezas: list.sort((a, b) => b.hours - a.hours),
     };
-  }).sort((a, b) => sec(a.section) - sec(b.section) || b.n - a.n);
+  }).sort((a, b) => sec(a.section) - sec(b.section) || a.section.localeCompare(b.section) || b.n - a.n); // secciones nuevas: juntas, por nombre
 }
 
 /** Órdenes que no cruzan: con piezas en el WIP y sin TCQS, y del TCQS sin piezas en proceso. */

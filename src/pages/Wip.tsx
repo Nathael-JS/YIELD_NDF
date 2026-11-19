@@ -45,6 +45,7 @@ export default function Wip() {
   const from = desde(read.corte, win), term = q.trim().toUpperCase();
   const keep = (p: Pieza) => (!model || p.model === model) && (!mo || p.mo === mo) && (!term || p.serial.toUpperCase().includes(term)) && p.at >= from;
   const ps = mine.filter(keep);
+  const fuera = (l: Pieza[]) => n(l.filter((p) => (!models || models.has(modelKey(p.model))) && keep(p)).length);
   const st = stations(ps, records), top = Math.max(1, ...st.map((s) => s.n));
   const x = cruce(mine, records);
   const count = (e: Estado) => ps.filter((p) => p.estado === e).length;
@@ -92,7 +93,7 @@ export default function Wip() {
                       </div></td>
                       <td className="num">{n(s.n)}</td>
                       <td>
-                        <span className="app-wip-bar" style={{ width: `${(s.n / top) * 100}%` }} title={`${s.ok} < 2 h · ${s.warn} < 20 h · ${s.bad} de 20 h o más`}>
+                        <span className="app-wip-bar" style={{ width: `${(s.n / top) * 100}%` }} role="img" aria-label={`${s.ok} < 2 h · ${s.warn} < 20 h · ${s.bad} de 20 h o más`} title={`${s.ok} < 2 h · ${s.warn} < 20 h · ${s.bad} de 20 h o más`}>
                           {(['ok', 'warn', 'bad'] as const).map((k) => s[k] > 0 && <span key={k} className={`is-${k}`} style={{ flexGrow: s[k] }} />)}
                         </span>
                       </td>
@@ -121,7 +122,7 @@ export default function Wip() {
           </div>
         ) : <p className="app-muted">Ninguna pieza con estos filtros.</p>}
         <p className="app-muted">
-          {n(read.terminadas)} terminadas (STOCKIN) y {n(read.ocultas)} en empaque (FG, PACK_CTN, PACK_PALT) no se muestran.
+          {fuera(read.terminadas)} terminadas (STOCKIN) y {fuera(read.ocultas)} en empaque (FG, PACK_CTN, PACK_PALT) no se muestran.
           {records.length ? ` Cruce con el TCQS: ${x.soloWip.length} órdenes con piezas en proceso no están en el TCQS; ${x.soloTcqs.length} del TCQS no tienen piezas en proceso.` : ' Carga el TCQS para ver el FPY de cada estación.'}
           {read.bad.length > 0 && ` ${read.bad.length} filas sin serial, estación u hora se ignoraron.`}
         </p>

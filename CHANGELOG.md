@@ -16,6 +16,8 @@ Los errores encontrados y cómo se corrigieron están en [ERRORES.md](ERRORES.md
 - Cruce con el TCQS: órdenes con piezas en proceso sin TCQS y órdenes del TCQS sin piezas en proceso.
 - Tokens `--sem-ok`, `--sem-warn`, `--sem-bad` (semáforo, claro y oscuro).
 
+- Terminadas y empaque se cuentan con los mismos filtros de la página; la barra de tiempo se anuncia en lectores de pantalla; secciones nuevas del MES quedan juntas.
+
 ### Cambiado
 - **Carga:** se quitan la tarjeta de modelos de Juliet y QM; la lista de modelos se actualiza solo en Base de datos («Actualizar modelos»).
 
