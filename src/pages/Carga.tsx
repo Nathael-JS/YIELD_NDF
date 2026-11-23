@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button, FileChip } from '../components/ui.tsx';
 import { parseFile } from '../lib/files.ts';
+import { local } from '../lib/wip.ts';
 import { shortDate, useApp, type FileType } from '../store.ts';
 import { PageHead } from './Layout.tsx';
 
@@ -9,7 +10,7 @@ const plural = (n: number, w: string) => `${n.toLocaleString('es-MX')} ${w}${n =
 const SLOTS: { type: FileType; label: string; accept: string; hint: string }[] = [
   { type: 'TCQS', label: 'TCQS', accept: '.csv,.xlsx', hint: 'Yield por orden, modelo y estación (.csv o .xlsx)' },
   { type: 'FALLAS', label: 'PRIMERAS FALLAS', accept: '.csv,.xlsx', hint: 'FirstFail por unidad con su código de error (.csv o .xlsx): para NDF' },
-  { type: 'WIP', label: 'WIP', accept: '.xlsx,.csv', hint: 'Reporte WIP del MES por pieza (.xlsx): dónde está cada una y desde hace cuánto' },
+  { type: 'WIP', label: 'WIP', accept: '.xlsx,.csv', hint: 'Reporte WIP del MES por pieza, general o de una orden (.xlsx): dónde está cada una y desde hace cuánto' },
 ];
 
 function Slot({ type, label, accept, hint }: (typeof SLOTS)[number]) {
@@ -21,7 +22,7 @@ function Slot({ type, label, accept, hint }: (typeof SLOTS)[number]) {
   async function load(file: File) {
     setBusy(true);
     try {
-      setFile(type, { ...(await parseFile(file)), name: file.name, loadedAt: shortDate(new Date()) });
+      setFile(type, { ...(await parseFile(file)), name: file.name, loadedAt: shortDate(new Date()), cargado: local() });
     } catch (e) {
       setError(type, `${file.name}: ${e instanceof Error ? e.message : 'no se pudo leer'}`);
     } finally {
@@ -56,8 +57,8 @@ export default function Carga() {
         {SLOTS.map((s) => <Slot key={s.type} {...s} />)}
       </section>
       <div className="yc-row">
-        <Button variant="primary" disabled={!files.TCQS} onClick={() => go('/validacion')}>Validar datos</Button>
-        <span className="app-muted">{files.TCQS ? (modelos ? 'Listo para validar.' : 'Sin lista de modelos se usan todos los modelos del TCQS.') : 'Carga el TCQS para continuar.'}</span>
+        <Button variant="primary" disabled={!files.TCQS && !files.WIP} onClick={() => go('/validacion')}>Validar datos</Button>
+        <span className="app-muted">{files.TCQS || files.WIP ? (modelos ? 'Listo para validar: cada archivo se valida por separado.' : 'Sin lista de modelos se usan todos los modelos.') : 'Carga el TCQS o el WIP para continuar.'}</span>
       </div>
     </>
   );

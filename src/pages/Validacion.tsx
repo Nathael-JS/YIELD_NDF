@@ -4,6 +4,7 @@ import { Badge, Button, KpiTile, type Tone } from '../components/ui.tsx';
 import { by, congruence, modelKey, pctText } from '../lib/tcqs.ts';
 import { useApp, useData } from '../store.ts';
 import { NeedTcqs, PageHead } from './Layout.tsx';
+import { useWip } from './wipParts.tsx';
 
 const n = (v: number) => v.toLocaleString('es-MX');
 const CHECK: Partial<Record<Tone, string>> = { ok: 'OK', warn: 'Revisar', info: 'Aviso' };
@@ -15,10 +16,12 @@ export default function Validacion() {
   // estimado «real»: nuestras fórmulas sobre las filas de Juliet, contra lo que dicen las columnas de % del archivo.
   // El detalle fila por fila se guarda con la carga en la base; aquí solo el resultado. Una vez por archivo, no por pintada.
   const estimate = useMemo(() => file && congruence(file, (m) => !models || models.has(modelKey(m))), [file, models]);
-  if (!read) return <><PageHead title="Validación" /><NeedTcqs /></>;
+  // el WIP se valida aparte: no espera al TCQS
+  if (!read) return <><PageHead title="Validación" /><WipCheck /><NeedTcqs /></>;
   if (read.missing.length) return (
     <>
       <PageHead title="Validación" />
+      <WipCheck />
       <p className="yc-card app-empty"><Badge tone="bad">Faltan columnas</Badge> El TCQS no trae <span className="app-mono">{read.missing.join(', ')}</span>. Revisa que sea el reporte de yield por estación.</p>
     </>
   );
@@ -41,6 +44,7 @@ export default function Validacion() {
         <Button variant="primary" disabled={!records.length} onClick={() => go('/yield')}>Ver yield</Button>
       </PageHead>
       {db && <p className="app-muted" role="status"><Badge tone={db[0]}>Base</Badge> {db[1]}</p>}
+      <WipCheck />
       <div className="yc-grid-kpi">
         <KpiTile label="Filas del TCQS" value={n(all.length + read.bad.length)} />
         <KpiTile label="Modelos en el BOM" value={models ? n(models.size) : '—'} />
@@ -97,5 +101,32 @@ export default function Validacion() {
         </table>
       </div>
     </>
+  );
+}
+
+/** Validación del WIP, independiente del TCQS: qué filas se usan, qué formato es y hasta qué hora se cuenta el tiempo. */
+function WipCheck() {
+  const { file, read, mine } = useWip();
+  const go = useNavigate();
+  if (!file || !read) return null;
+  if (read.missing.length) return <p className="yc-card app-empty"><Badge tone="bad">WIP · faltan columnas</Badge> {file.name} no trae <span className="app-mono">{read.missing.join(', ')}</span>.</p>;
+  const ps = mine(read.piezas), unicas = read.filas - read.bad.length - read.repetidas;
+  const checks: [Tone, string, string][] = [
+    [read.repetidas ? 'info' : 'ok', `${n(read.repetidas)} filas repetidas`, 'El MES repite filas de la misma pieza: se cuenta una vez, con su llegada más reciente.'],
+    [read.bad.length ? 'warn' : 'ok', `${n(read.bad.length)} filas inválidas`, read.bad.length ? `Sin serial, estación u hora; no se usan: filas ${read.bad.slice(0, 15).join(', ')}${read.bad.length > 15 ? '…' : ''}.` : 'Todas traen serial, estación y hora.'],
+    [read.fuente === 'movimiento' ? 'warn' : 'ok', `Tiempo contado hasta ${read.corte.slice(0, 16)}`, read.fuente === 'archivo' ? 'El reporte general trae las horas en la estación (HOUR).' : read.fuente === 'carga' ? `Reporte por orden: sin HOUR, las horas se cuentan hasta la carga del archivo. Último movimiento: ${read.ultimo.slice(0, 16)}.` : 'Archivo cargado antes de 0.27: se cuenta hasta el último movimiento. Vuelve a cargarlo para contar hasta la hora de carga.'],
+  ];
+  return (
+    <section className="yc-card yc-pad app-checks" aria-labelledby="wip-check">
+      <h2 id="wip-check" className="app-h3">WIP · {file.name} <Badge tone="info">{read.formato === 'por orden' ? 'Reporte por orden' : 'Reporte general'}</Badge></h2>
+      <div className="yc-grid-kpi">
+        <KpiTile label="Piezas en el archivo" value={n(unicas)} />
+        <KpiTile label="En proceso (Juliet)" value={n(ps.length)} />
+        <KpiTile label="Terminadas y empaque" value={n(mine(read.terminadas).length + mine(read.ocultas).length)} />
+        <KpiTile label="Órdenes" value={n(new Set(ps.map((p) => p.mo)).size)} />
+      </div>
+      <ul>{checks.map(([tone, title, text]) => <li key={title}><Badge tone={tone}>{CHECK[tone]}</Badge><div><strong>{title}</strong><p className="app-muted">{text}</p></div></li>)}</ul>
+      <div className="yc-row"><Button variant="primary" onClick={() => go('/wip')}>Ver WIP</Button></div>
+    </section>
   );
 }

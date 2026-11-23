@@ -8,6 +8,19 @@ Un cambio de componente se publica primero en el artefacto y después se copia a
 
 Los errores encontrados y cómo se corrigieron están en [ERRORES.md](ERRORES.md); las mejoras y cómo se hicieron, en [MEJORAS.md](MEJORAS.md).
 
+## [0.27.0] — 2026-11-23
+
+### Agregado
+- **WIP por orden:** se lee también el reporte del MES de una sola orden (sin HOUR). Las horas en la estación se cuentan hasta la **hora de carga** del archivo y se muestran el corte y el **último movimiento**. Con GROUP_NAME → WIP_GROUP se deduce la ruta: las estaciones se ordenan ruta por ruta (subensambles primero) en la tabla, la línea de tiempo y los reportes.
+- **Línea de tiempo del WIP** (Motion, solo en la página WIP): una fila por estación en el orden del flujo; cada punto junta las piezas con un tiempo parecido en la estación (escala logarítmica, de minutos a meses), con zonas verde/naranja/roja y las urgentes latiendo. Botón «Mostrar/Ocultar línea de tiempo»; clic en una estación abre sus piezas. Respeta «reducir movimiento».
+- **Vista por orden** en WIP (en proceso por estado, terminadas, la más antigua; «Ver flujo» filtra esa orden) y «Quitar filtros».
+- **Descargas** (riel derecho): Yield en HTML y PDF (antes en la página Yield) y **WIP en HTML y PDF**: resumen y semáforo, flujo por estación, urgentes y bloqueadas, y por orden.
+- **Validación del WIP** aparte del TCQS: filas repetidas e inválidas, formato, hasta qué hora se cuenta el tiempo. «Validar datos» se activa con el TCQS o con el WIP.
+- Dependencia `motion` 14.10.1 (≈ 50 kB comprimidos, solo en la página WIP).
+
+### Corregido
+- Las correcciones de la revisión de 0.26 (horas con coma decimal, horas de Excel al segundo, filtros que se reinician, sección por mayoría, TARGET_QTY opcional) y la carga de páginas al visitarlas llegaron después del merge del PR #20; quedan en esta versión.
+
 ## [0.26.0] — 2026-11-19
 
 ### Agregado
@@ -16,6 +29,8 @@ Los errores encontrados y cómo se corrigieron están en [ERRORES.md](ERRORES.md
 - Cruce con el TCQS: órdenes con piezas en proceso sin TCQS y órdenes del TCQS sin piezas en proceso.
 - Tokens `--sem-ok`, `--sem-warn`, `--sem-bad` (semáforo, claro y oscuro).
 
+- **App más ligera al abrir:** cada página se descarga al visitarla; la carga inicial bajó de 427 kB a 289 kB (141 → 97 kB comprimido).
+- WIP: horas con coma decimal («20,5») en CSV; horas de Excel redondeadas al segundo (también en primeras fallas); los filtros se reinician al cargar otro archivo; la estación va en la sección de la mayoría de sus piezas; TARGET_QTY ya no se exige.
 - Terminadas y empaque se cuentan con los mismos filtros de la página; la barra de tiempo se anuncia en lectores de pantalla; secciones nuevas del MES quedan juntas.
 
 ### Cambiado

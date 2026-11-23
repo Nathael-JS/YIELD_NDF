@@ -89,10 +89,13 @@ export function reportHtml({ title, sub, views }: { title: string; sub: string; 
       <p className="app-muted">Generado el {new Date().toLocaleString('es-MX')} · Fórmulas según la guía YieldRateSFC y RetestRate.</p>
     </main>,
   );
-  return `<!doctype html>
+  return htmlDoc(title, body, SCRIPT);
+}
+
+/** Un archivo HTML con los estilos de la app dentro: se abre sin internet. */
+export const htmlDoc = (title: string, body: string, script = '') => `<!doctype html>
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${esc(title)}</title><style>${tokensCss}${ycCss}${appCss}
 /* las gráficas del archivo se dibujan a 800 px (sin JavaScript no se miden): más ancho agrandaría el texto */
 .app-main { max-width: 1120px; }</style></head>
-<body>${body}<script>${SCRIPT}</script></body></html>`;
-}
+<body>${body}${script && `<script>${script}</script>`}</body></html>`;

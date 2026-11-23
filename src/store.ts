@@ -8,12 +8,13 @@ import { apiLogout, apiMe, loadModelos, setOnExpired, type Modelos, type Sesion 
 import { dropAll, dropFile, loadFiles, saveFile } from './lib/saved.ts';
 import { modelKey, readTcqs } from './lib/tcqs.ts';
 
-// Los modelos de Juliet (BOM) viven en la base (`modelos`); DATA ANALYSIS y QM: pendientes.
-// FALLAS = reporte de primeras fallas por unidad (códigos de error), para la página NDF
+// Los modelos de Juliet (BOM) viven en la base (`modelos`); se actualizan en Base de datos.
+// FALLAS = reporte de primeras fallas por unidad (códigos de error), para la página NDF; WIP = reporte WIP del MES por pieza
 export const FILE_TYPES = ['TCQS', 'FALLAS', 'WIP'] as const;
 export type FileType = (typeof FILE_TYPES)[number];
 
-export interface LoadedFile extends ParsedFile { name: string; loadedAt: string }
+/** `cargado`: hora local de la carga («2026-11-23 10:15:00»); los archivos guardados antes de 0.27 no la traen. */
+export interface LoadedFile extends ParsedFile { name: string; loadedAt: string; cargado?: string }
 
 
 interface State {

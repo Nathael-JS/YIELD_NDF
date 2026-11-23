@@ -1,4 +1,4 @@
-import { StrictMode } from 'react';
+import { lazy, StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { createBrowserRouter, Navigate, RouterProvider } from 'react-router-dom';
 import '@fontsource/ibm-plex-sans/400.css';
@@ -9,20 +9,22 @@ import '@fontsource/ibm-plex-mono/500.css';
 import './styles/tokens.css';
 import './styles/yc.css';
 import './styles/app.css';
-import Base from './pages/Base.tsx';
-import Carga from './pages/Carga.tsx';
-import Comparativas from './pages/Comparativas.tsx';
-import Cuentas from './pages/Cuentas.tsx';
-import Graficos from './pages/Graficos.tsx';
-import Historial from './pages/Historial.tsx';
 import Inicio from './pages/Inicio.tsx';
 import Layout from './pages/Layout.tsx';
 import Login from './pages/Login.tsx';
-import Ndf from './pages/Ndf.tsx';
-import Seguridad from './pages/Seguridad.tsx';
-import Validacion from './pages/Validacion.tsx';
-import Wip from './pages/Wip.tsx';
-import Yield from './pages/Yield.tsx';
+// el resto de las páginas se descarga al visitarlas: la app abre más rápido
+const Yield = lazy(() => import('./pages/Yield.tsx'));
+const Wip = lazy(() => import('./pages/Wip.tsx'));
+const Descargas = lazy(() => import('./pages/Descargas.tsx'));
+const Validacion = lazy(() => import('./pages/Validacion.tsx'));
+const Seguridad = lazy(() => import('./pages/Seguridad.tsx'));
+const Ndf = lazy(() => import('./pages/Ndf.tsx'));
+const Historial = lazy(() => import('./pages/Historial.tsx'));
+const Graficos = lazy(() => import('./pages/Graficos.tsx'));
+const Cuentas = lazy(() => import('./pages/Cuentas.tsx'));
+const Comparativas = lazy(() => import('./pages/Comparativas.tsx'));
+const Carga = lazy(() => import('./pages/Carga.tsx'));
+const Base = lazy(() => import('./pages/Base.tsx'));
 
 const router = createBrowserRouter([
   { path: '/login', element: <Login /> },
@@ -34,6 +36,7 @@ const router = createBrowserRouter([
       { path: '/validacion', element: <Validacion /> },
       { path: '/yield', element: <Yield /> },
       { path: '/wip', element: <Wip /> },
+      { path: '/descargas', element: <Descargas /> },
       { path: '/graficos', element: <Graficos /> },
       { path: '/comparativas', element: <Comparativas /> },
       { path: '/ndf', element: <Ndf /> },

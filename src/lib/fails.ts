@@ -18,7 +18,7 @@ const text = (v: Cell) => (v == null ? '' : String(v).trim());
 /** «2026-11-13 11:20:40», fecha de Excel o número de serie de Excel → 2026-11-13. */
 function day(v: Cell) {
   if (v instanceof Date) return v.toISOString().slice(0, 10);
-  if (typeof v === 'number') return new Date(Date.UTC(1899, 11, 30) + v * 864e5).toISOString().slice(0, 10);
+  if (typeof v === 'number') return new Date(Date.UTC(1899, 11, 30) + Math.round(v * 86400) * 1000).toISOString().slice(0, 10);
   const s = text(v);
   return /^\d{4}-\d{2}-\d{2}/.test(s) ? s.slice(0, 10) : '';
 }
