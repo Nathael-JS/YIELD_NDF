@@ -263,3 +263,68 @@ function Report({ title, sub, kpis, stations, watch, pareto, trend, ndf }: PdfDa
 }
 
 export const reportPdf = (d: PdfData) => pdf(<Report {...d} />).toBlob();
+
+// ── Reporte WIP ──
+const SEM = { ok: '#1f8a4c', warn: '#e07b00', bad: '#d0342c' }; // tokens sem-* del tema claro
+type WipSt = { name: string; section: string; n: number; ok: number; warn: number; bad: number; urgent: number; blocked: number; max: number; fpy: number; estado: string; cuello: boolean };
+export interface WipPdfData {
+  title: string; sub: string; kpis: { label: string; value: number }[]; stations: WipSt[];
+  criticas: { serial: string; mo: string; station: string; at: string; hours: number; blocked: boolean }[];
+  ordenes: { mo: string; model: string; n: number; linea: number; hold: number; rep: number; blocked: number; terminadas: number; max: number }[];
+  nota: string;
+}
+const hrs = (h: number) => (h < 48 ? `${h.toFixed(1)} h` : `${Math.floor(Math.round(h) / 24)} d ${Math.round(h) % 24} h`);
+const WCOLS = [150, 50, 165, 70, 48, 40];
+
+function WipReport({ title, sub, kpis, stations, criticas, ordenes, nota }: WipPdfData) {
+  const date = new Date().toLocaleString('es-MX'), top = Math.max(1, ...stations.map((x) => x.n));
+  return (
+    <Document title={title} author="Yield Control" subject="Reporte WIP">
+      <Page size="A4" style={s.page}>
+        <Text style={s.eyebrow}>Yield Control · reporte WIP</Text>
+        <Text style={s.h1}>{title}</Text>
+        <Text style={s.sub}>{sub}</Text>
+        <View style={s.kpis}>
+          {kpis.map((k) => <View key={k.label} style={[s.kpi, { width: (W - 24) / 5 }]}><Text style={s.kLabel}>{k.label}</Text><Text style={s.kValue}>{k.value.toLocaleString('es-MX')}</Text></View>)}
+        </View>
+        <Text style={s.h2}>Flujo por estación</Text>
+        <Legend items={[['< 2 h', SEM.ok], ['< 20 h', SEM.warn], ['20 h o más', SEM.bad]]} />
+        <View style={s.th} fixed>{['Estación', 'Piezas', 'Tiempo en la estación', 'Más antigua', 'FPY', 'Urg.'].map((h, i) => <Text key={h} style={[{ width: WCOLS[i], paddingLeft: 4 }, i === 1 || i > 2 ? num : {}]}>{h}</Text>)}</View>
+        {stations.map((r, i) => (
+          <View key={r.name} wrap={false}>
+            {r.section !== stations[i - 1]?.section && <Text style={[s.eyebrow, { marginTop: 6, marginBottom: 2 }]}>{r.section}</Text>}
+            <View style={s.tr}>
+              <View style={{ width: WCOLS[0], paddingLeft: 4, gap: 2 }}>
+                <Text style={s.mono}>{cutTo(r.name, 26)}</Text>
+                {(r.estado !== 'Línea' || r.cuello || r.blocked > 0) && <Text style={{ fontSize: 6.5, color: C.bad[1] }}>{[r.estado !== 'Línea' && r.estado, r.cuello && 'Cuello de botella', r.blocked > 0 && `${r.blocked} bloqueadas`].filter(Boolean).join(' · ')}</Text>}
+              </View>
+              <Text style={[num, { width: WCOLS[1] }]}>{r.n}</Text>
+              <View style={{ width: WCOLS[2], paddingLeft: 4 }}>
+                <View style={{ flexDirection: 'row', width: Math.max(4, ((WCOLS[2] - 8) * r.n) / top), height: 7, borderRadius: 3, overflow: 'hidden' }}>
+                  {(['ok', 'warn', 'bad'] as const).map((k) => r[k] > 0 && <View key={k} style={{ flexGrow: r[k], backgroundColor: SEM[k] }} />)}
+                </View>
+              </View>
+              <Text style={[num, { width: WCOLS[3], color: r.max >= 20 ? SEM.bad : C.ink }]}>{hrs(r.max)}</Text>
+              <Text style={[num, { width: WCOLS[4] }]}>{Number.isFinite(r.fpy) ? `${pctText(r.fpy)}` : '—'}</Text>
+              <Text style={[num, { width: WCOLS[5] }]}>{r.urgent}</Text>
+            </View>
+          </View>
+        ))}
+        <Foot date={date} />
+      </Page>
+      <Page size="A4" style={s.page}>
+        <Text style={s.h2}>{`Urgentes (> 100 h) y bloqueadas · ${criticas.length}`}</Text>
+        {criticas.length ? <Table dense cols={[130, 60, 150, 70, 65, 48]} head={['Serial', 'Orden', 'Estación', 'Llegó', 'En estación', '']}
+          rows={criticas.slice(0, 300).map((p) => [cutTo(p.serial, 24), p.mo, cutTo(p.station, 26), p.at.slice(5, 16), hrs(p.hours), p.blocked ? 'Bloqueada' : ''])} /> : <Text style={{ color: C.muted }}>Ninguna.</Text>}
+        {criticas.length > 300 && <Text style={{ color: C.muted, marginTop: 4 }}>{`Se muestran las 300 más antiguas de ${criticas.length}; el HTML las trae todas.`}</Text>}
+        <Text style={s.h2}>Por orden</Text>
+        <Table cols={[70, 110, 48, 40, 38, 45, 50, 58, 64]} head={['Orden', 'Modelo', 'Proceso', 'Línea', 'Hold', 'Rep.', 'Bloq.', 'Termin.', 'Más antigua']}
+          rows={ordenes.map((o) => [o.mo, cutTo(o.model, 18), o.n, o.linea, o.hold, o.rep, o.blocked, o.terminadas, o.n ? hrs(o.max) : '—'])} />
+        <Text style={{ color: C.muted, marginTop: 10 }}>{nota}</Text>
+        <Foot date={date} />
+      </Page>
+    </Document>
+  );
+}
+
+export const wipPdf = (d: WipPdfData) => pdf(<WipReport {...d} />).toBlob();

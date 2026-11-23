@@ -15,6 +15,7 @@ import Login from './pages/Login.tsx';
 // el resto de las páginas se descarga al visitarlas: la app abre más rápido
 const Yield = lazy(() => import('./pages/Yield.tsx'));
 const Wip = lazy(() => import('./pages/Wip.tsx'));
+const Descargas = lazy(() => import('./pages/Descargas.tsx'));
 const Validacion = lazy(() => import('./pages/Validacion.tsx'));
 const Seguridad = lazy(() => import('./pages/Seguridad.tsx'));
 const Ndf = lazy(() => import('./pages/Ndf.tsx'));
@@ -35,6 +36,7 @@ const router = createBrowserRouter([
       { path: '/validacion', element: <Validacion /> },
       { path: '/yield', element: <Yield /> },
       { path: '/wip', element: <Wip /> },
+      { path: '/descargas', element: <Descargas /> },
       { path: '/graficos', element: <Graficos /> },
       { path: '/comparativas', element: <Comparativas /> },
       { path: '/ndf', element: <Ndf /> },

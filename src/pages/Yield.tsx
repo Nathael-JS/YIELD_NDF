@@ -1,32 +1,27 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Badge, Button, KpiTile, PeriodTabs, Select } from '../components/ui.tsx';
-import { by, byFpy, countOrders, change, diagnose, DX_HINT, modelKey, pctText, periodOf, periodsOf, rty, shortDay, toWatch, totals, type Grain, type Rec } from '../lib/tcqs.ts';
+import { Badge, KpiTile, PeriodTabs, Select } from '../components/ui.tsx';
+import { by, byFpy, countOrders, change, diagnose, DX_HINT, pctText, periodOf, periodsOf, rty, shortDay, totals, type Grain, type Rec } from '../lib/tcqs.ts';
 import { useApp, useData } from '../store.ts';
 import { NeedTcqs, PageHead } from './Layout.tsx';
-import { download } from '../lib/download.ts';
 import { slides } from './slides.tsx';
-import { codesOf, NdfReport, useFails } from './Ndf.tsx';
-import { classify, ndfStations } from '../lib/fails.ts';
+import { ndfStations } from '../lib/fails.ts';
 
-const ALL = 'Todos los modelos';
-const WHOLE = 'todo';
+export const ALL = 'Todos los modelos';
+export const WHOLE = 'todo';
 const p1 = (n: number) => (Number.isFinite(n) ? `${n.toFixed(1)} %` : '—');
-const GRAINS = [
+export const GRAINS = [
   { id: 'dia' as const, label: 'Día', hint: 'Un punto por día' },
   { id: 'semana' as const, label: 'Semana', hint: 'Lunes a domingo' },
   { id: 'mes' as const, label: 'Mes', hint: 'Mes calendario' },
 ];
 
 export default function Yield() {
-  const { records, from, to, models } = useData();
+  const { records, from, to } = useData();
   const period = useApp((s) => s.period), setPeriod = useApp((s) => s.setPeriod);
   const [model, setModel] = useState(ALL);
   const [pick, setPick] = useState<string>(); // clave del periodo; sin elegir = el último con datos
-  const [busy, setBusy] = useState(false);
-  const [fail, setFail] = useState<string>();
   const db = useApp((s) => s.db);
-  const { read: fallas } = useFails(records, models); // primeras fallas (si se cargaron) para la sección NDF del HTML
   // estación que llega desde «Dónde mirar primero» (/yield#FT): se resalta y se lleva a la vista
   const focus = decodeURIComponent(useLocation().hash.slice(1));
   useEffect(() => {
@@ -42,47 +37,6 @@ export default function Yield() {
   const chart = (id: string) => sl.find((s) => s.id === id)?.content;
   const sub = cur ? `Juliet · ${cur[1]}${i > 0 ? ` · comparado con ${ps[i - 1][1]}` : ''}` : `Juliet · ${shortDay(from!)} – ${shortDay(to!)}`;
   const kpis = <>{kpiList.map((k) => <KpiTile key={k.label} {...k} />)}</>;
-  const file = `yield-juliet-${(cur?.[1] ?? 'rango').replace(/\s+/g, '-').toLowerCase()}`;
-  const title = `Yield de Juliet · ${cur?.[1] ?? 'todo el rango'}`;
-  // los dos reportes se cargan al pedirlos: react-pdf y el renderizado a HTML pesan más que la app
-  const exportPdf = async () => {
-    setBusy(true);
-    setFail(undefined);
-    try {
-      const { reportPdf } = await import('./pdf.tsx');
-      const periods = by(rs, (r) => periodOf(r.date, period)[0]).filter((p) => p.input > 0).sort((a, b) => (a.name < b.name ? -1 : 1));
-      // NDF del mismo modelo y periodo (página 3 y anexo)
-      const inCur = (d: string) => !cur || periodOf(d, period)[0] === cur[0], pr = rs.filter((r) => inCur(r.date));
-      const pf = fallas && !fallas.missing.length ? fallas.fails.filter((x) => (!models || models.has(modelKey(x.model))) && (model === ALL || x.model === model) && inCur(x.date)) : [];
-      const mk = classify(pf, pr).marked;
-      download(`${file}.pdf`, await reportPdf({
-        ndf: { stations: ndfStations(pr), codes: codesOf(mk), units: mk, input: pr.reduce((a, r) => a + r.input, 0) },
-        title, sub: `${sub} · ${scope}`, kpis: kpiList, stations: st, watch: toWatch(st),
-        pareto: st.filter((x) => x.ff > 0).map((x) => ({ label: x.name, value: x.ff })),
-        trend: periods.map((p) => ({ label: ps.find(([k]) => k === p.name)![1], fpy: p.fpy, final: p.final })),
-      }));
-    } catch (e) {
-      setFail(`No se pudo generar el PDF: ${e instanceof Error ? e.message : e}`);
-    } finally {
-      setBusy(false);
-    }
-  };
-  const exportHtml = async () => {
-    const { reportHtml } = await import('./report.tsx');
-    // todos los modelos en un solo archivo (el lector elige en la lista); mismo periodo que en pantalla.
-    // Lo que se ve primero es lo que hay en pantalla; sin datos en el periodo, el modelo no aparece.
-    const views = [ALL, ...[...new Set(records.map((r) => r.model))].sort()].map((m) => {
-      // como en pantalla: se compara con el periodo anterior con datos de ese modelo
-      const mrs = m === ALL ? records : records.filter((r) => r.model === m), keys = periodsOf(mrs, period), at = cur ? keys.findIndex(([k]) => k === cur[0]) : -1;
-      const v = view(mrs, period, cur?.[0], at > 0 ? keys[at - 1][0] : undefined, m === ALL ? 'todas las estaciones' : m);
-      // NDF del mismo modelo y periodo que el resto de la vista
-      const inCur = (d: string) => !cur || periodOf(d, period)[0] === cur[0];
-      const pr = mrs.filter((r) => inCur(r.date)), pf = fallas && !fallas.missing.length ? fallas.fails.filter((x) => (!models || models.has(modelKey(x.model))) && (m === ALL || x.model === m) && inCur(x.date)) : undefined;
-      const ndf = <NdfReport recs={pr} marked={pf && classify(pf, pr).marked} />;
-      return { name: m, kpis: <>{v.kpiList.map((k) => <KpiTile key={k.label} {...k} />)}</>, slides: v.sl, table: v.table, ndf, input: v.t.input };
-    }).filter((v) => v.input > 0).sort((a, b) => Number(b.name === model) - Number(a.name === model));
-    download(`${file}.html`, new Blob([reportHtml({ title, sub, views })], { type: 'text/html' }));
-  };
   return (
     <>
       <PageHead title="Yield" sub={sub}>
@@ -92,9 +46,7 @@ export default function Yield() {
       </PageHead>
       <div className="yc-grid-kpi">{kpis}</div>
       <div className="yc-row">
-        <Button onClick={exportHtml}>Descargar reporte HTML</Button>
-        <Button onClick={exportPdf} disabled={busy}>{busy ? 'Generando PDF…' : 'Descargar PDF'}</Button>
-        {fail && <span className="app-muted" role="alert"><Badge tone="bad">Error</Badge> {fail}</span>}
+        <Link className="yc-btn yc-btn-secondary" to="/descargas">Descargar HTML o PDF</Link>
         {/* lo que se ve aquí ya quedó en el historial (se guarda solo al leer el TCQS) */}
         {db && <span className="app-muted" role="status"><Badge tone={db[0]}>Historial</Badge> {db[1]} {db[0] === 'ok' && <Link to="/historial">Ver historial</Link>}</span>}
       </div>
@@ -106,7 +58,7 @@ export default function Yield() {
 }
 
 /** KPIs, gráficas y tabla de unas filas (un modelo o todos) en un periodo, comparado con el anterior. */
-function view(rs: Rec[], period: Grain, key: string | undefined, prevKey: string | undefined, scope: string, focus = '') {
+export function view(rs: Rec[], period: Grain, key: string | undefined, prevKey: string | undefined, scope: string, focus = '') {
   const inPeriod = (k: string) => rs.filter((r) => periodOf(r.date, period)[0] === k);
   const now = key ? inPeriod(key) : rs;
   const prevRs = prevKey ? inPeriod(prevKey) : undefined;
