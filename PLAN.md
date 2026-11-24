@@ -1,6 +1,6 @@
 # Plan de trabajo — Yield Control
 
-Versiones en [CHANGELOG.md](CHANGELOG.md) · errores en [ERRORES.md](ERRORES.md) · mejoras en [MEJORAS.md](MEJORAS.md).
+Versiones en [CHANGELOG.md](CHANGELOG.md) · errores en [ERRORES.md](ERRORES.md) · mejoras en [MEJORAS.md](MEJORAS.md) · Pallets en [PALLETS.md](PALLETS.md).
 
 App de yield para el proyecto **Juliet**, basada en el sistema de diseño **Yield Control** (artefacto `RqMowPxsmEFcuTiJy8Ntxu`). Todo corre en el navegador: los archivos no salen del equipo. Publicada en Render como sitio estático (`render.yaml`).
 
