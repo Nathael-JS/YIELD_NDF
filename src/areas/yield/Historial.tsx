@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Badge, Button, FileChip, HistoryList, type HistoryItem } from '../components/ui.tsx';
-import { getRespaldo, loadCargas, loadRespaldos, loadSummary, respaldoAccion, type Carga, type Respaldo } from '../lib/db.ts';
-import { download } from '../lib/download.ts';
-import { fromDb, pctText, shortDay } from '../lib/tcqs.ts';
-import { shortDate, useApp } from '../store.ts';
-import { PageHead } from './Layout.tsx';
+import { Badge, Button, FileChip, HistoryList, type HistoryItem } from '../../components/ui.tsx';
+import { getRespaldo, loadCargas, loadRespaldos, loadSummary, respaldoAccion, type Carga, type Respaldo } from '../../lib/db.ts';
+import { download } from '../../lib/download.ts';
+import { fromDb, pctText, shortDay } from '../../lib/tcqs.ts';
+import { shortDate, useApp } from '../../store.ts';
+import { PageHead } from '../../pages/Layout.tsx';
 
 type Row = HistoryItem & { carga: Carga };
 const when = (iso: string) => shortDate(new Date(iso));
@@ -41,7 +41,7 @@ export default function Historial() {
       const rows = await loadSummary(desde, hasta);
       if (!rows.length) return setMsg('No hay datos guardados para ese rango.');
       setFile('TCQS', { ...fromDb(rows), name: `Base · ${label}`, loadedAt: shortDate(new Date()) });
-      go('/yield');
+      go('/yield/estaciones');
     } catch (e) {
       setMsg(`No se pudo leer la base: ${e instanceof Error ? e.message : e}`);
     }

@@ -1,11 +1,11 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Badge, Button, Segmented, Select, SplitBar, type SplitPart } from '../components/ui.tsx';
-import { ParetoChart } from '../components/charts.tsx';
-import { byLabel, classify, ndfStations, readFails, top80, type Estado, type Marked } from '../lib/fails.ts';
-import { modelKey, pctText, type Rec } from '../lib/tcqs.ts';
-import { useApp, useData } from '../store.ts';
-import { NeedTcqs, PageHead } from './Layout.tsx';
+import { Badge, Button, Segmented, Select, SplitBar, type SplitPart } from '../../components/ui.tsx';
+import { ParetoChart } from '../../components/charts.tsx';
+import { byLabel, classify, ndfStations, readFails, top80, type Estado, type Marked } from '../../lib/fails.ts';
+import { modelKey, pctText, type Rec } from '../../lib/tcqs.ts';
+import { useApp, useData } from '../../store.ts';
+import { NeedTcqs, PageHead } from '../../pages/Layout.tsx';
 
 const n = (v: number) => (Number.isFinite(v) ? v.toLocaleString('es-MX', { maximumFractionDigits: 1 }) : '—');
 const ALL = '';
@@ -107,7 +107,7 @@ export default function Ndf() {
           <section className="yc-card yc-pad app-sec" aria-labelledby="codigos">
             <h2 id="codigos" className="app-h3">Por qué fallan · <span className="app-mono">{where}</span></h2>
             {!read ? (
-              <p className="app-muted">Carga el reporte de <strong>primeras fallas</strong> (FirstFail) en <Link to="/carga">Carga de datos</Link> para ver los códigos de error, los testers y los seriales.</p>
+              <p className="app-muted">Carga el reporte de <strong>primeras fallas</strong> (FirstFail) en <Link to="/yield/carga">Carga de datos</Link> para ver los códigos de error, los testers y los seriales.</p>
             ) : !marked ? (
               <p className="app-muted"><Badge tone="bad">Faltan columnas</Badge> El archivo no trae <span className="app-mono">{read.missing.join(', ')}</span>.</p>
             ) : !codes.length ? <p className="app-muted">Sin primeras fallas en el archivo para {where}.</p> : (

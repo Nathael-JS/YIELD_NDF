@@ -8,6 +8,22 @@ Un cambio de componente se publica primero en el artefacto y después se copia a
 
 Los errores encontrados y cómo se corrigieron están en [ERRORES.md](ERRORES.md); las mejoras y cómo se hicieron, en [MEJORAS.md](MEJORAS.md).
 
+## [0.30.0] — 2026-11-25
+
+### Agregado
+- **Áreas: WIP, YIELD y PALLETS.**
+  - El inicio (`/`) es un **menú giratorio** (`AreaWheel`): tarjetas en carrusel 3D que se manejan con ← →, clic o Enter, y recuerda la última área.
+  - En la barra superior, un botón con el área actual regresa al menú.
+  - Cada área tiene sus rieles, su **Carga** (solo sus archivos), su **Validación**, su **Historial** y sus **Descargas**, en rutas `/área/…`.
+  - Las direcciones anteriores (`/carga`, `/graficos`…) redirigen a YIELD.
+- **Validación de Pallets:** entregas leídas, tarimas del shipping report y filas sin Pallet #, y tarimas del equipo.
+- **Descargas de Pallets:** CSV de tarimas y todas sus etiquetas en un PDF, una por página.
+- Código separado por carpeta: `src/areas/{yield,wip,pallets}`. Las áreas se definen en `src/areas.ts` y las poses del menú en `src/lib/wheel.ts`, con pruebas.
+
+### Pendiente
+- Historial de WIP y Pallets: se activa con la base de datos.
+- Permisos por área: por ahora todos los usuarios ven las tres.
+
 ## [0.29.0] — 2026-11-25
 
 ### Agregado

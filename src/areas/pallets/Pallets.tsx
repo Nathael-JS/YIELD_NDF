@@ -3,13 +3,13 @@
 // shortcut: sin base de datos; se guardará para ciertos usuarios después de separar los entornos.
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Badge, Button, Segmented, SerialInput } from '../components/ui.tsx';
-import { PalletLabel, type LabelVariant, type PalletLabelData } from '../components/label.tsx';
-import { download } from '../lib/download.ts';
-import { defaultsFor, desdeEntrega, qrText, readEntregas, readShipping, readTarimas, revisar, serialsOf, tarimasFile, toCsv, type Tarima, type TarimaKey } from '../lib/pallets.ts';
-import { readWip } from '../lib/wip.ts';
-import { shortDate, useApp } from '../store.ts';
-import { PageHead } from './Layout.tsx';
+import { Badge, Button, Segmented, SerialInput } from '../../components/ui.tsx';
+import { PalletLabel, type LabelVariant } from '../../components/label.tsx';
+import { download } from '../../lib/download.ts';
+import { defaultsFor, desdeEntrega, labelOf, qrText, readEntregas, readShipping, readTarimas, revisar, serialsOf, tarimasFile, toCsv, type Tarima, type TarimaKey } from '../../lib/pallets.ts';
+import { readWip } from '../../lib/wip.ts';
+import { shortDate, useApp } from '../../store.ts';
+import { PageHead } from '../../pages/Layout.tsx';
 
 type Campo = { key: TarimaKey; label: string; listado?: boolean; mono?: boolean };
 /** Las áreas del shipping report (renglón 1 del Excel): quién llena cada campo. */
@@ -31,11 +31,6 @@ const AREAS: { id: string; name: string; hint: string; campos: Campo[] }[] = [
 const REQ = new Set<TarimaKey>(['pallet', 'ref', 'dn', 'pn', 'qty', 'cartons', 'nw', 'gw', 'dims', 'hts', 'coo', 'shipDate']);
 const VARIANTES = [{ value: 'qr' as const, label: 'QR grande' }, { value: 'text' as const, label: 'Más texto' }];
 const today = () => new Date().toISOString().slice(0, 10);
-
-const labelOf = (t: Tarima, index = 1, total = 1): PalletLabelData => ({
-  pallet: t.pallet || 'PAL—', customer: t.customer || '—', destination: t.destination || '—', ref: t.ref || '—', dn: t.dn, so: t.so, po: t.po, to: t.to, pn: t.pn, desc: t.desc,
-  qty: Number(t.qty) || 0, cartons: Number(t.cartons) || 0, nw: t.nw || '—', gw: t.gw || '—', dims: t.dims, coo: t.coo, hts: t.hts, battery: t.battery, shipDate: t.shipDate, index, total,
-});
 
 export default function Pallets() {
   const files = useApp((s) => s.files), setFile = useApp((s) => s.setFile);
@@ -66,7 +61,7 @@ export default function Pallets() {
 
   const pdf = async (x: Tarima) => {
     setBusy(true);
-    try { const { labelsPdf } = await import('./pdf.tsx'); download(`etiqueta-${x.pallet}.pdf`, await labelsPdf([{ d: labelOf(x), qr: qrText(x) }])); guardar({ ...x, printed: shortDate(new Date()) }); }
+    try { const { labelsPdf } = await import('../../pages/pdf.tsx'); download(`etiqueta-${x.pallet}.pdf`, await labelsPdf([{ d: labelOf(x), qr: qrText(x) }])); guardar({ ...x, printed: shortDate(new Date()) }); }
     catch (e) { setMsg(`No se pudo generar el PDF: ${e instanceof Error ? e.message : e}`); } finally { setBusy(false); }
   };
   const exportar = () => download(`tarimas-${today()}.csv`, new Blob([toCsv(tarimasFile(mias))], { type: 'text/csv' }));
@@ -84,7 +79,7 @@ export default function Pallets() {
         <Button onClick={exportar} disabled={!mias.length}>Exportar tarimas (CSV)</Button>
       </PageHead>
       {!files.DN && !files.SHIPPING && !files.TARIMAS ? (
-        <p className="yc-card app-empty">Carga el <strong>listado de entregas</strong> (y si quieres el shipping report o un CSV de tarimas) en <Link to="/carga">Carga de datos</Link>.</p>
+        <p className="yc-card app-empty">Carga el <strong>listado de entregas</strong> (y si quieres el shipping report o un CSV de tarimas) en <Link to="/pallets/carga">Carga de datos</Link>.</p>
       ) : (
         <div className="app-pal">
           <aside className="yc-card app-pal-list" aria-label="Entregas y tarimas">

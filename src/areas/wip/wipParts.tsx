@@ -1,9 +1,9 @@
 // Piezas del WIP que comparten la página y el reporte HTML (sin Motion: el HTML se dibuja sin JavaScript).
 import { Fragment, useMemo, type ReactNode } from 'react';
-import { Badge, KpiTile } from '../components/ui.tsx';
-import { modelKey, pctText } from '../lib/tcqs.ts';
-import { nivel, readWip, urgente, type Estado, type ordenes, type Pieza, type stations } from '../lib/wip.ts';
-import { useApp, useData } from '../store.ts';
+import { Badge, KpiTile } from '../../components/ui.tsx';
+import { modelKey, pctText } from '../../lib/tcqs.ts';
+import { nivel, readWip, urgente, type Estado, type ordenes, type Pieza, type stations } from '../../lib/wip.ts';
+import { useApp, useData } from '../../store.ts';
 
 export const n = (v: number) => v.toLocaleString('es-MX');
 /** 45 min · 5.2 h · 6 d 4 h */

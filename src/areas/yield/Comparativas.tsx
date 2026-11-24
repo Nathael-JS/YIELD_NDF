@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Badge, Button, KpiTile, PeriodTabs } from '../components/ui.tsx';
-import { loadCargas, loadSummary, type Carga } from '../lib/db.ts';
-import { by, byFpy, change, countOrders, fromDb, pctText, ranges, readTcqs, shortDay, totals, type Congruencia, type DbRow } from '../lib/tcqs.ts';
-import { useData } from '../store.ts';
-import { PageHead } from './Layout.tsx';
+import { Badge, Button, KpiTile, PeriodTabs } from '../../components/ui.tsx';
+import { loadCargas, loadSummary, type Carga } from '../../lib/db.ts';
+import { by, byFpy, change, countOrders, fromDb, pctText, ranges, readTcqs, shortDay, totals, type Congruencia, type DbRow } from '../../lib/tcqs.ts';
+import { useData } from '../../store.ts';
+import { PageHead } from '../../pages/Layout.tsx';
 
 const n = (v: number) => v.toLocaleString('es-MX');
 type Mode = 'dia' | 'semana';
@@ -72,7 +72,7 @@ export default function Comparativas() {
         <section className="yc-card yc-pad app-sec" role="status">
           <h2 className="app-h3">Faltan datos <Badge tone="warn">{missing.map(label).join(' y ')}</Badge></h2>
           <p className="app-muted">La base no tiene información de {missing.map(label).join(' ni de ')}: nunca se cargó o se borró. Carga el TCQS que la incluya (o restaura su respaldo en Historial) y vuelve aquí.</p>
-          <Button variant="primary" onClick={() => go('/carga')}>Ir a Carga de datos</Button>
+          <Button variant="primary" onClick={() => go('/yield/carga')}>Ir a Carga de datos</Button>
         </section>
       )}
       {rows && rb.length > 0 && ra.length > 0 && (
@@ -113,7 +113,7 @@ export default function Comparativas() {
         {!review ? (
           <>
             <p className="app-muted">No hay revisión del TCQS para este rango: se hace al cargar el archivo. Carga el TCQS que lo incluya y vuelve aquí.</p>
-            <Button onClick={() => go('/carga')}>Ir a Carga de datos</Button>
+            <Button onClick={() => go('/yield/carga')}>Ir a Carga de datos</Button>
           </>
         ) : !bad.length ? (
           <p className="app-muted"><Badge tone="ok">Todo cuadra</Badge> {review.archivo}: las columnas del archivo coinciden con las fórmulas.</p>

@@ -6,10 +6,12 @@ import { classify, ndfStations } from '../lib/fails.ts';
 import { by, modelKey, periodOf, periodsOf, shortDay, toWatch } from '../lib/tcqs.ts';
 import { ordenes, stations, urgente } from '../lib/wip.ts';
 import { useApp, useData } from '../store.ts';
+import { useArea } from '../areas.ts';
+import { labelOf, qrText, readTarimas, tarimasFile, toCsv } from '../lib/pallets.ts';
 import { PageHead } from './Layout.tsx';
-import { codesOf, NdfReport, useFails } from './Ndf.tsx';
-import { criticas, kpisOf, useWip } from './wipParts.tsx';
-import { ALL, GRAINS, view, WHOLE } from './Yield.tsx';
+import { codesOf, NdfReport, useFails } from '../areas/yield/Ndf.tsx';
+import { criticas, kpisOf, useWip } from '../areas/wip/wipParts.tsx';
+import { ALL, GRAINS, view, WHOLE } from '../areas/yield/Yield.tsx';
 
 const slug = (t: string) => t.replace(/\s+/g, '-').toLowerCase();
 
@@ -24,14 +26,28 @@ function useJob() {
 }
 
 export default function Descargas() {
+  const area = useArea();
   return (
     <>
-      <PageHead title="Descargas" sub="Reportes en HTML (se abre sin internet, con buscador) y PDF (para imprimir o enviar). Se generan en este equipo con lo que tienes cargado." />
-      <div className="app-dl">
-        <YieldCard />
-        <WipCard />
-      </div>
+      <PageHead title={`Descargas · ${area.name}`} sub="Reportes en HTML (se abre sin internet, con buscador) y PDF (para imprimir o enviar). Se generan en este equipo con lo que tienes cargado." />
+      <div className="app-dl">{area.id === 'yield' ? <YieldCard /> : area.id === 'wip' ? <WipCard /> : <PalletsCard />}</div>
     </>
+  );
+}
+
+/** Pallets: las tarimas del equipo en CSV (se edita y se vuelve a cargar) y sus etiquetas en un solo PDF. */
+function PalletsCard() {
+  const file = useApp((s) => s.files.TARIMAS), { busy, fail, run } = useJob();
+  const ts = file ? readTarimas(file).tarimas.filter((t) => t.pallet) : [];
+  if (!ts.length) return <Card title="Pallets" empty={<>Arma y guarda tarimas en <Link to="/pallets">Etiquetas</Link>, o carga un CSV de tarimas en <Link to="/pallets/carga">Carga de datos</Link>.</>} />;
+  const csv = run('el CSV', async () => download(`tarimas-${new Date().toISOString().slice(0, 10)}.csv`, new Blob([toCsv(tarimasFile(ts))], { type: 'text/csv' })));
+  const pdf = run('el PDF', async () => {
+    const { labelsPdf } = await import('./pdf.tsx');
+    download(`etiquetas-${ts.length}-tarimas.pdf`, await labelsPdf(ts.map((t, i) => ({ d: labelOf(t, i + 1, ts.length), qr: qrText(t) }))));
+  });
+  return (
+    <Card title="Pallets" what={`${ts.length} tarimas de este equipo: CSV editable (se vuelve a cargar en Carga) y sus etiquetas 4×6 in en un solo PDF, una por página.`}
+      busy={busy === 'el PDF' ? 'el PDF' : busy === 'el CSV' ? 'el HTML' : undefined} fail={fail} onHtml={csv} onPdf={pdf} htmlLabel="Exportar CSV" />
   );
 }
 
@@ -41,7 +57,7 @@ function YieldCard() {
   const [model, setModel] = useState(ALL), [pick, setPick] = useState<string>();
   const { read: fallas } = useFails(records, models); // primeras fallas (si se cargaron) para la sección NDF
   const { busy, fail, run } = useJob();
-  if (!records.length) return <Card title="Yield" empty={<>Carga el TCQS en <Link to="/carga">Carga de datos</Link>.</>} />;
+  if (!records.length) return <Card title="Yield" empty={<>Carga el TCQS en <Link to="/yield/carga">Carga de datos</Link>.</>} />;
 
   const rs = model === ALL ? records : records.filter((r) => r.model === model);
   const ps = periodsOf(rs, period);
@@ -90,7 +106,7 @@ function WipCard() {
   const { file, read, records, mine } = useWip();
   const [model, setModel] = useState(''), [mo, setMo] = useState('');
   const { busy, fail, run } = useJob();
-  if (!read || read.missing.length) return <Card title="WIP" empty={<>Carga el reporte WIP en <Link to="/carga">Carga de datos</Link>.</>} />;
+  if (!read || read.missing.length) return <Card title="WIP" empty={<>Carga el reporte WIP en <Link to="/wip/carga">Carga de datos</Link>.</>} />;
 
   const all = mine(read.piezas), keep = (p: { model: string; mo: string }) => (!model || p.model === model) && (!mo || p.mo === mo);
   const ps = all.filter(keep), st = stations(ps, records), crit = criticas(ps);
@@ -101,7 +117,7 @@ function WipCard() {
   const nota = 'Terminadas (STOCKIN) y empaque (FG, PACK_CTN, PACK_PALT) no cuentan como piezas en proceso. Semáforo: verde < 2 h, naranja < 20 h, rojo desde 20 h; urgente pasando de 100 h.';
 
   const html = run('el HTML', async () => {
-    const { wipHtml } = await import('./wipReport.tsx');
+    const { wipHtml } = await import('../areas/wip/wipReport.tsx');
     download(`${name}.html`, new Blob([wipHtml({ title, sub, ps, st, criticas: crit, os, nota })], { type: 'text/html' }));
   });
   const pdf = run('el PDF', async () => {
@@ -118,8 +134,8 @@ function WipCard() {
   );
 }
 
-function Card({ title, what, empty, meta, busy, fail, onHtml, onPdf, children }: {
-  title: string; what?: string; empty?: React.ReactNode; meta?: React.ReactNode; busy?: string; fail?: string;
+function Card({ title, what, empty, meta, busy, fail, onHtml, onPdf, children, htmlLabel = 'Descargar HTML' }: {
+  title: string; what?: string; empty?: React.ReactNode; meta?: React.ReactNode; busy?: string; fail?: string; htmlLabel?: string;
   onHtml?: () => void; onPdf?: () => void; children?: React.ReactNode;
 }) {
   return (
@@ -128,9 +144,9 @@ function Card({ title, what, empty, meta, busy, fail, onHtml, onPdf, children }:
       {empty ? <p className="app-muted">{empty}</p> : (
         <>
           <p className="app-muted">{what}</p>
-          <div className="app-dl-filters">{children}</div>
+          {children && <div className="app-dl-filters">{children}</div>}
           <div className="yc-row">
-            <Button variant="primary" onClick={onHtml} disabled={!!busy}>{busy === 'el HTML' ? 'Generando HTML…' : 'Descargar HTML'}</Button>
+            <Button variant="primary" onClick={onHtml} disabled={!!busy}>{busy === 'el HTML' ? 'Generando…' : htmlLabel}</Button>
             <Button onClick={onPdf} disabled={!!busy}>{busy === 'el PDF' ? 'Generando PDF…' : 'Descargar PDF'}</Button>
           </div>
           {fail && <p className="app-muted" role="alert"><Badge tone="bad">Error</Badge> {fail}</p>}

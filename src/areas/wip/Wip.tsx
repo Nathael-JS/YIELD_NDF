@@ -1,10 +1,10 @@
 import { lazy, Suspense, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { Link } from 'react-router-dom';
-import { Badge, Button, Segmented, Select } from '../components/ui.tsx';
-import { cruce, desde, ordenes, stations, type Pieza, type Ventana } from '../lib/wip.ts';
-import { useApp } from '../store.ts';
-import { PageHead } from './Layout.tsx';
+import { Badge, Button, Segmented, Select } from '../../components/ui.tsx';
+import { cruce, desde, ordenes, stations, type Pieza, type Ventana } from '../../lib/wip.ts';
+import { useApp } from '../../store.ts';
+import { PageHead } from '../../pages/Layout.tsx';
 import { FlowTable, Kpis, Legend, n, OrderTable, UnitTable, useWip } from './wipParts.tsx';
 
 const WipTimeline = lazy(() => import('./WipTimeline.tsx'));
@@ -30,7 +30,7 @@ function WipView() {
   if (!read) return (
     <>
       <PageHead title="WIP" sub="Dónde está cada pieza y desde hace cuánto." />
-      <p className="yc-card app-empty">Carga el reporte WIP (general o por orden) en <Link to="/carga">Carga de datos</Link> para ver esta página.</p>
+      <p className="yc-card app-empty">Carga el reporte WIP (general o por orden) en <Link to="/wip/carga">Carga de datos</Link> para ver esta página.</p>
     </>
   );
   if (read.missing.length) return (
@@ -52,7 +52,7 @@ function WipView() {
   return (
     <>
       <PageHead title="WIP" sub={`${file!.name} · ${read.formato === 'por orden' ? 'reporte por orden' : 'reporte general'}`}>
-        <Link className="yc-btn yc-btn-secondary" to="/descargas">Descargar HTML o PDF</Link>
+        <Link className="yc-btn yc-btn-secondary" to="/wip/descargas">Descargar HTML o PDF</Link>
       </PageHead>
       <p className="app-wip-times" role="status">
         <span><span className="yc-kpi-label">Tiempo contado hasta</span> <strong className="app-mono">{read.corte.slice(0, 16)}</strong> <span className="app-muted">({FUENTE[read.fuente]})</span></span>

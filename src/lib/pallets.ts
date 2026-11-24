@@ -2,6 +2,7 @@
 // Las tarimas se guardan como una tabla limpia (TARIMAS_COLS): la misma que se exporta a CSV, se edita en Excel
 // y se vuelve a cargar.
 import type { Cell, ParsedFile } from './files.ts';
+import type { PalletLabelData } from '../components/label.tsx';
 
 const text = (v: Cell) => (v instanceof Date ? v.toISOString().slice(0, 10) : v == null ? '' : String(v).replace(/ /g, ' ').trim());
 const norm = (h: string) => h.toLowerCase().replace(/\s+/g, ' ').trim();
@@ -115,3 +116,9 @@ export const qrText = (t: Tarima) => ([
   ['PALLET', t.pallet], ['REF', t.ref], ['DN', t.dn], ['SO', t.so], ['PO', t.po], ['TO', t.to], ['PN', t.pn], ['QTY', t.qty], ['CTN', t.cartons],
   ['NW', t.nw], ['GW', t.gw], ['DIM', t.dims], ['COO', t.coo], ['HTS', t.hts], ['DATE', t.shipDate], ['SN', serialsOf(t).join(',')],
 ] as const).filter(([, v]) => v).map(([k, v]) => `${k}:${v}`).join('\n').normalize('NFD').replace(/[^\x20-\x7e\n]/g, '');
+
+/** Datos de la etiqueta de una tarima. */
+export const labelOf = (t: Tarima, index = 1, total = 1): PalletLabelData => ({
+  pallet: t.pallet || 'PAL—', customer: t.customer || '—', destination: t.destination || '—', ref: t.ref || '—', dn: t.dn, so: t.so, po: t.po, to: t.to, pn: t.pn, desc: t.desc,
+  qty: Number(t.qty) || 0, cartons: Number(t.cartons) || 0, nw: t.nw || '—', gw: t.gw || '—', dims: t.dims, coo: t.coo, hts: t.hts, battery: t.battery, shipDate: t.shipDate, index, total,
+});
