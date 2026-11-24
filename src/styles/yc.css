@@ -327,3 +327,6 @@ body { margin: 0; background: var(--surface-100); color: var(--ink); font: 400 1
 .yc-wheel-dots { display: flex; align-items: center; gap: var(--space-2); }
 @media (max-width: 640px) { .yc-wheel-stage { height: 300px; } .yc-wheel-card { width: 62vw; min-height: 230px; padding: var(--space-4); } .yc-wheel-card strong { font-size: 24px; } }
 @media (prefers-reduced-motion: reduce) { .yc-wheel-card { transition: opacity .2s; } }
+.yc-serials-last { margin: 0; font-size: 12px; color: var(--ink-muted); }
+.yc-serials-last b { font-weight: 600; } .yc-serials-last b.is-scan { color: var(--ok-fg); }
+.yc-label-test { margin-left: 2.5cqw; padding: .4cqw 1.6cqw; border: .6cqw solid #000; font: 700 3.4cqw/1.2 var(--font-sans); letter-spacing: .12em; vertical-align: middle; }

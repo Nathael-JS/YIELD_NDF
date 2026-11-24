@@ -8,6 +8,24 @@ Un cambio de componente se publica primero en el artefacto y después se copia a
 
 Los errores encontrados y cómo se corrigieron están en [ERRORES.md](ERRORES.md); las mejoras y cómo se hicieron, en [MEJORAS.md](MEJORAS.md).
 
+## [0.31.0] — 2026-11-26
+
+### Agregado
+- **Pallets:**
+  - El **FXNN DN** y el **NVIDIA DN** se escriben a mano. El DN del listado se ve como guía dentro del campo. El NVIDIA DN va en la etiqueta, el QR, el CSV y el PDF; el T/O pasa a la variante «Más texto».
+  - **Uno o varios archivos** en Carga para el listado de entregas y el WIP. Se unen por nombre de columna y una entrega repetida queda una sola vez.
+  - **QR:** «Descargar QR (PNG)» y «Cargar QR», que lee la imagen de una etiqueta (jsQR) y abre esa tarima.
+  - **Escáner:** cada lectura dice si vino del escáner (con los ms por carácter) o del teclado. Si escaneas el QR de una etiqueta en el campo de seriales, avisa.
+  - **Modo prueba ×9:** cada lectura entra 9 veces y la etiqueta sale marcada **PRUEBA**, también impresa. El QR lleva `TEST:1`.
+- Endpoints de la API revisados con una prueba de humo (20 casos: sin sesión, login con MFA, cada endpoint con sesión, salir).
+
+### Corregido
+- Guardar una tarima con un Pallet # repetido ya no reemplaza a la otra.
+- El CSV de tarimas escribe los números largos como `="…"`: Excel ya no los convierte en 6.20610E+13.
+- Las descargas de Pallets solo imprimen las etiquetas completas.
+- El Internal Ref sugerido continúa la numeración del shipping report.
+- El Pallet # repetido se detecta aunque traiga espacios.
+
 ## [0.30.0] — 2026-11-25
 
 ### Agregado

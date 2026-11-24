@@ -1,34 +1,37 @@
 import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button, FileChip } from '../components/ui.tsx';
-import { parseFile } from '../lib/files.ts';
+import { mergeParsed, parseFile } from '../lib/files.ts';
 import { local } from '../lib/wip.ts';
 import { shortDate, useApp, type FileType } from '../store.ts';
 import { PageHead } from './Layout.tsx';
 import { useArea } from '../areas.ts';
 
 const plural = (n: number, w: string) => `${n.toLocaleString('es-MX')} ${w}${n === 1 ? '' : 's'}`;
-const SLOTS: { type: FileType; label: string; accept: string; hint: string }[] = [
+const SLOTS: { type: FileType; label: string; accept: string; hint: string; multiple?: boolean }[] = [
   { type: 'TCQS', label: 'TCQS', accept: '.csv,.xlsx', hint: 'Yield por orden, modelo y estación (.csv o .xlsx)' },
   { type: 'FALLAS', label: 'PRIMERAS FALLAS', accept: '.csv,.xlsx', hint: 'FirstFail por unidad con su código de error (.csv o .xlsx): para NDF' },
-  { type: 'WIP', label: 'WIP', accept: '.xlsx,.csv', hint: 'Reporte WIP del MES por pieza, general o de una orden (.xlsx): dónde está cada una y desde hace cuánto' },
-  { type: 'DN', label: 'LISTADO DE ENTREGAS', accept: '.xlsx,.csv', hint: 'Entregas de SAP (download): DN, SO, T/O, modelo y piezas, para Pallets' },
+  { type: 'WIP', label: 'WIP', accept: '.xlsx,.csv', hint: 'Reporte WIP del MES por pieza, general o de una o varias órdenes (.xlsx): dónde está cada una y desde hace cuánto', multiple: true },
+  { type: 'DN', label: 'LISTADO DE ENTREGAS', accept: '.xlsx,.csv', hint: 'Entregas de SAP (download), uno o varios archivos: SO, T/O, modelo y piezas, para Pallets', multiple: true },
   { type: 'SHIPPING', label: 'SHIPPING REPORT', accept: '.xlsx', hint: 'Bitácora de embarques (FINISH GOOD): tarimas ya enviadas y datos por número de parte' },
   { type: 'TARIMAS', label: 'TARIMAS', accept: '.csv,.xlsx', hint: 'CSV de tarimas exportado desde Pallets (se puede editar en Excel y volver a cargar)' },
 ];
 
-function Slot({ type, label, accept, hint }: (typeof SLOTS)[number]) {
+function Slot({ type, label, accept, hint, multiple }: (typeof SLOTS)[number]) {
   const f = useApp((s) => s.files[type]), err = useApp((s) => s.errors[type]);
   const setFile = useApp((s) => s.setFile), setError = useApp((s) => s.setError), removeFile = useApp((s) => s.removeFile);
   const pick = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
 
-  async function load(file: File) {
+  // varios archivos del mismo reporte se unen en uno (los repetidos se quitan al leerlo: una pieza por serial, una entrega por DN)
+  async function load(...fs: File[]) {
     setBusy(true);
+    const name = fs.length > 1 ? `${fs.length} archivos: ${fs.map((x) => x.name).join(', ')}` : fs[0].name;
     try {
-      setFile(type, { ...(await parseFile(file)), name: file.name, loadedAt: shortDate(new Date()), cargado: local() });
+      const parts = await Promise.all(fs.map((x) => parseFile(x).catch((e) => { throw new Error(`${x.name}: ${e instanceof Error ? e.message : 'no se pudo leer'}`); })));
+      setFile(type, { ...(parts.length > 1 ? mergeParsed(parts) : parts[0]), name, loadedAt: shortDate(new Date()), cargado: local() });
     } catch (e) {
-      setError(type, `${file.name}: ${e instanceof Error ? e.message : 'no se pudo leer'}`);
+      setError(type, e instanceof Error ? e.message : `${name}: no se pudo leer`);
     } finally {
       setBusy(false);
     }
@@ -36,12 +39,12 @@ function Slot({ type, label, accept, hint }: (typeof SLOTS)[number]) {
   const detail = f && plural(f.rows.length, 'fila');
   return (
     <div className="app-slot">
-      <FileChip type={label} accept={accept} onFile={load}
+      <FileChip type={label} accept={accept} onFile={load} multiple={multiple}
         status={err ? 'error' : busy ? 'comparing' : f ? 'loaded' : 'empty'}
         meta={err ?? (busy ? 'Leyendo…' : f ? `${f.name} · ${detail}` : hint)} />
       {(f || err) && (
         <div className="yc-row">
-          <input ref={pick} type="file" hidden accept={accept} onChange={(e) => { const x = e.target.files?.[0]; e.target.value = ''; if (x) load(x); }} />
+          <input ref={pick} type="file" hidden accept={accept} multiple={multiple} onChange={(e) => { const xs = [...(e.target.files ?? [])]; e.target.value = ''; if (xs.length) load(...xs); }} />
           <Button variant="quiet" onClick={() => pick.current?.click()}>Cambiar archivo</Button>
           {/* quita el archivo de la app; lo ya guardado en el historial se borra desde Historial */}
           <Button variant="quiet" onClick={() => confirm(`¿Quitar ${f?.name ?? 'el archivo'} de la carga? Lo guardado en el historial no se borra.`) && removeFile(type)}>Borrar archivo</Button>

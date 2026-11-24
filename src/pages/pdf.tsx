@@ -358,14 +358,14 @@ function LabelPage({ d, qr }: { d: PalletLabelData; qr: string }) {
         </Svg>}
       </View>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', paddingTop: 7, flexGrow: 1 }}>
-        <F k="Internal Ref" v={d.ref} wide /><F k="DN" v={d.dn} /><F k="SO" v={d.so} /><F k="PO" v={d.po} /><F k="T/O" v={d.to} />
+        <F k="Internal Ref" v={d.ref} wide /><F k="DN" v={d.dn} /><F k="NVIDIA DN" v={d.nvdn || '—'} /><F k="SO" v={d.so} /><F k="PO" v={d.po} />
         <F k="Part number" v={d.pn} wide /><F k="Piezas" v={d.qty} /><F k="Cajas" v={d.cartons} /><F k="Peso neto" v={`${d.nw} kg`} /><F k="Peso bruto" v={`${d.gw} kg`} />
       </View>
       <View style={[L.row, { borderTopWidth: 1, paddingTop: 7, alignItems: 'flex-end' }]}>
         <View style={{ flex: 1, paddingRight: 8, gap: 5 }}>
           {d.battery ? <Text style={{ borderWidth: 1.5, padding: 4, fontSize: 7, fontFamily: 'Helvetica-Bold' }}>{d.battery}</Text> : null}
-          <Text style={{ fontSize: 7 }}>{`COO ${d.coo} · HTS ${d.hts} · ${d.dims} cm · ${d.shipDate}`}</Text>
-          <Text style={{ fontSize: 10 }}>Tarima <Text style={{ fontFamily: 'Courier-Bold', fontSize: 16 }}>{d.index}</Text> de <Text style={{ fontFamily: 'Courier-Bold', fontSize: 16 }}>{d.total}</Text></Text>
+          <Text style={{ fontSize: 7 }}>{`T/O ${d.to} · COO ${d.coo} · HTS ${d.hts} · ${d.dims} cm · ${d.shipDate}`}</Text>
+          <Text style={{ fontSize: 10 }}>Tarima <Text style={{ fontFamily: 'Courier-Bold', fontSize: 16 }}>{d.index}</Text> de <Text style={{ fontFamily: 'Courier-Bold', fontSize: 16 }}>{d.total}</Text>{d.test ? '   PRUEBA' : ''}</Text>
         </View>
         {n > 0 && <Svg width={96} height={96} viewBox={`-4 -4 ${n + 8} ${n + 8}`}>
           {m.flatMap((r, yy) => r.map((on, xx) => (on ? <Rect key={`${xx}.${yy}`} x={xx} y={yy} width={1.02} height={1.02} fill="#000" /> : null)))}

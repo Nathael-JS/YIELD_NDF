@@ -23,3 +23,9 @@ export async function parseFile(file: File): Promise<ParsedFile> {
   const [head, ...rows] = table;
   return { headers: head.map((h, i) => (h == null || h === '' ? `Columna ${i + 1}` : String(h).trim())), rows };
 }
+
+/** Une varios archivos del mismo reporte en uno: columnas por nombre (las que falten quedan vacías), filas una tras otra. */
+export function mergeParsed(parts: ParsedFile[]): ParsedFile {
+  const headers = [...new Set(parts.flatMap((p) => p.headers))];
+  return { headers, rows: parts.flatMap((p) => p.rows.map((r) => headers.map((h) => { const i = p.headers.indexOf(h); return i < 0 ? null : r[i] ?? null; }))) };
+}

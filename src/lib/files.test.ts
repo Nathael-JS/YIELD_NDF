@@ -8,3 +8,9 @@ test('parseFile lee CSV como texto y conserva ceros a la izquierda', async () =>
   await assert.rejects(parseFile(new File(['x'], 'a.pdf')), /Formato no soportado/);
   await assert.rejects(parseFile(new File([''], 'a.csv')), /no tiene filas/);
 });
+
+test('mergeParsed: columnas por nombre (en otro orden o faltantes) y filas una tras otra', async () => {
+  const { mergeParsed } = await import('./files.ts');
+  const m = mergeParsed([{ headers: ['DN_NO', 'SO'], rows: [['1', 'a']] }, { headers: ['SO', 'DN_NO', 'X'], rows: [['b', '2', 'x']] }]);
+  assert.deepEqual(m, { headers: ['DN_NO', 'SO', 'X'], rows: [['1', 'a', null], ['2', 'b', 'x']] });
+});

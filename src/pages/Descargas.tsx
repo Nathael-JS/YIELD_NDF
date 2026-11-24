@@ -7,7 +7,7 @@ import { by, modelKey, periodOf, periodsOf, shortDay, toWatch } from '../lib/tcq
 import { ordenes, stations, urgente } from '../lib/wip.ts';
 import { useApp, useData } from '../store.ts';
 import { useArea } from '../areas.ts';
-import { labelOf, qrText, readTarimas, tarimasFile, toCsv } from '../lib/pallets.ts';
+import { labelOf, qrText, readTarimas, revisar, tarimasFile, toCsv } from '../lib/pallets.ts';
 import { PageHead } from './Layout.tsx';
 import { codesOf, NdfReport, useFails } from '../areas/yield/Ndf.tsx';
 import { criticas, kpisOf, useWip } from '../areas/wip/wipParts.tsx';
@@ -38,16 +38,17 @@ export default function Descargas() {
 /** Pallets: las tarimas del equipo en CSV (se edita y se vuelve a cargar) y sus etiquetas en un solo PDF. */
 function PalletsCard() {
   const file = useApp((s) => s.files.TARIMAS), { busy, fail, run } = useJob();
-  const ts = file ? readTarimas(file).tarimas.filter((t) => t.pallet) : [];
-  if (!ts.length) return <Card title="Pallets" empty={<>Arma y guarda tarimas en <Link to="/pallets">Etiquetas</Link>, o carga un CSV de tarimas en <Link to="/pallets/carga">Carga de datos</Link>.</>} />;
-  const csv = run('el CSV', async () => download(`tarimas-${new Date().toISOString().slice(0, 10)}.csv`, new Blob([toCsv(tarimasFile(ts))], { type: 'text/csv' })));
+  const todas = file ? readTarimas(file).tarimas.filter((t) => t.pallet) : [];
+  const ts = todas.filter((t) => revisar(t, new Set()).listo), fuera = todas.length - ts.length; // como en la página: solo se imprimen las completas
+  if (!todas.length) return <Card title="Pallets" empty={<>Arma y guarda tarimas en <Link to="/pallets">Etiquetas</Link>, o carga un CSV de tarimas en <Link to="/pallets/carga">Carga de datos</Link>.</>} />;
+  const csv = run('el CSV', async () => download(`tarimas-${new Date().toISOString().slice(0, 10)}.csv`, new Blob([toCsv(tarimasFile(todas))], { type: 'text/csv' })));
   const pdf = run('el PDF', async () => {
     const { labelsPdf } = await import('./pdf.tsx');
     download(`etiquetas-${ts.length}-tarimas.pdf`, await labelsPdf(ts.map((t, i) => ({ d: labelOf(t, i + 1, ts.length), qr: qrText(t) }))));
   });
   return (
-    <Card title="Pallets" what={`${ts.length} tarimas de este equipo: CSV editable (se vuelve a cargar en Carga) y sus etiquetas 4×6 in en un solo PDF, una por página.`}
-      busy={busy === 'el PDF' ? 'el PDF' : busy === 'el CSV' ? 'el HTML' : undefined} fail={fail} onHtml={csv} onPdf={pdf} htmlLabel="Exportar CSV" />
+    <Card title="Pallets" what={`${todas.length} tarimas de este equipo en CSV editable (se vuelve a cargar en Carga) y las etiquetas 4×6 in de las ${ts.length} completas en un solo PDF${fuera ? `; ${fuera} incompletas no se imprimen` : ''}.`}
+      busy={busy === 'el PDF' ? 'el PDF' : busy === 'el CSV' ? 'el HTML' : undefined} fail={fail} onHtml={csv} onPdf={ts.length ? pdf : undefined} htmlLabel="Exportar CSV" />
   );
 }
 
@@ -147,7 +148,7 @@ function Card({ title, what, empty, meta, busy, fail, onHtml, onPdf, children, h
           {children && <div className="app-dl-filters">{children}</div>}
           <div className="yc-row">
             <Button variant="primary" onClick={onHtml} disabled={!!busy}>{busy === 'el HTML' ? 'Generando…' : htmlLabel}</Button>
-            <Button onClick={onPdf} disabled={!!busy}>{busy === 'el PDF' ? 'Generando PDF…' : 'Descargar PDF'}</Button>
+            <Button onClick={onPdf} disabled={!!busy || !onPdf}>{busy === 'el PDF' ? 'Generando PDF…' : 'Descargar PDF'}</Button>
           </div>
           {fail && <p className="app-muted" role="alert"><Badge tone="bad">Error</Badge> {fail}</p>}
         </>

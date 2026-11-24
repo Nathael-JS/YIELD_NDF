@@ -4,9 +4,11 @@ import qrcode from 'qrcode-generator';
 import { code128 } from '../lib/code128.ts';
 
 export interface PalletLabelData {
-  pallet: string; customer: string; destination: string; ref: string; dn: string; so: string; po: string; to: string;
+  pallet: string; customer: string; destination: string; ref: string; dn: string; nvdn?: string; so: string; po: string; to: string;
   pn: string; desc?: string; qty: number; cartons: number; nw: string; gw: string; dims: string; coo: string; hts: string;
   battery?: string; shipDate: string; index: number; total: number;
+  /** Etiqueta de prueba (modo ×9): sale con la marca PRUEBA, también impresa. */
+  test?: boolean;
 }
 /** qr: QR grande y menos texto · text: más datos y QR mediano. */
 export type LabelVariant = 'qr' | 'text';
@@ -58,22 +60,43 @@ export function PalletLabel({ d, qr, variant = 'qr', sample = false }: { d: Pall
       </section>
       <section className="yc-label-grid">
         <Field k="Internal Ref" v={d.ref} wide />
-        <Field k="DN" v={d.dn} /><Field k="SO" v={d.so} />
-        <Field k="PO" v={d.po} /><Field k="T/O" v={d.to} />
+        <Field k="DN" v={d.dn} /><Field k="NVIDIA DN" v={d.nvdn || '—'} />
+        <Field k="SO" v={d.so} /><Field k="PO" v={d.po} />
         <Field k="Part number" v={d.pn} wide />
         {all && d.desc && <Field k="Descripción" v={d.desc} wide />}
         <Field k="Piezas" v={d.qty} /><Field k="Cajas" v={d.cartons} />
         <Field k="Peso neto" v={`${d.nw} kg`} /><Field k="Peso bruto" v={`${d.gw} kg`} />
-        {all && <><Field k="Medidas (cm)" v={d.dims} /><Field k="COO" v={d.coo} /><Field k="HTS" v={d.hts} /><Field k="Fecha de envío" v={d.shipDate} /></>}
+        {all && <><Field k="T/O" v={d.to} /><Field k="Medidas (cm)" v={d.dims} /><Field k="COO" v={d.coo} /><Field k="HTS" v={d.hts} /><Field k="Fecha de envío" v={d.shipDate} wide /></>}
       </section>
       <footer className="yc-label-foot">
         <div className="yc-label-side">
           {d.battery && <p className="yc-label-battery">{d.battery}</p>}
           {!all && <p className="yc-label-k">COO {d.coo} · HTS {d.hts} · {d.dims} cm</p>}
-          <p className="yc-label-count">Tarima <b>{d.index}</b> de <b>{d.total}</b></p>
+          <p className="yc-label-count">Tarima <b>{d.index}</b> de <b>{d.total}</b>{d.test && <span className="yc-label-test">PRUEBA</span>}</p>
         </div>
         <div className="yc-label-code"><Qr text={qr} />{sample && <span className="yc-label-sample">MUESTRA</span>}</div>
       </footer>
     </article>
   );
+}
+
+/** El QR como imagen PNG (fondo blanco, margen de 4 módulos), para pegarlo o probar el lector. */
+export function qrPng(text: string, px = 10): Promise<Blob> {
+  const m = qrModules(text);
+  if (!m) return Promise.reject(new Error('demasiados datos para un QR'));
+  const n = m.length, size = (n + 8) * px, c = document.createElement('canvas');
+  c.width = c.height = size;
+  const g = c.getContext('2d')!;
+  g.fillStyle = '#fff'; g.fillRect(0, 0, size, size); g.fillStyle = '#000';
+  m.forEach((r, y) => r.forEach((on, x) => on && g.fillRect((x + 4) * px, (y + 4) * px, px, px)));
+  return new Promise((ok, ko) => c.toBlob((b) => (b ? ok(b) : ko(new Error('no se pudo crear la imagen'))), 'image/png'));
+}
+
+/** Lee el QR de una imagen (foto o captura). `null` si no encuentra uno. */
+export async function readQrImage(file: File): Promise<string | null> {
+  const { default: jsQR } = await import('jsqr');
+  const img = await createImageBitmap(file), k = Math.min(1, 1600 / Math.max(img.width, img.height)); // fotos grandes: más rápido y igual de legible
+  const c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+  const g = c.getContext('2d')!; g.drawImage(img, 0, 0, c.width, c.height);
+  return jsQR(g.getImageData(0, 0, c.width, c.height).data, c.width, c.height)?.data ?? null;
 }
