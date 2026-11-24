@@ -2,7 +2,7 @@
 // No se estima con el TCQS (no registra la entrada a almacén): se cuenta del archivo y se cruza con el TCQS
 // por orden y estación (FPY de la estación junto a las piezas que esperan en ella).
 import type { Cell, ParsedFile } from './files.ts';
-import { by, META_FPY, type Rec } from './tcqs.ts';
+import { by, META_FPY, text, type Rec } from './tcqs.ts';
 
 export const WIP_REQUIRED = ['SERIAL_NUMBER', 'MODEL_NAME', 'MO_NUMBER', 'SECTION_NAME', 'WIP_GROUP', 'IN_STATION_TIME', 'ERROR_FLAG'] as const;
 /** Opcionales. HOUR: horas en la estación (reporte general); sin ella (reporte por orden) se cuentan hasta la hora de carga.
@@ -24,7 +24,6 @@ const OCULTAS = new Set(['FG', 'PACK_CTN', 'PACK_PALT']);
 /** Orden del flujo por sección; las que no estén van al final. */
 export const SECCIONES = ['INPUT', 'SMT', 'PTH', 'ICT', 'TEST', 'ASSY_2', 'SI'];
 
-const text = (v: Cell) => (v == null ? '' : String(v).trim());
 const pad = (n: number) => String(n).padStart(2, '0');
 const stamp = (d: Date) => `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:${pad(d.getUTCSeconds())}`;
 /** «2026/05/21 14:58:21», fecha de Excel o número de serie de Excel → «2026-05-21 14:58:21» (hora de planta, sin zona). */

@@ -55,8 +55,8 @@ export function PalletLabel({ d, qr, variant = 'qr', sample = false }: { d: Pall
       </header>
       <section className="yc-label-pallet">
         <span className="yc-label-k">Pallet #</span>
-        <strong>{d.pallet}</strong>
-        <Barcode text={d.pallet} />
+        <strong>{d.pallet || '—'}</strong>
+        {d.pallet ? <Barcode text={d.pallet} /> : <span className="yc-label-bar" aria-hidden />}
       </section>
       <section className="yc-label-grid">
         <Field k="Internal Ref" v={d.ref} wide />

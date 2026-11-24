@@ -6,7 +6,7 @@ import { extname, join, normalize, resolve } from 'node:path';
 import pg from 'pg';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { checkPassword, checkTotp, cookieOf, failed, hashPassword, HOURS, limited, newSecret, otpUri, sign, verify } from './auth.js';
-import { validate } from './validate.js';
+import { validate, validateEntregas, validateTarima } from './validate.js';
 
 const DIST = resolve('dist');
 const TYPES = { '.ico': 'image/x-icon', '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.woff': 'font/woff', '.json': 'application/json' };
@@ -47,7 +47,13 @@ create table if not exists yield_modelos (
 -- comentarios de una gráfica ampliada (Gráficos); grafica = qué gráfica y con qué rango de fechas
 create table if not exists yield_comentarios (
   id serial primary key, grafica text not null, usuario text not null, texto text not null, creado timestamptz not null default now());
-create index if not exists yield_comentarios_grafica on yield_comentarios (grafica)`)
+create index if not exists yield_comentarios_grafica on yield_comentarios (grafica);
+-- Pallets: cada listado de entregas cargado (histórico por fecha y hora de subida) y las tarimas (Pallet # único en toda la base)
+create table if not exists pallet_cargas (
+  id serial primary key, archivo text not null, usuario text not null, filas int not null, entregas jsonb not null, subida timestamptz not null default now());
+create table if not exists pallet_tarimas (
+  pallet text primary key, datos jsonb not null, usuario text not null,
+  creada timestamptz not null default now(), actualizada timestamptz not null default now(), impresa timestamptz)`)
   // cuenta principal (super administrador) desde el entorno: ADMIN_USER (y ADMIN_PASSWORD si hay que crearla)
   .then(async () => {
     // si la cuenta ya existe (creada desde «Crear cuenta») se activa como administradora y conserva su contraseña
@@ -238,6 +244,52 @@ async function comments(req, res, me, url) {
   return json(res, 200, c);
 }
 
+/** Pallets: listados de entregas (histórico) y tarimas. Todos los usuarios con sesión; los permisos por área vendrán después. */
+async function pallets(req, res, me, url) {
+  if (url.pathname === '/api/pallets/cargas') {
+    if (req.method === 'GET') {
+      const id = Number(url.searchParams.get('id'));
+      if (id) {
+        const { rows: [c] } = await db.query('select entregas from pallet_cargas where id = $1', [id]);
+        return c ? json(res, 200, c) : json(res, 404, { error: 'Carga no encontrada' });
+      }
+      const { rows } = await db.query(`select id, archivo, usuario, filas, subida from pallet_cargas order by subida desc limit 200`);
+      return json(res, 200, { cargas: rows });
+    }
+    if (req.method === 'POST') {
+      const v = validateEntregas(await body(req));
+      if (v.error) return json(res, 400, { error: v.error });
+      const { rows: [c] } = await db.query('insert into pallet_cargas (archivo, usuario, filas, entregas) values ($1, $2, $3, $4) returning id, subida',
+        [v.archivo, me.nombre, v.entregas.length, JSON.stringify(v.entregas)]);
+      return json(res, 200, c);
+    }
+  }
+  if (url.pathname === '/api/pallets/tarimas') {
+    if (req.method === 'GET') {
+      const { rows } = await db.query(`select datos, usuario, creada, actualizada, impresa from pallet_tarimas order by creada desc limit 2000`);
+      return json(res, 200, { tarimas: rows });
+    }
+    if (req.method === 'POST') {
+      // POST: tarima nueva (409 si el Pallet # ya existe). Con `antes`: edición, aunque cambie el Pallet #; todo en una transacción
+      const v = validateTarima(await body(req));
+      if (v.error) return json(res, 400, { error: v.error });
+      const c = await db.connect();
+      try {
+        await c.query('begin');
+        if (v.antes && v.antes !== v.pallet) await c.query('delete from pallet_tarimas where pallet = $1', [v.antes]);
+        const impresa = v.datos.printed ? 'now()' : 'null';
+        const { rowCount } = await c.query(`insert into pallet_tarimas (pallet, datos, usuario, impresa) values ($1, $2, $3, ${impresa})
+          on conflict (pallet) do update set datos = excluded.datos, actualizada = now(), impresa = coalesce(excluded.impresa, pallet_tarimas.impresa)
+          where excluded.pallet = $4::text`, [v.pallet, JSON.stringify(v.datos), me.nombre, v.antes]); // solo se actualiza la tarima que se edita: nunca otra con ese Pallet #
+        if (!rowCount) { await c.query('rollback'); return json(res, 409, { error: `El Pallet # ${v.pallet} ya existe en la base` }); }
+        await c.query('commit');
+        return json(res, 200, { pallet: v.pallet });
+      } catch (e) { await c.query('rollback'); throw e; } finally { c.release(); }
+    }
+  }
+  return json(res, req.method === 'GET' || req.method === 'POST' ? 404 : 405, { error: 'No encontrado' });
+}
+
 async function account(req, res, path) {
   if (path === '/api/logout') { res.setHeader('set-cookie', cookie('', 0)); return json(res, 200, {}); }
   if (path === '/api/me') {
@@ -389,6 +441,7 @@ async function api(req, res) {
   if (url.pathname === '/api/modelos') return models(req, res, s);
   if (url.pathname === '/api/comentarios') return comments(req, res, s, url);
   if (url.pathname === '/api/respaldos') return backups(req, res, s, url);
+  if (url.pathname.startsWith('/api/pallets/')) return pallets(req, res, s, url);
   if (req.method === 'GET' && url.pathname === '/api/cargas') {
     const { rows } = await db.query(`select id, sesion, usuario, archivo, filas, entradas, primer_pase, primera_falla, segundo_pase,
       to_char(desde, 'YYYY-MM-DD') desde, to_char(hasta, 'YYYY-MM-DD') hasta, guardado_en, congruencia from yield_cargas order by guardado_en desc limit 200`);

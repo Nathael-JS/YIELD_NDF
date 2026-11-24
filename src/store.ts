@@ -10,7 +10,7 @@ import { modelKey, readTcqs } from './lib/tcqs.ts';
 
 // Los modelos de Juliet (BOM) viven en la base (`modelos`); se actualizan en Base de datos.
 // FALLAS = reporte de primeras fallas por unidad (códigos de error), para la página NDF; WIP = reporte WIP del MES por pieza
-export const FILE_TYPES = ['TCQS', 'FALLAS', 'WIP', 'DN', 'SHIPPING', 'TARIMAS'] as const;
+export const FILE_TYPES = ['TCQS', 'FALLAS', 'WIP', 'DN', 'TARIMAS'] as const;
 export type FileType = (typeof FILE_TYPES)[number];
 
 /** `cargado`: hora local de la carga («2026-11-23 10:15:00»); los archivos guardados antes de 0.27 no la traen. */

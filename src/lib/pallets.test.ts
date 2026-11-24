@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { defaultsFor, desdeEntrega, fromQr, qrText, readEntregas, readShipping, readTarimas, revisar, tarimasFile, toCsv, vacia } from './pallets.ts';
+import { desdeEntrega, entregasFile, fromQr, qrText, readEntregas, readTarimas, revisar, tarimasFile, toCsv, vacia } from './pallets.ts';
 
 test('readEntregas: una por DN, T/O sin ceros a la izquierda; sin columnas clave no se lee', () => {
   const H = ['TO_NO', 'DN_NO', 'SO_NUMBER', 'MODEL_NAME', 'MODEL_DESC', 'SHIPPING_QTY', 'CUST_PO', 'CUST_NAME', 'CITY1', 'COUNTRY', 'UNIT_NW', 'UNIT_GW'];
@@ -9,17 +9,9 @@ test('readEntregas: una por DN, T/O sin ceros a la izquierda; sin columnas clave
   assert.deepEqual(readEntregas({ headers: ['DN_NO'], rows: [] }).missing, ['SO_NUMBER', 'TO_NO', 'MODEL_NAME', 'SHIPPING_QTY', 'CUST_PO']);
 });
 
-test('readShipping: renglón de áreas, filas del mismo embarque sin Internal Ref, seriales por renglón y FIN', () => {
-  const areas = ['SHIPPING', 'ITC', null, 'FULLFILMENT', null, null, null, null];
-  const campos = ['Internal Ref', 'Date & hour of receive (ITC)', 'FXNN DN', 'Part\nNumber FXNN', 'Quantity (PCS)', 'Serial#', 'Pallet #', 'HTS CODE'];
-  const r = readShipping({ headers: areas.map(String), rows: [campos,
-    ['FGNS-1', new Date('2026-08-05'), 5276000000, 'PN-A', 7, 'MT1\r\nMT2', 'PALFX98195', '8517.62.0090'],
-    [null, null, 5276000000, 'PN-A', 2, 'MT3\r\nMT4', 'PALFX98196', '8517.62.0090'],
-    [null, null, 5276000009, 'PN-B', 9, 'MT5', null, null],
-    ['FIN', 'FIN', null, null, null, null, null, null], ['FGNS-9', null, 1, 'X', 1, 'MT9', 'PALFX1', null]] });
-  assert.deepEqual(r.tarimas.map((t) => [t.pallet, t.ref, t.dn, t.serials]), [['PALFX98195', 'FGNS-1', '5276000000', 'MT1 MT2'], ['PALFX98196', 'FGNS-1', '5276000000', 'MT3 MT4']]);
-  assert.equal(r.sinPallet, 1);
-  assert.deepEqual(defaultsFor('PN-A', r.tarimas).hts, '8517.62.0090');
+test('entregasFile: un listado guardado vuelve a leerse igual', () => {
+  const e = { dn: '5278000047', so: '2683000058', to: '1687795', po: '73593605', model: 'SA029400', desc: 'JULIET', qty: 36, customer: 'NVIDIA', destination: 'Israel · IL', loose: '1 caja', nw: '360', gw: '360' };
+  assert.deepEqual(readEntregas(entregasFile([e])).entregas, [e]);
 });
 
 test('revisar: obligatorios, pesos, formato y repetido de Pallet #, seriales contra piezas y aviso del WIP', () => {

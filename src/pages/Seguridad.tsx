@@ -1,14 +1,16 @@
-import { useState, type FormEvent } from 'react';
+import { lazy, Suspense, useState, type FormEvent } from 'react';
 import { Badge, Button } from '../components/ui.tsx';
 import { apiMe, changePassword, mfaConfirm, mfaStart } from '../lib/db.ts';
 import { useApp } from '../store.ts';
 import { PageHead } from './Layout.tsx';
+// el QR se carga solo al configurar el MFA: la librería no pesa en el resto de la app
+const Qr = lazy(() => import('../components/label.tsx').then((m) => ({ default: m.Qr })));
 
 /** Contraseña y MFA de la propia cuenta. Si la contraseña es temporal o un administrador no tiene MFA, la app solo muestra esto. */
 export default function Seguridad() {
   const cuenta = useApp((s) => s.cuenta), admin = useApp((s) => s.admin), login = useApp((s) => s.login);
   const [msg, setMsg] = useState<[ 'ok' | 'bad', string ]>();
-  const [qr, setQr] = useState<{ img: string; secreto: string }>();
+  const [qr, setQr] = useState<{ uri: string; secreto: string }>();
   const refresh = () => apiMe().then(login);
   const run = (f: () => Promise<unknown>, ok: string) => f().then(() => { setMsg(['ok', ok]); return refresh(); }).catch((e) => setMsg(['bad', e.message]));
 
@@ -22,8 +24,7 @@ export default function Seguridad() {
   const startMfa = async () => {
     try {
       const { secreto, uri } = await mfaStart();
-      const QR = await import('qrcode'); // solo aquí: no pesa en el resto de la app
-      setQr({ img: await QR.toDataURL(uri, { margin: 1, width: 200 }), secreto });
+      setQr({ uri, secreto });
     } catch (e) {
       setMsg(['bad', (e as Error).message]);
     }
@@ -55,7 +56,7 @@ export default function Seguridad() {
           <Button onClick={startMfa}>{cuenta.mfa ? 'Configurar en otro teléfono' : 'Configurar MFA'}</Button>
         ) : (
           <div className="app-mfa">
-            <img src={qr.img} width={200} height={200} alt="Código QR para la app autenticadora" />
+            <span className="app-mfa-qr"><Suspense fallback={null}><Qr text={qr.uri} /></Suspense></span>
             <div>
               <p className="app-muted">Escanea el código con la app. Si no puedes, escribe esta clave:</p>
               <p className="app-mono app-secret">{qr.secreto.match(/.{1,4}/g)!.join(' ')}</p>

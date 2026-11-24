@@ -1,5 +1,8 @@
 // Escalas de las gráficas: ejes en pasos limpios (1, 2, 2.5, 5, 10…).
 
+/** Entero con separador de miles (es-MX). */
+export const num = (v: number) => v.toLocaleString('es-MX');
+
 export function fmt(v: number) {
   return Number(v.toFixed(2)).toLocaleString('es-MX');
 }

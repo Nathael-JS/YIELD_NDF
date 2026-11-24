@@ -1,6 +1,7 @@
 // API del servidor (server/index.js): cuentas y datos en Neon. Misma dirección que la app: la sesión va en una
 // cookie que JavaScript no puede leer, y ninguna clave vive en el navegador.
 import type { Congruencia, DbRow } from './tcqs.ts';
+import type { Entrega, Tarima } from './pallets.ts';
 
 /** Lo llama la app cuando el servidor dice que la sesión ya no vale (vencida o cerrada). */
 export let onExpired = () => {};
@@ -65,3 +66,14 @@ export const getRespaldo = (id: number) => call<DatosRespaldo>(`/api/respaldos?i
 export const respaldoAccion = (a: { accion: 'crear' | 'borrar'; carga: number } | { accion: 'restaurar'; id: number } | { accion: 'cargar'; datos: unknown }) =>
   post<{ id?: number; vence?: string; guardadas?: number }>('/api/respaldos', a);
 export const loadCargas = () => call<{ cargas: Carga[] }>('/api/cargas').then((b) => b.cargas);
+
+// ── Pallets ──
+export interface PalletCarga { id: number; archivo: string; usuario: string; filas: number; subida: string }
+/** Cada listado de entregas cargado queda en la base con su fecha y hora (el histórico). */
+export const savePalletCarga = (archivo: string, entregas: Entrega[]) => post<{ id: number; subida: string }>('/api/pallets/cargas', { archivo, entregas });
+export const loadPalletCargas = () => call<{ cargas: PalletCarga[] }>('/api/pallets/cargas').then((b) => b.cargas);
+export const loadPalletCarga = (id: number) => call<{ entregas: Entrega[] }>(`/api/pallets/cargas?id=${id}`).then((b) => b.entregas);
+export interface TarimaDb { datos: Tarima; usuario: string; creada: string; actualizada: string; impresa: string | null }
+export const loadTarimasDb = () => call<{ tarimas: TarimaDb[] }>('/api/pallets/tarimas').then((b) => b.tarimas);
+/** Tarima nueva (409 si el Pallet # ya existe en la base) o edición de la que se guardó como `antes`. */
+export const saveTarimaDb = (tarima: Tarima, antes?: string) => post<{ pallet: string }>('/api/pallets/tarimas', { tarima, antes });

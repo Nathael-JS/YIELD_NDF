@@ -33,7 +33,7 @@ export default function Yield() {
   const ps = periodsOf(rs, period);
   const cur = pick === WHOLE ? undefined : ps.find(([k]) => k === pick) ?? ps.at(-1);
   const i = cur ? ps.indexOf(cur) : -1;
-  const { st, sl, kpiList, table, scope } = view(rs, period, cur?.[0], ps[i - 1]?.[0], model === ALL ? 'todas las estaciones' : model, focus);
+  const { sl, kpiList, table, scope } = view(rs, period, cur?.[0], ps[i - 1]?.[0], model === ALL ? 'todas las estaciones' : model, focus);
   const chart = (id: string) => sl.find((s) => s.id === id)?.content;
   const sub = cur ? `Juliet · ${cur[1]}${i > 0 ? ` · comparado con ${ps[i - 1][1]}` : ''}` : `Juliet · ${shortDay(from!)} – ${shortDay(to!)}`;
   const kpis = <>{kpiList.map((k) => <KpiTile key={k.label} {...k} />)}</>;

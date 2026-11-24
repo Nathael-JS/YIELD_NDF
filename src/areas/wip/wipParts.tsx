@@ -5,7 +5,8 @@ import { modelKey, pctText } from '../../lib/tcqs.ts';
 import { nivel, readWip, urgente, type Estado, type ordenes, type Pieza, type stations } from '../../lib/wip.ts';
 import { useApp, useData } from '../../store.ts';
 
-export const n = (v: number) => v.toLocaleString('es-MX');
+import { num as n } from '../../lib/chart.ts';
+export { n };
 /** 45 min · 5.2 h · 6 d 4 h */
 export const dur = (h: number) => (h < 1 ? `${Math.round(h * 60)} min` : h < 48 ? `${h.toFixed(1)} h` : `${Math.floor(Math.round(h) / 24)} d ${Math.round(h) % 24} h`);
 export const TONE: Record<Estado, 'neutral' | 'warn' | 'bad' | 'info'> = { Línea: 'neutral', Hold: 'warn', Reparación: 'info', Bonpile: 'bad' };

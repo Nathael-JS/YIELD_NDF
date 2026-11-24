@@ -6,7 +6,7 @@ import { by, byFpy, change, countOrders, fromDb, pctText, ranges, readTcqs, shor
 import { useData } from '../../store.ts';
 import { PageHead } from '../../pages/Layout.tsx';
 
-const n = (v: number) => v.toLocaleString('es-MX');
+import { num as n } from '../../lib/chart.ts';
 type Mode = 'dia' | 'semana';
 const label = ([a, b]: [string, string]) => (a === b ? shortDay(a) : `${shortDay(a)} – ${shortDay(b)}`);
 const CAMPOS: Record<keyof Congruencia['campos'], string> = {
