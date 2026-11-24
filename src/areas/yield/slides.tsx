@@ -1,7 +1,7 @@
 // Gráficas del TCQS; las usan Inicio (carrusel), Gráficos (cuadrícula) y Yield.
-import { BarChart, Histogram, ParetoChart, ScatterPlot, TrendChart } from '../components/charts.tsx';
-import type { CarouselSlide } from '../components/ui.tsx';
-import { by, byFpy, META_FPY, periodOf, type Grain, type Rec } from '../lib/tcqs.ts';
+import { BarChart, Histogram, ParetoChart, ScatterPlot, TrendChart } from '../../components/charts.tsx';
+import type { CarouselSlide } from '../../components/ui.tsx';
+import { by, byFpy, META_FPY, periodOf, type Grain, type Rec } from '../../lib/tcqs.ts';
 
 const r1 = (n: number) => Math.round(n * 10) / 10;
 const meta = [{ value: META_FPY, label: `Meta FPY ${META_FPY} %` }];

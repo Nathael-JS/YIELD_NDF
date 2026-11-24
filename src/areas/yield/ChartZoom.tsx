@@ -1,8 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from 'react';
-import { Badge, Button } from '../components/ui.tsx';
-import { loadComentarios, saveComentario, type Comentario } from '../lib/db.ts';
-import { download } from '../lib/download.ts';
-import { shortDate } from '../store.ts';
+import { Badge, Button } from '../../components/ui.tsx';
+import { loadComentarios, saveComentario, type Comentario } from '../../lib/db.ts';
+import { download } from '../../lib/download.ts';
+import { shortDate } from '../../store.ts';
 import type { Slide } from './slides.tsx';
 
 /** Gráfica ampliada en pantalla dividida: la gráfica, la tabla con sus datos y comentarios guardados en la base.

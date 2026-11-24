@@ -1,10 +1,10 @@
 import { useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
-import { ChartCarousel } from '../components/ui.tsx';
-import { shortDay } from '../lib/tcqs.ts';
-import { useData } from '../store.ts';
+import { ChartCarousel } from '../../components/ui.tsx';
+import { shortDay } from '../../lib/tcqs.ts';
+import { useData } from '../../store.ts';
 import ChartZoom from './ChartZoom.tsx';
-import { NeedTcqs, PageHead } from './Layout.tsx';
+import { NeedTcqs, PageHead } from '../../pages/Layout.tsx';
 import { slides, type Slide } from './slides.tsx';
 
 /** Cambio de vista animado por el navegador (View Transitions). Sin soporte o con «reducir movimiento», cambia al instante. */

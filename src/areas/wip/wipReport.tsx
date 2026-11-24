@@ -1,7 +1,7 @@
 // Reporte WIP descargable en HTML: resumen y semáforo, flujo por estación, urgentes y bloqueadas, y por orden.
 import { renderToStaticMarkup } from 'react-dom/server';
-import type { Pieza } from '../lib/wip.ts';
-import { htmlDoc } from './report.tsx';
+import type { Pieza } from '../../lib/wip.ts';
+import { htmlDoc } from '../../pages/report.tsx';
 import { FlowTable, Kpis, Legend, OrderTable, UnitTable, type Orden, type St } from './wipParts.tsx';
 
 export interface WipReport { title: string; sub: string; ps: Pieza[]; st: St[]; criticas: Pieza[]; os: Orden[]; nota: string }

@@ -4,7 +4,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import appCss from '../styles/app.css?inline';
 import tokensCss from '../styles/tokens.css?inline';
 import ycCss from '../styles/yc.css?inline';
-import type { Slide } from './slides.tsx';
+import type { Slide } from '../areas/yield/slides.tsx';
 
 // Lo único con JavaScript en el archivo: elegir modelo, mover el carrusel (botones, puntos, ← →) y filtrar la tabla.
 const SCRIPT = `(() => {

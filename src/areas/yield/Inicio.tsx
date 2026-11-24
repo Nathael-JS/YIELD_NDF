@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Badge, Button, ChartCarousel, KpiTile, Select } from '../components/ui.tsx';
-import { ACTION, by, countOrders, pctText, rty, shortDay, toWatch, totals } from '../lib/tcqs.ts';
-import { useData } from '../store.ts';
-import { PageHead } from './Layout.tsx';
+import { Badge, Button, ChartCarousel, KpiTile, Select } from '../../components/ui.tsx';
+import { ACTION, by, countOrders, pctText, rty, shortDay, toWatch, totals } from '../../lib/tcqs.ts';
+import { useData } from '../../store.ts';
+import { PageHead } from '../../pages/Layout.tsx';
 import { slides } from './slides.tsx';
 
 const n = (v: number) => v.toLocaleString('es-MX');
@@ -15,7 +15,7 @@ export default function Inicio() {
   const go = useNavigate();
   if (!all.length) return (
     <>
-      <PageHead title="Yield Control" sub="Carga el TCQS y el Excel de modelos del proyecto para ver yield, fallas y tendencias." />
+      <PageHead title="Yield" sub="Carga el TCQS y el Excel de modelos del proyecto para ver yield, fallas y tendencias." />
       <section className="yc-card app-start">
         <h2 className="app-h3">Empieza en tres pasos</h2>
         <ol className="app-muted">
@@ -23,7 +23,7 @@ export default function Inicio() {
           <li>Revisa en Validación qué filas y modelos entran.</li>
           <li>Ve el yield por estación, el Pareto y la tendencia.</li>
         </ol>
-        <Button variant="primary" onClick={() => go('/carga')}>Cargar archivos</Button>
+        <Button variant="primary" onClick={() => go('/yield/carga')}>Cargar archivos</Button>
       </section>
     </>
   );
@@ -40,8 +40,8 @@ export default function Inicio() {
         <p>Final Yield {pctText(t.final)} %: {pctText(t.retest)} % se recupera en retest. {watch.length ? `${watch.length === 1 ? 'Una estación pide' : `${watch.length} estaciones piden`} atención.` : 'Todas las estaciones con datos suficientes están en meta.'}</p>
         <div className="yc-row app-hero-actions">
           <Select label="Modelo" value={model} onChange={setModel} options={[{ value: '', label: 'Todos los modelos' }, ...[...new Set(all.map((r) => r.model))].sort()]} />
-          <Button variant="primary" onClick={() => go('/yield')}>Ver yield por estación</Button>
-          <Button onClick={() => go('/carga')}>Cargar otro TCQS</Button>
+          <Button variant="primary" onClick={() => go('/yield/estaciones')}>Ver yield por estación</Button>
+          <Button onClick={() => go('/yield/carga')}>Cargar otro TCQS</Button>
           {!models && <Badge tone="warn">Sin filtro de proyecto</Badge>}
         </div>
       </section>

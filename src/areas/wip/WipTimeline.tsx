@@ -1,7 +1,7 @@
 // Línea de tiempo del WIP: una fila por estación en el orden del flujo; cada punto junta las piezas con un tiempo parecido
 // en la estación (escala logarítmica: minutos y semanas en la misma línea). Animada con Motion; respeta «reducir movimiento».
 import { AnimatePresence, motion, MotionConfig } from 'motion/react';
-import { nivel, urgente } from '../lib/wip.ts';
+import { nivel, urgente } from '../../lib/wip.ts';
 import { dur, n, type St } from './wipParts.tsx';
 
 const BINS = 32;

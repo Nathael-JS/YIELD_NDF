@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Badge, KpiTile, PeriodTabs, Select } from '../components/ui.tsx';
-import { by, byFpy, countOrders, change, diagnose, DX_HINT, pctText, periodOf, periodsOf, rty, shortDay, totals, type Grain, type Rec } from '../lib/tcqs.ts';
-import { useApp, useData } from '../store.ts';
-import { NeedTcqs, PageHead } from './Layout.tsx';
+import { Badge, KpiTile, PeriodTabs, Select } from '../../components/ui.tsx';
+import { by, byFpy, countOrders, change, diagnose, DX_HINT, pctText, periodOf, periodsOf, rty, shortDay, totals, type Grain, type Rec } from '../../lib/tcqs.ts';
+import { useApp, useData } from '../../store.ts';
+import { NeedTcqs, PageHead } from '../../pages/Layout.tsx';
 import { slides } from './slides.tsx';
-import { ndfStations } from '../lib/fails.ts';
+import { ndfStations } from '../../lib/fails.ts';
 
 export const ALL = 'Todos los modelos';
 export const WHOLE = 'todo';
@@ -46,9 +46,9 @@ export default function Yield() {
       </PageHead>
       <div className="yc-grid-kpi">{kpis}</div>
       <div className="yc-row">
-        <Link className="yc-btn yc-btn-secondary" to="/descargas">Descargar HTML o PDF</Link>
+        <Link className="yc-btn yc-btn-secondary" to="/yield/descargas">Descargar HTML o PDF</Link>
         {/* lo que se ve aquí ya quedó en el historial (se guarda solo al leer el TCQS) */}
-        {db && <span className="app-muted" role="status"><Badge tone={db[0]}>Historial</Badge> {db[1]} {db[0] === 'ok' && <Link to="/historial">Ver historial</Link>}</span>}
+        {db && <span className="app-muted" role="status"><Badge tone={db[0]}>Historial</Badge> {db[1]} {db[0] === 'ok' && <Link to="/yield/historial">Ver historial</Link>}</span>}
       </div>
       {chart('estaciones')}
       {table}

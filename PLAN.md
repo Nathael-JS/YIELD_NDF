@@ -1,6 +1,6 @@
 # Plan de trabajo — Yield Control
 
-Versiones en [CHANGELOG.md](CHANGELOG.md) · errores en [ERRORES.md](ERRORES.md) · mejoras en [MEJORAS.md](MEJORAS.md).
+Versiones en [CHANGELOG.md](CHANGELOG.md) · errores en [ERRORES.md](ERRORES.md) · mejoras en [MEJORAS.md](MEJORAS.md) · Pallets en [PALLETS.md](PALLETS.md).
 
 App de yield para el proyecto **Juliet**, basada en el sistema de diseño **Yield Control** (artefacto `RqMowPxsmEFcuTiJy8Ntxu`). Todo corre en el navegador: los archivos no salen del equipo. Publicada en Render como sitio estático (`render.yaml`).
 
@@ -63,3 +63,23 @@ Decisiones tomadas a partir de la guía:
 
 - `npm test`: lector de CSV, escalas de gráficas, lectura del TCQS, extracción de modelos del BOM, fórmulas, diagnóstico y semanas ISO.
 - Navegador con los archivos reales: 211 filas, 21 modelos, 208 filas de Juliet (con los manifolds); Entradas 755, FPY 91.0 %, Retest 7.3 %, Final Yield 98.3 % (iguales a un cálculo independiente). Login animado y con movimiento reducido; claro, oscuro y móvil sin scroll horizontal.
+
+## Áreas (0.30.0 en adelante)
+
+| Área | Carga | Vistas | Historial | Descargas |
+| --- | --- | --- | --- | --- |
+| **WIP** | Reporte WIP (general o por MO) | WIP (flujo y línea de tiempo) | Con la base de datos | HTML y PDF |
+| **YIELD** | TCQS y primeras fallas | Inicio, Yield por estación, Gráficos, Comparativas, NDF | En la base | HTML y PDF |
+| **PALLETS** | Listado de entregas, shipping report, CSV de tarimas | Etiquetas | Con la base de datos | CSV y etiquetas en PDF |
+
+**Front, siguientes pasos**
+1. **WIP:** cargar varios reportes por MO y combinarlos (sin repetir seriales), y empezar el plan de diseño y desarrollo del dashboard.
+2. **Descargas con vista previa** en las tres áreas: el reporte se ve antes de bajarlo y se eligen sus secciones para el HTML y el PDF. En Yield se quitan los botones de descarga del panel.
+3. **Comparativas con grafo** (pendiente).
+4. **Selector de área en el login** (después de las primeras pruebas).
+
+**Back**
+1. **Permisos por área:** columna `areas` en `usuarios`, que asigna el administrador en Cuentas. El servidor revisa el área en cada llamada y `areasDe(user)` (`src/areas.ts`) muestra solo las permitidas.
+2. **Endpoints de WIP:** guardar cada corte (fecha × modelo × estación) y el historial.
+3. **Endpoints de Pallets:** tarimas con el Pallet # único en toda la base, historial y reimpresión (ver [PALLETS.md](PALLETS.md)).
+4. **Historial por área** con descarga y vista previa.

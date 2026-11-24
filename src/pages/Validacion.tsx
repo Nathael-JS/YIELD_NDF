@@ -1,15 +1,25 @@
 import { useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useArea } from '../areas.ts';
+import { readEntregas, readShipping, readTarimas } from '../lib/pallets.ts';
 import { Badge, Button, KpiTile, type Tone } from '../components/ui.tsx';
 import { by, congruence, modelKey, pctText } from '../lib/tcqs.ts';
 import { useApp, useData } from '../store.ts';
 import { NeedTcqs, PageHead } from './Layout.tsx';
-import { useWip } from './wipParts.tsx';
+import { useWip } from '../areas/wip/wipParts.tsx';
 
 const n = (v: number) => v.toLocaleString('es-MX');
 const CHECK: Partial<Record<Tone, string>> = { ok: 'OK', warn: 'Revisar', info: 'Aviso' };
 
+/** Cada área valida lo suyo: Yield el TCQS, WIP su reporte, Pallets el listado, el shipping report y las tarimas. */
 export default function Validacion() {
+  const area = useArea();
+  if (area.id === 'wip') return <><PageHead title="Validación · WIP" /><WipCheck empty /></>;
+  if (area.id === 'pallets') return <><PageHead title="Validación · Pallets" /><PalletsCheck /></>;
+  return <ValidacionYield />;
+}
+
+function ValidacionYield() {
   const { read, bom, models, all, records } = useData();
   const go = useNavigate();
   const db = useApp((s) => s.db), file = useApp((s) => s.files.TCQS);
@@ -17,11 +27,10 @@ export default function Validacion() {
   // El detalle fila por fila se guarda con la carga en la base; aquí solo el resultado. Una vez por archivo, no por pintada.
   const estimate = useMemo(() => file && congruence(file, (m) => !models || models.has(modelKey(m))), [file, models]);
   // el WIP se valida aparte: no espera al TCQS
-  if (!read) return <><PageHead title="Validación" /><WipCheck /><NeedTcqs /></>;
+  if (!read) return <><PageHead title="Validación · Yield" /><NeedTcqs /></>;
   if (read.missing.length) return (
     <>
-      <PageHead title="Validación" />
-      <WipCheck />
+      <PageHead title="Validación · Yield" />
       <p className="yc-card app-empty"><Badge tone="bad">Faltan columnas</Badge> El TCQS no trae <span className="app-mono">{read.missing.join(', ')}</span>. Revisa que sea el reporte de yield por estación.</p>
     </>
   );
@@ -40,11 +49,10 @@ export default function Validacion() {
   ];
   return (
     <>
-      <PageHead title="Validación" sub="Qué filas del TCQS se pueden usar y qué modelos son del proyecto Juliet.">
-        <Button variant="primary" disabled={!records.length} onClick={() => go('/yield')}>Ver yield</Button>
+      <PageHead title="Validación · Yield" sub="Qué filas del TCQS se pueden usar y qué modelos son del proyecto Juliet.">
+        <Button variant="primary" disabled={!records.length} onClick={() => go('/yield/estaciones')}>Ver yield</Button>
       </PageHead>
       {db && <p className="app-muted" role="status"><Badge tone={db[0]}>Base</Badge> {db[1]}</p>}
-      <WipCheck />
       <div className="yc-grid-kpi">
         <KpiTile label="Filas del TCQS" value={n(all.length + read.bad.length)} />
         <KpiTile label="Modelos en el BOM" value={models ? n(models.size) : '—'} />
@@ -105,10 +113,10 @@ export default function Validacion() {
 }
 
 /** Validación del WIP, independiente del TCQS: qué filas se usan, qué formato es y hasta qué hora se cuenta el tiempo. */
-function WipCheck() {
+function WipCheck({ empty }: { empty?: boolean }) {
   const { file, read, mine } = useWip();
   const go = useNavigate();
-  if (!file || !read) return null;
+  if (!file || !read) return empty ? <p className="yc-card app-empty">Carga el reporte WIP en <Link to="/wip/carga">Carga de datos</Link>.</p> : null;
   if (read.missing.length) return <p className="yc-card app-empty"><Badge tone="bad">WIP · faltan columnas</Badge> {file.name} no trae <span className="app-mono">{read.missing.join(', ')}</span>.</p>;
   const ps = mine(read.piezas), unicas = read.filas - read.bad.length - read.repetidas;
   const checks: [Tone, string, string][] = [
@@ -127,6 +135,23 @@ function WipCheck() {
       </div>
       <ul>{checks.map(([tone, title, text]) => <li key={title}><Badge tone={tone}>{CHECK[tone]}</Badge><div><strong>{title}</strong><p className="app-muted">{text}</p></div></li>)}</ul>
       <div className="yc-row"><Button variant="primary" onClick={() => go('/wip')}>Ver WIP</Button></div>
+    </section>
+  );
+}
+
+/** Validación de Pallets: qué se leyó de cada archivo y qué falta. */
+function PalletsCheck() {
+  const files = useApp((s) => s.files), go = useNavigate();
+  const dn = files.DN && readEntregas(files.DN), sh = files.SHIPPING && readShipping(files.SHIPPING), ta = files.TARIMAS && readTarimas(files.TARIMAS);
+  if (!dn && !sh && !ta) return <p className="yc-card app-empty">Carga el listado de entregas, el shipping report o un CSV de tarimas en <Link to="/pallets/carga">Carga de datos</Link>.</p>;
+  const checks: [Tone, string, string][] = [];
+  if (dn) checks.push(dn.missing.length ? ['warn', `Listado: faltan ${dn.missing.length} columnas`, dn.missing.join(', ')] : ['ok', `Listado: ${n(dn.entregas.length)} entregas`, 'Cada entrega llena DN, SO, T/O, PO, modelo, piezas, cliente, destino y pesos de su tarima.']);
+  if (sh) checks.push(sh.missing.length ? ['warn', `Shipping report: faltan ${sh.missing.length} columnas`, sh.missing.join(', ')] : ['ok', `Shipping report: ${n(sh.tarimas.length)} tarimas con Pallet #`, `Sirven para no repetir un Pallet # y para reimprimir.${sh.sinPallet ? ` ${n(sh.sinPallet)} filas sin Pallet # no se usan.` : ''}`]);
+  if (ta) checks.push(ta.missing.length ? ['warn', `Tarimas: faltan ${ta.missing.length} columnas`, ta.missing.join(', ')] : ['ok', `Tarimas: ${n(ta.tarimas.length)} en este equipo`, 'Se editan y se reimprimen en Etiquetas; se exportan en Descargas.']);
+  return (
+    <section className="yc-card yc-pad app-checks" aria-label="Comprobaciones de Pallets">
+      <ul>{checks.map(([tone, title, text]) => <li key={title}><Badge tone={tone}>{CHECK[tone]}</Badge><div><strong>{title}</strong><p className="app-muted">{text}</p></div></li>)}</ul>
+      <div className="yc-row"><Button variant="primary" onClick={() => go('/pallets')}>Ir a etiquetas</Button></div>
     </section>
   );
 }
