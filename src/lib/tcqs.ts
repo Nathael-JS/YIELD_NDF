@@ -3,6 +3,10 @@
 // «Guía de interpretación – YieldRateSFC y RetestRate» (fórmulas 1–4, 6, 10 y 11; reglas de lectura 2 y 4).
 import type { Cell, ParsedFile } from './files.ts';
 
+/** Texto de una celda, sin espacios a los lados (vacía si no hay valor). Aquí y no en files.ts: importar files.ts
+ * trae las librerías de Excel y CSV a la carga inicial de la app. */
+export const text = (v: Cell) => (v == null ? '' : String(v).trim());
+
 export const REQUIRED = ['WORK_DATE', 'MODEL_NAME', 'MO_NUMBER', 'GROUP_NAME', 'STATION_NAME', 'INPUT_QTY', 'FIRST_PASS_QTY', 'FIRST_FAIL_QTY', 'SECOND_PASS_QTY'] as const;
 export const META_FPY = 95;
 const MIN_SAMPLE = 10; // menos entradas que esto no basta para juzgar una estación
@@ -10,7 +14,6 @@ const MIN_SAMPLE = 10; // menos entradas que esto no basta para juzgar una estac
 /** `fail`: FAIL_QTY (falló también el retest → reparación); no viene en lo leído de la base. */
 export interface Rec { date: string; model: string; mo: string; group: string; tester: string; input: number; fp: number; ff: number; sp: number; fail?: number }
 
-const text = (v: Cell) => (v == null ? '' : String(v).trim());
 const qty = (v: Cell) => { const n = Number(text(v)); return Number.isFinite(n) && n >= 0 ? n : NaN; };
 /** WORK_DATE llega como 20261105 (texto o número) o como fecha de Excel; sale como 2026-11-05. */
 function day(v: Cell) {

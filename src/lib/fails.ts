@@ -4,7 +4,7 @@
 // registrado otro día u en otro tester que la primera falla. El conteo fino (día × orden × estación × tester) solo
 // comprueba que el archivo cuadre con FIRST_FAIL_QTY.
 import type { Cell, ParsedFile } from './files.ts';
-import { by, type Rec } from './tcqs.ts';
+import { by, text, type Rec } from './tcqs.ts';
 
 export const FAIL_REQUIRED = ['MO_NUMBER', 'MODEL_NAME', 'SERIAL_NUMBER', 'GROUP_NAME', 'STATION_NAME', 'ERROR_CODE', 'ERROR_DESC', 'IN_STATION_TIME'] as const;
 
@@ -14,7 +14,6 @@ export interface Fail { date: string; model: string; mo: string; group: string; 
 export type Estado = 'NDF' | 'Mezcla' | 'Real' | 'Pendiente' | 'Sin TCQS';
 export type Marked = Fail & { estado: Estado; ndf: number };
 
-const text = (v: Cell) => (v == null ? '' : String(v).trim());
 /** «2026-11-13 11:20:40», fecha de Excel o número de serie de Excel → 2026-11-13. */
 function day(v: Cell) {
   if (v instanceof Date) return v.toISOString().slice(0, 10);

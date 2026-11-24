@@ -8,6 +8,21 @@ Un cambio de componente se publica primero en el artefacto y después se copia a
 
 Los errores encontrados y cómo se corrigieron están en [ERRORES.md](ERRORES.md); las mejoras y cómo se hicieron, en [MEJORAS.md](MEJORAS.md).
 
+## [0.33.0] — 2026-11-27
+
+### Cambiado (optimización)
+- **Carga inicial sin cambios de tamaño** (279.6 kB): `text()` vive en `tcqs.ts`. Si estuviera en `files.ts`, el arranque cargaría las librerías de Excel y CSV (unos 290 kB).
+- **Una sola librería de QR:** el QR del MFA (Seguridad) usa `qrcode-generator`, la misma de las etiquetas, y se carga solo al configurarlo. Se desinstalan `qrcode` y `@types/qrcode`.
+- **Helpers repetidos unificados:** `text()` (antes 3 copias) y el formato de enteros `num` (antes 4 copias).
+- **Código muerto quitado:**
+  - El menú anterior (`PipelineNav`, `STEPS`) y sus estilos; sigue disponible en el sistema de diseño.
+  - Una variable sin usar en Yield.
+  - Tres clases CSS sin uso y dos reglas que otra posterior anulaba.
+- **`tsconfig`:** `noUnusedLocals` y `noUnusedParameters` activados. El build falla si queda una variable o un parámetro sin usar.
+
+### Corregido
+- La validación de Pallets ya no dice que el DN viene del listado (se escribe a mano).
+
 ## [0.32.0] — 2026-11-26
 
 ### Agregado

@@ -6,7 +6,7 @@ import { useData } from '../../store.ts';
 import { PageHead } from '../../pages/Layout.tsx';
 import { slides } from './slides.tsx';
 
-const n = (v: number) => v.toLocaleString('es-MX');
+import { num as n } from '../../lib/chart.ts';
 
 export default function Inicio() {
   const { records: all, models, from, to } = useData();
