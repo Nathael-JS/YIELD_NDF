@@ -240,12 +240,14 @@ body { margin: 0; background: var(--surface-100); color: var(--ink); font: 400 1
 
 /* Etiqueta de tarima 4×6 in: solo negro sobre blanco (impresora térmica), en cualquier tema; escala con su ancho (cqw) */
 .yc-label-wrap { container-type: inline-size; width: 100%; max-width: 420px; }
-.yc-label { aspect-ratio: 2 / 3; display: grid; grid-template-rows: auto auto minmax(0, 1fr) auto; box-sizing: border-box; padding: 4.5cqw;
+.yc-label { aspect-ratio: 2 / 3; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto minmax(0, 1fr) auto; box-sizing: border-box; padding: 4.5cqw;
   background: #fff; color: #000; border: 1px solid var(--line-strong); border-radius: var(--radius-sm); font-family: var(--font-sans); overflow: hidden; }
 .yc-label-k { display: block; font: 700 2.6cqw/1.2 var(--font-sans); letter-spacing: .04em; text-transform: uppercase; }
 .yc-label-head { display: flex; justify-content: space-between; gap: 3cqw; padding-bottom: 2.5cqw; border-bottom: .8cqw solid #000; }
-.yc-label-head strong { font-size: 4.6cqw; line-height: 1.15; }
-.yc-label-head .is-right { text-align: right; }
+.yc-label-head > div { min-width: 0; }
+.yc-label-head > div:first-child { flex: 1 1 auto; }
+.yc-label-head strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 4.6cqw; line-height: 1.15; }
+.yc-label-head .is-right { flex: none; max-width: 45%; text-align: right; }
 .yc-label-pallet { display: grid; gap: 1cqw; padding: 3cqw 0; border-bottom: .3cqw solid #000; }
 .yc-label-pallet strong { font: 700 10cqw/1 var(--font-mono); letter-spacing: -.02em; }
 .yc-label-bar { width: 100%; height: 11cqw; fill: #000; }

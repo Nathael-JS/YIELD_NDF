@@ -3,6 +3,8 @@
 import { Document, Font, G, Line, Page, pdf, Polyline, Rect, StyleSheet, Svg, Text, View } from '@react-pdf/renderer';
 import { ACTION, diagnose, META_FPY, pctText, type Totals } from '../lib/tcqs.ts';
 import type { byLabel, Estado, Marked, ndfStations } from '../lib/fails.ts';
+import { code128 } from '../lib/code128.ts';
+import { qrModules, type PalletLabelData } from '../components/label.tsx';
 
 const C = {
   ink: '#18201c', muted: '#535d57', line: '#d2d6cc', strong: '#8a9389', sunk: '#e6e8e2', brand: '#0d6157',
@@ -328,3 +330,51 @@ function WipReport({ title, sub, kpis, stations, criticas, ordenes, nota }: WipP
 }
 
 export const wipPdf = (d: WipPdfData) => pdf(<WipReport {...d} />).toBlob();
+
+// ── Etiqueta de tarima 4×6 in (288 × 432 pt), negro sobre blanco: misma jerarquía que PalletLabel ──
+const L = StyleSheet.create({
+  page: { padding: 13, fontFamily: 'Helvetica', color: '#000' },
+  k: { fontSize: 6.5, fontFamily: 'Helvetica-Bold', textTransform: 'uppercase', letterSpacing: 0.3 },
+  v: { fontSize: 11, fontFamily: 'Courier-Bold' },
+  row: { flexDirection: 'row', justifyContent: 'space-between' },
+});
+function LabelPage({ d, qr }: { d: PalletLabelData; qr: string }) {
+  const m = qrModules(qr) ?? [], n = m.length, w = code128Safe(d.pallet), total = w.reduce((a, b) => a + b, 0) + 20;
+  const F = ({ k, v, wide }: { k: string; v: string | number; wide?: boolean }) => (
+    <View style={{ width: wide ? '100%' : '50%', marginBottom: 4 }}><Text style={L.k}>{k}</Text><Text style={L.v}>{String(v)}</Text></View>
+  );
+  let x = 10;
+  return (
+    <Page size={[288, 432]} style={L.page}>
+      <View style={[L.row, { borderBottomWidth: 2, paddingBottom: 6 }]}>
+        <View><Text style={L.k}>Cliente</Text><Text style={{ fontSize: 12, fontFamily: 'Helvetica-Bold' }}>{d.customer}</Text></View>
+        <View style={{ alignItems: 'flex-end' }}><Text style={L.k}>Destino</Text><Text style={{ fontSize: 12, fontFamily: 'Helvetica-Bold' }}>{d.destination}</Text></View>
+      </View>
+      <View style={{ borderBottomWidth: 1, paddingVertical: 7 }}>
+        <Text style={L.k}>Pallet #</Text>
+        <Text style={{ fontSize: 27, fontFamily: 'Courier-Bold', marginVertical: 2 }}>{d.pallet}</Text>
+        {w.length > 0 && <Svg width={262} height={30} viewBox={`0 0 ${total} 40`} preserveAspectRatio="none">
+          {w.map((bw, i) => { const r = i % 2 === 0 ? <Rect key={i} x={x} y={0} width={bw} height={40} fill="#000" /> : null; x += bw; return r; })}
+        </Svg>}
+      </View>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', paddingTop: 7, flexGrow: 1 }}>
+        <F k="Internal Ref" v={d.ref} wide /><F k="DN" v={d.dn} /><F k="SO" v={d.so} /><F k="PO" v={d.po} /><F k="T/O" v={d.to} />
+        <F k="Part number" v={d.pn} wide /><F k="Piezas" v={d.qty} /><F k="Cajas" v={d.cartons} /><F k="Peso neto" v={`${d.nw} kg`} /><F k="Peso bruto" v={`${d.gw} kg`} />
+      </View>
+      <View style={[L.row, { borderTopWidth: 1, paddingTop: 7, alignItems: 'flex-end' }]}>
+        <View style={{ flex: 1, paddingRight: 8, gap: 5 }}>
+          {d.battery ? <Text style={{ borderWidth: 1.5, padding: 4, fontSize: 7, fontFamily: 'Helvetica-Bold' }}>{d.battery}</Text> : null}
+          <Text style={{ fontSize: 7 }}>{`COO ${d.coo} · HTS ${d.hts} · ${d.dims} cm · ${d.shipDate}`}</Text>
+          <Text style={{ fontSize: 10 }}>Tarima <Text style={{ fontFamily: 'Courier-Bold', fontSize: 16 }}>{d.index}</Text> de <Text style={{ fontFamily: 'Courier-Bold', fontSize: 16 }}>{d.total}</Text></Text>
+        </View>
+        {n > 0 && <Svg width={96} height={96} viewBox={`-4 -4 ${n + 8} ${n + 8}`}>
+          {m.flatMap((r, yy) => r.map((on, xx) => (on ? <Rect key={`${xx}.${yy}`} x={xx} y={yy} width={1.02} height={1.02} fill="#000" /> : null)))}
+        </Svg>}
+      </View>
+    </Page>
+  );
+}
+const code128Safe = (t: string) => { try { return code128(t); } catch { return []; } };
+/** Una página por etiqueta. */
+export const labelsPdf = (labels: { d: PalletLabelData; qr: string }[]) =>
+  pdf(<Document title={`Etiquetas ${labels.map((l) => l.d.pallet).join(', ')}`} author="Yield Control">{labels.map((l) => <LabelPage key={l.d.pallet} {...l} />)}</Document>).toBlob();

@@ -11,6 +11,9 @@ const SLOTS: { type: FileType; label: string; accept: string; hint: string }[] =
   { type: 'TCQS', label: 'TCQS', accept: '.csv,.xlsx', hint: 'Yield por orden, modelo y estación (.csv o .xlsx)' },
   { type: 'FALLAS', label: 'PRIMERAS FALLAS', accept: '.csv,.xlsx', hint: 'FirstFail por unidad con su código de error (.csv o .xlsx): para NDF' },
   { type: 'WIP', label: 'WIP', accept: '.xlsx,.csv', hint: 'Reporte WIP del MES por pieza, general o de una orden (.xlsx): dónde está cada una y desde hace cuánto' },
+  { type: 'DN', label: 'LISTADO DE ENTREGAS', accept: '.xlsx,.csv', hint: 'Entregas de SAP (download): DN, SO, T/O, modelo y piezas, para Pallets' },
+  { type: 'SHIPPING', label: 'SHIPPING REPORT', accept: '.xlsx', hint: 'Bitácora de embarques (FINISH GOOD): tarimas ya enviadas y datos por número de parte' },
+  { type: 'TARIMAS', label: 'TARIMAS', accept: '.csv,.xlsx', hint: 'CSV de tarimas exportado desde Pallets (se puede editar en Excel y volver a cargar)' },
 ];
 
 function Slot({ type, label, accept, hint }: (typeof SLOTS)[number]) {

@@ -8,6 +8,28 @@ Un cambio de componente se publica primero en el artefacto y después se copia a
 
 Los errores encontrados y cómo se corrigieron están en [ERRORES.md](ERRORES.md); las mejoras y cómo se hicieron, en [MEJORAS.md](MEJORAS.md).
 
+## [0.29.0] — 2026-11-25
+
+### Agregado
+- **Pallets · fase B (funcional):** se cargan en Carga el **listado de entregas** (SAP), el **shipping report** (FINISH GOOD) y un **CSV de tarimas**.
+  - Al elegir una entrega, la tarima se llena con el DN, SO, T/O, PO, modelo, piezas, cliente, destino y pesos.
+  - Del shipping report salen el HTS, COO, batería, medidas, Incoterm y Carrier de ese número de parte. Se propone el siguiente Internal Ref (FGNS-AAAAMMDD-NNN).
+- **Validaciones:**
+  - Campos obligatorios.
+  - El peso neto no puede ser mayor que el bruto.
+  - Formato del Pallet # (PALFX…) y que no esté repetido en las tarimas del equipo ni en el shipping report.
+  - Seriales = piezas.
+  - Cruce con el WIP como aviso: seriales que siguen en línea o que no aparecen en el WIP. Terminadas y empaque (FG, PACK) cuentan como listas.
+- **Etiqueta con códigos reales:**
+  - QR (nivel M) con todos los datos y los seriales.
+  - Code128 propio con el Pallet #.
+  - **PDF de 4×6 in** (288×432 pt). Ambos códigos se leen desde el PDF a 203 dpi.
+- **Tarimas guardadas en este equipo** con su estado (guardada, impresa y fecha). Se pueden reimprimir y editar, también las que vienen del shipping report. **Exportar tarimas (CSV)** da un archivo limpio y editable que se vuelve a cargar en Carga.
+- Dependencia `qrcode-generator` 2.0.4 (MIT, sin dependencias).
+
+### Corregido
+- Las secciones de la tarima ya no se cierran solas al llenar sus campos obligatorios.
+
 ## [0.28.0] — 2026-11-24
 
 ### Agregado
