@@ -308,3 +308,37 @@ export function Segmented<T extends string>({ label, options, value, onChange }:
     </div>
   );
 }
+
+/** Captura de seriales con escáner o teclado: Enter (o pegar varios renglones) agrega; un duplicado no entra y tiembla.
+ * `expected`: piezas esperadas, para el contador «5 / 7». */
+export function SerialInput({ value, onChange, expected, label = 'Seriales' }: {
+  value: string[]; onChange: (v: string[]) => void; expected?: number; label?: string;
+}) {
+  const [dup, setDup] = useState<string>();
+  const add = (text: string) => {
+    const news = text.split(/[\s,;]+/).map((s) => s.trim().toUpperCase()).filter(Boolean);
+    const seen = new Set(value), ok: string[] = [];
+    for (const s of news) { if (seen.has(s)) { setDup(undefined); requestAnimationFrame(() => setDup(s)); } else { seen.add(s); ok.push(s); } }
+    if (ok.length) onChange([...value, ...ok]);
+  };
+  const state = expected == null ? '' : value.length === expected ? 'is-ok' : value.length > expected ? 'is-over' : '';
+  return (
+    <div className="yc-serials">
+      <label className="yc-field">
+        <span className="yc-serials-head">{label}{expected != null && <span className={`yc-serials-count ${state}`} aria-live="polite">{value.length} / {expected}</span>}</span>
+        <input className="yc-input yc-mono" placeholder="Escanea o escribe y pulsa Enter" autoComplete="off" spellCheck={false}
+          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); add(e.currentTarget.value); e.currentTarget.value = ''; } }}
+          onPaste={(e) => { const t = e.clipboardData.getData('text'); if (/[\s,;]/.test(t.trim())) { e.preventDefault(); add(t); } }} />
+      </label>
+      {dup && <p className="yc-serials-dup" role="alert">{dup} ya está en la lista.</p>}
+      <ol className="yc-serials-list">
+        {value.map((s) => (
+          <li key={s} className={s === dup ? 'is-dup' : undefined}>
+            <span className="yc-mono">{s}</span>
+            <button type="button" aria-label={`Quitar ${s}`} onClick={() => onChange(value.filter((x) => x !== s))}>×</button>
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+}

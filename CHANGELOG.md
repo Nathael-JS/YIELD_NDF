@@ -8,6 +8,17 @@ Un cambio de componente se publica primero en el artefacto y después se copia a
 
 Los errores encontrados y cómo se corrigieron están en [ERRORES.md](ERRORES.md); las mejoras y cómo se hicieron, en [MEJORAS.md](MEJORAS.md).
 
+## [0.28.0] — 2026-11-24
+
+### Agregado
+- **Pallets · fase A (diseño, datos de ejemplo):** página nueva en el riel izquierdo. Tiene tres columnas:
+  - Entregas del listado, con buscador.
+  - La tarima por áreas del shipping report (Shipping, Fulfillment, ITC), con avance y campos «del listado» llenos de antemano.
+  - Vista previa de la etiqueta en vivo.
+- Estados de la tarima: incompleta, lista para imprimir e impresa. Validación de pesos (el neto no puede ser mayor que el bruto) y de seriales (deben cuadrar con las piezas).
+- **Etiqueta 4×6 in** (`PalletLabel`): blanco y negro para impresora térmica, con dos variantes (QR grande o más texto). Al imprimir sale una sola hoja de 4×6 in exactas. El QR y el Code128 son de muestra; los reales entran en la fase B.
+- **`SerialInput`:** captura con escáner o teclado (Enter o pegar varios), contador contra las piezas, el duplicado no entra y tiembla.
+
 ## [0.27.0] — 2026-11-23
 
 ### Agregado
