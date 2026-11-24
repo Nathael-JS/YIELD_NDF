@@ -237,3 +237,71 @@ body { margin: 0; background: var(--surface-100); color: var(--ink); font: 400 1
   svg g:hover > :is(.yc-pareto-x, .yc-chart-x) { opacity: 1; filter: none; fill: var(--ink); font-weight: 600; }
 }
 @media (prefers-reduced-motion: no-preference) { :is(.yc-pareto-x, .yc-chart-x) { transition: opacity .2s, filter .2s; } }
+
+/* Etiqueta de tarima 4×6 in: solo negro sobre blanco (impresora térmica), en cualquier tema; escala con su ancho (cqw) */
+.yc-label-wrap { container-type: inline-size; width: 100%; max-width: 420px; }
+.yc-label { aspect-ratio: 2 / 3; display: grid; grid-template-rows: auto auto minmax(0, 1fr) auto; box-sizing: border-box; padding: 4.5cqw;
+  background: #fff; color: #000; border: 1px solid var(--line-strong); border-radius: var(--radius-sm); font-family: var(--font-sans); overflow: hidden; }
+.yc-label-k { display: block; font: 700 2.6cqw/1.2 var(--font-sans); letter-spacing: .04em; text-transform: uppercase; }
+.yc-label-head { display: flex; justify-content: space-between; gap: 3cqw; padding-bottom: 2.5cqw; border-bottom: .8cqw solid #000; }
+.yc-label-head strong { font-size: 4.6cqw; line-height: 1.15; }
+.yc-label-head .is-right { text-align: right; }
+.yc-label-pallet { display: grid; gap: 1cqw; padding: 3cqw 0; border-bottom: .3cqw solid #000; }
+.yc-label-pallet strong { font: 700 10cqw/1 var(--font-mono); letter-spacing: -.02em; }
+.yc-label-bar { width: 100%; height: 11cqw; fill: #000; }
+.yc-label-grid { display: grid; grid-template-columns: 1fr 1fr; align-content: start; gap: 1.4cqw 4cqw; padding-top: 2.5cqw; overflow: hidden; }
+.yc-label-f { display: grid; min-width: 0; }
+.yc-label-f.is-wide { grid-column: 1 / -1; }
+.yc-label-f span { font: 700 2.4cqw/1.2 var(--font-sans); letter-spacing: .04em; text-transform: uppercase; }
+.yc-label-f b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 600 4cqw/1.25 var(--font-mono); }
+.yc-label.is-text .yc-label-f b { font-size: 3.3cqw; }
+.yc-label.is-text .yc-label-f span { font-size: 2.2cqw; }
+.yc-label.is-text .yc-label-grid { gap: .8cqw 4cqw; padding-top: 2cqw; }
+.yc-label.is-text .yc-label-pallet { padding: 2cqw 0; }
+.yc-label.is-text .yc-label-head { padding-bottom: 2cqw; }
+.yc-label.is-text .yc-label-battery { font-size: 2.4cqw; }
+.yc-label.is-text .yc-label-pallet strong { font-size: 9cqw; }
+.yc-label.is-text .yc-label-bar { height: 9cqw; }
+.yc-label-foot { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 3cqw; padding-top: 2.5cqw; border-top: .3cqw solid #000; }
+.yc-label-side { display: grid; gap: 2cqw; }
+.yc-label-side p { margin: 0; }
+.yc-label-battery { padding: 1.2cqw 2cqw; border: .6cqw solid #000; font: 700 2.6cqw/1.25 var(--font-sans); }
+.yc-label-side .yc-label-k { font-weight: 600; text-transform: none; letter-spacing: 0; }
+.yc-label-count { font-size: 3.6cqw; }
+.yc-label-count b { font-family: var(--font-mono); font-size: 6cqw; }
+.yc-label-code { position: relative; display: grid; justify-items: center; }
+.yc-label-qr { display: block; width: 32cqw; fill: #000; }
+.yc-label.is-text .yc-label-qr { width: 26cqw; }
+.yc-label-sample { position: absolute; top: 50%; left: 50%; translate: -50% -50%; rotate: -18deg; padding: .5cqw 2cqw; background: #fff; border: .5cqw solid #000; font: 700 3cqw/1 var(--font-sans); letter-spacing: .1em; }
+
+/* Captura de seriales */
+.yc-serials { display: grid; gap: var(--space-2); }
+.yc-serials-head { display: flex; justify-content: space-between; align-items: baseline; }
+.yc-serials-count { font: 600 13px var(--font-mono); color: var(--ink-muted); }
+.yc-serials-count.is-ok { color: var(--ok-fg); } .yc-serials-count.is-over { color: var(--bad-fg); }
+.yc-serials-dup { margin: 0; font-size: 12px; color: var(--bad-fg); }
+.yc-serials-list { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.yc-serials-list li { display: inline-flex; align-items: center; gap: 4px; height: 26px; padding: 0 4px 0 8px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface-100); font-size: 12px; }
+.yc-serials-list button { width: 20px; height: 20px; border: 0; border-radius: 3px; background: none; color: var(--ink-muted); font-size: 15px; line-height: 1; cursor: pointer; }
+.yc-serials-list button:hover { background: var(--surface-200); color: var(--ink); }
+.yc-serials-list li.is-dup { border-color: var(--bad-fg); background: var(--bad-bg); }
+@media (prefers-reduced-motion: no-preference) {
+  .yc-serials-list li { animation: yc-serial-in .25s cubic-bezier(.2, .7, .2, 1) both; }
+  .yc-serials-list li.is-dup { animation: yc-shake .4s ease both; }
+}
+@keyframes yc-serial-in { from { opacity: 0; transform: translateY(-4px) scale(.96); } }
+@keyframes yc-shake { 20%, 60% { transform: translateX(-4px); } 40%, 80% { transform: translateX(4px); } }
+
+/* Impresión: solo la etiqueta, a 4×6 in */
+@media print {
+  @page { size: 4in 6in; margin: 0; }
+  html, body { height: 6in; overflow: hidden; } /* una sola hoja: lo oculto sigue ocupando lugar */
+  body * { visibility: hidden; }
+  .yc-label-print, .yc-label-print * { visibility: visible; }
+  .yc-label-print { position: fixed; inset: 0; width: 4in; height: 6in; max-width: none; }
+  .yc-label-print .yc-label { width: 4in; height: 6in; border: 0; border-radius: 0; }
+  .yc-label-sample { display: none; }
+  *, *::before, *::after { animation: none !important; transition: none !important; } /* una animación con transform mueve la etiqueta fija */
+  .app-pal-preview { position: static !important; }
+}
+.yc-mono { font-family: var(--font-mono); }

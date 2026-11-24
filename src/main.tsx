@@ -16,6 +16,7 @@ import Login from './pages/Login.tsx';
 const Yield = lazy(() => import('./pages/Yield.tsx'));
 const Wip = lazy(() => import('./pages/Wip.tsx'));
 const Descargas = lazy(() => import('./pages/Descargas.tsx'));
+const Pallets = lazy(() => import('./pages/Pallets.tsx'));
 const Validacion = lazy(() => import('./pages/Validacion.tsx'));
 const Seguridad = lazy(() => import('./pages/Seguridad.tsx'));
 const Ndf = lazy(() => import('./pages/Ndf.tsx'));
@@ -37,6 +38,7 @@ const router = createBrowserRouter([
       { path: '/yield', element: <Yield /> },
       { path: '/wip', element: <Wip /> },
       { path: '/descargas', element: <Descargas /> },
+      { path: '/pallets', element: <Pallets /> },
       { path: '/graficos', element: <Graficos /> },
       { path: '/comparativas', element: <Comparativas /> },
       { path: '/ndf', element: <Ndf /> },
