@@ -8,6 +8,22 @@ Un cambio de componente se publica primero en el artefacto y después se copia a
 
 Los errores encontrados y cómo se corrigieron están en [ERRORES.md](ERRORES.md); las mejoras y cómo se hicieron, en [MEJORAS.md](MEJORAS.md).
 
+## [0.32.0] — 2026-11-26
+
+### Agregado
+- **`npm run check`:** verificación de solo lectura.
+  - **Base:** tablas, columnas, índice, filas, respaldos vencidos y cuentas, incluidos los administradores sin MFA.
+  - **API** (opcional, con `--api <url>`): salud, 401 sin sesión, 405 y 415.
+  - Se puede correr en el Shell de Render.
+- El QR de la etiqueta lleva también el cliente, el destino y la nota de batería (CUST, DEST, BATT).
+
+### Corregido
+- Una tarima con seriales repetidos fuera del modo prueba ya no queda «Lista para imprimir».
+- Al apagar el modo ×9, las piezas vuelven a la cantidad de la entrega.
+- WIP general y por orden cargados juntos: las piezas del reporte por orden ya no salen con 0 h.
+- Una tarima abierta con «Cargar QR» completa lo que falte desde el shipping report o el listado. Cliente y destino son obligatorios para imprimir.
+- La medición escáner/teclado se reinicia al borrar lo escrito o al pegar.
+
 ## [0.31.0] — 2026-11-26
 
 ### Agregado

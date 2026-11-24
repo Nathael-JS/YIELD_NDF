@@ -99,7 +99,7 @@ export function defaultsFor(pn: string, hist: Tarima[]): Partial<Tarima> {
   return t ? { hts: t.hts, coo: t.coo, battery: t.battery, dims: t.dims, incoterm: t.incoterm, carrier: t.carrier } : {};
 }
 
-const REQ: [TarimaKey, string][] = [['pallet', 'Pallet #'], ['ref', 'Internal Ref'], ['dn', 'DN'], ['nvdn', 'NVIDIA DN'], ['pn', 'Part number'], ['qty', 'Piezas'], ['cartons', 'Cajas'], ['nw', 'Peso neto'], ['gw', 'Peso bruto'], ['dims', 'Medidas'], ['hts', 'HTS'], ['coo', 'COO'], ['shipDate', 'Fecha de envío']];
+const REQ: [TarimaKey, string][] = [['pallet', 'Pallet #'], ['ref', 'Internal Ref'], ['customer', 'Cliente'], ['destination', 'Destino'], ['dn', 'DN'], ['nvdn', 'NVIDIA DN'], ['pn', 'Part number'], ['qty', 'Piezas'], ['cartons', 'Cajas'], ['nw', 'Peso neto'], ['gw', 'Peso bruto'], ['dims', 'Medidas'], ['hts', 'HTS'], ['coo', 'COO'], ['shipDate', 'Fecha de envío']];
 
 /** Qué le falta a una tarima para imprimirse. `usados`: Pallet # de otras tarimas (las del equipo y las del reporte).
  * `wip`: serial → estación en el WIP cargado (aviso, no bloquea). */
@@ -112,15 +112,17 @@ export function revisar(t: Tarima, usados: Set<string>, wip?: Map<string, string
   const fueraWip = wip ? s.filter((x) => !wip.has(x)) : [];
   // terminadas (STOCKIN) o ya en empaque (FG, PACK_CTN, PACK_PALT): es lo esperado al armar una tarima
   const sinStock = wip ? s.filter((x) => wip.has(x) && !/STOCKIN|SHIP|^FG$|^PACK_(CTN|PALT)$/.test(wip.get(x)!)) : [];
-  const listo = !faltan.length && !pesoMal && !formato && !repetido && s.length === qty && qty > 0;
-  return { faltan, pesoMal, formato, repetido, seriales: s.length, qty, fueraWip, sinStock, listo };
+  // seriales repetidos solo en modo prueba (×9); fuera de él la tarima no se imprime así
+  const duplicados = t.prueba ? 0 : s.length - new Set(s).size;
+  const listo = !faltan.length && !pesoMal && !formato && !repetido && !duplicados && s.length === qty && qty > 0;
+  return { faltan, pesoMal, formato, repetido, duplicados, seriales: s.length, qty, fueraWip, sinStock, listo };
 }
 
 /** Texto del QR: una línea por dato y los seriales al final. Solo ASCII (el lector de cualquier escáner lo entiende). */
 export const qrText = (t: Tarima) => ([
-  ['PALLET', t.pallet], ['REF', t.ref], ['DN', t.dn], ['NVDN', t.nvdn], ['SO', t.so], ['PO', t.po], ['TO', t.to], ['PN', t.pn], ['QTY', t.qty], ['CTN', t.cartons],
-  ['NW', t.nw], ['GW', t.gw], ['DIM', t.dims], ['COO', t.coo], ['HTS', t.hts], ['DATE', t.shipDate], ['TEST', t.prueba ? '1' : ''], ['SN', serialsOf(t).join(',')],
-] as const).filter(([, v]) => v).map(([k, v]) => `${k}:${v}`).join('\n').normalize('NFD').replace(/[^\x20-\x7e\n]/g, '');
+  ['PALLET', t.pallet], ['REF', t.ref], ['CUST', t.customer], ['DEST', t.destination], ['DN', t.dn], ['NVDN', t.nvdn], ['SO', t.so], ['PO', t.po], ['TO', t.to], ['PN', t.pn], ['QTY', t.qty], ['CTN', t.cartons],
+  ['NW', t.nw], ['GW', t.gw], ['DIM', t.dims], ['COO', t.coo], ['HTS', t.hts], ['DATE', t.shipDate], ['BATT', t.battery], ['TEST', t.prueba ? '1' : ''], ['SN', serialsOf(t).join(',')],
+] as const).filter(([, v]) => v).map(([k, v]) => `${k}:${v}`).join('\n').replace(/·/g, '-').normalize('NFD').replace(/[^\x20-\x7e\n]/g, '');
 
 /** Datos de la etiqueta de una tarima. */
 export const labelOf = (t: Tarima, index = 1, total = 1): PalletLabelData => ({
@@ -128,7 +130,7 @@ export const labelOf = (t: Tarima, index = 1, total = 1): PalletLabelData => ({
   qty: Number(t.qty) || 0, cartons: Number(t.cartons) || 0, nw: t.nw || '—', gw: t.gw || '—', dims: t.dims, coo: t.coo, hts: t.hts, battery: t.battery, shipDate: t.shipDate, index, total, test: !!t.prueba,
 });
 
-const QR_KEYS: Record<string, TarimaKey> = { PALLET: 'pallet', REF: 'ref', DN: 'dn', NVDN: 'nvdn', SO: 'so', PO: 'po', TO: 'to', PN: 'pn', QTY: 'qty', CTN: 'cartons', NW: 'nw', GW: 'gw', DIM: 'dims', COO: 'coo', HTS: 'hts', DATE: 'shipDate' };
+const QR_KEYS: Record<string, TarimaKey> = { PALLET: 'pallet', REF: 'ref', CUST: 'customer', DEST: 'destination', BATT: 'battery', DN: 'dn', NVDN: 'nvdn', SO: 'so', PO: 'po', TO: 'to', PN: 'pn', QTY: 'qty', CTN: 'cartons', NW: 'nw', GW: 'gw', DIM: 'dims', COO: 'coo', HTS: 'hts', DATE: 'shipDate' };
 /** Tarima desde el texto de un QR de etiqueta (lo inverso de qrText); `null` si no es un QR de tarima. */
 export function fromQr(text: string): Tarima | null {
   const t = vacia();

@@ -344,7 +344,8 @@ export function SerialInput({ value, onChange, expected, label = 'Seriales', rep
               add(v, v.length > 3 && ms < 35 ? 'escáner' : 'teclado', Math.round(ms)); e.currentTarget.value = ''; teclas.current = 0;
             } else if (e.key.length === 1) { if (!teclas.current++) t0.current = e.timeStamp; }
           }}
-          onPaste={(e) => { const t = e.clipboardData.getData('text'); if (/[\s,;]/.test(t.trim())) { e.preventDefault(); add(t); } }} />
+          onInput={(e) => { if (!e.currentTarget.value) teclas.current = 0; }} // borró lo escrito: la próxima lectura se mide de nuevo
+          onPaste={(e) => { teclas.current = 0; const t = e.clipboardData.getData('text'); if (/[\s,;]/.test(t.trim())) { e.preventDefault(); add(t); } }} />
       </label>
       {ultima && <p className="yc-serials-last" aria-live="polite">Última lectura: <span className="yc-mono">{ultima.s}</span> · <b className={ultima.via === 'escáner' ? 'is-scan' : undefined}>{ultima.via === 'escáner' ? `escáner (${ultima.ms} ms por carácter)` : 'teclado'}</b>{repeat > 1 && ` · ×${repeat}`}</p>}
       {dup && <p className="yc-serials-dup" role="alert">{dup} ya está en la lista.</p>}

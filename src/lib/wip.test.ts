@@ -60,3 +60,10 @@ test('rutas: las estaciones de una misma ruta quedan juntas, la ruta corta prime
   const ps = [P('a', 'WC_PRESSURE', 'WC_WATER_FILL'), P('b', 'WC_WATER_FILL', 'FT'), P('c', 'FT', 'FATP_VI'), P('d', 'SYS_ASSY_VI', 'J_TAG'), P('e', 'J_TAG', 'ASSY_CHASSIS')];
   assert.deepEqual(stations(ps, []).map((s) => s.name), ['J_TAG', 'ASSY_CHASSIS', 'WC_WATER_FILL', 'FT', 'FATP_VI']);
 });
+
+test('WIP general y por orden juntos: las filas sin HOUR se cuentan hasta el corte del general', () => {
+  const H3 = ['SERIAL_NUMBER', 'MODEL_NAME', 'MO_NUMBER', 'SECTION_NAME', 'WIP_GROUP', 'IN_STATION_TIME', 'HOUR', 'ERROR_FLAG'];
+  const r = readWip({ headers: H3, rows: [['g', 'SA1', 'M1', 'SI', 'FT', '2026/11/19 06:00:00', 2, '0'], ['o', 'SA1', 'M2', 'SI', 'FT', '2026/11/17 08:00:00', null, '0']] });
+  assert.equal(r.corte, '2026-11-19 08:00:00');
+  assert.deepEqual(r.piezas.map((p) => [p.serial, p.hours]), [['g', 2], ['o', 48]]);
+});

@@ -15,7 +15,7 @@ type Campo = { key: TarimaKey; label: string; listado?: boolean; mono?: boolean 
 /** Las áreas del shipping report (renglón 1 del Excel): quién llena cada campo. */
 const AREAS: { id: string; name: string; hint: string; campos: Campo[] }[] = [
   { id: 'shipping', name: 'Shipping', hint: 'Solicitud, transporte y cierre', campos: [
-    { key: 'ref', label: 'Internal Ref', mono: true }, { key: 'to', label: 'T/O', listado: true, mono: true }, { key: 'truckHour', label: 'Hora de solicitud de truck' },
+    { key: 'ref', label: 'Internal Ref', mono: true }, { key: 'customer', label: 'Cliente', listado: true }, { key: 'destination', label: 'Destino', listado: true }, { key: 'to', label: 'T/O', listado: true, mono: true }, { key: 'truckHour', label: 'Hora de solicitud de truck' },
     { key: 'carrier', label: 'Carrier' }, { key: 'plates', label: 'Truck # / placas' }, { key: 'hts', label: 'HTS code', mono: true },
   ] },
   { id: 'fulfillment', name: 'Fulfillment', hint: 'Orden, producto y cantidades', campos: [
@@ -28,7 +28,7 @@ const AREAS: { id: string; name: string; hint: string; campos: Campo[] }[] = [
     { key: 'gw', label: 'Peso bruto (kg)', listado: true }, { key: 'seal', label: 'Sello Foxconn' }, { key: 'dock', label: 'Dock #' }, { key: 'shipDate', label: 'Fecha de envío' },
   ] },
 ];
-const REQ = new Set<TarimaKey>(['pallet', 'ref', 'dn', 'nvdn', 'pn', 'qty', 'cartons', 'nw', 'gw', 'dims', 'hts', 'coo', 'shipDate']);
+const REQ = new Set<TarimaKey>(['pallet', 'ref', 'customer', 'destination', 'dn', 'nvdn', 'pn', 'qty', 'cartons', 'nw', 'gw', 'dims', 'hts', 'coo', 'shipDate']);
 const VARIANTES = [{ value: 'qr' as const, label: 'QR grande' }, { value: 'text' as const, label: 'Más texto' }];
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -76,7 +76,12 @@ export default function Pallets() {
       const x = fromQr((await readQrImage(file)) ?? '');
       if (!x) { setMsg(`${file.name}: no se encontró el QR de una etiqueta de tarima.`); return; }
       const g = mias.find((m) => m.pallet === x.pallet);
-      setTab('tarimas'); abrir(g ?? x, g?.pallet);
+      if (g) { setTab('tarimas'); abrir(g, g.pallet); return; }
+      // no está en el equipo: lo que el QR no traiga (etiquetas de antes de 0.32) sale del shipping report o del listado
+      const h = hist.find((m) => m.pallet === x.pallet), e = entregas.find((m) => m.so === x.so);
+      const extra: Partial<Tarima> = { ...defaultsFor(x.pn, [...hist, ...mias]), ...(e && { customer: e.customer, destination: e.destination, desc: e.desc }), ...h };
+      const lleno = Object.fromEntries(Object.entries(x).map(([k, v]) => [k, v || extra[k as TarimaKey] || ''])) as Tarima;
+      setTab('tarimas'); abrir(lleno, h ? h.pallet : undefined);
     } catch (e) { setMsg(`${file.name}: ${e instanceof Error ? e.message : 'no se pudo leer'}`); }
   };
   const exportar = () => download(`tarimas-${today()}.csv`, new Blob([toCsv(tarimasFile(mias))], { type: 'text/csv' }));
@@ -149,9 +154,10 @@ export default function Pallets() {
                   );
                 })}
                 <section className="yc-card app-pal-area app-pal-serials" aria-label="Seriales">
-                  <label className="app-pal-test"><input type="checkbox" checked={!!t.prueba} onChange={(e) => t && setT({ ...t, prueba: e.target.checked ? 'sí' : '', qty: e.target.checked ? '9' : t.qty, printed: '' })} />
+                  <label className="app-pal-test"><input type="checkbox" checked={!!t.prueba} onChange={(e) => t && setT({ ...t, prueba: e.target.checked ? 'sí' : '', qty: e.target.checked ? '9' : String(entregas.find((x) => x.so === t.so)?.qty ?? t.qty), printed: '' })} />
                     <span><strong>Modo prueba ×9</strong> · cada lectura entra 9 veces (la escaneada + 8 copias) para llenar el QR como una tarima de 9 piezas. La etiqueta sale marcada PRUEBA.</span></label>
                   <SerialInput key={t.so + orig} value={serialsOf(t)} onChange={(s) => set('serials', s.join(' '))} expected={chk!.qty} label="Seriales de la tarima" repeat={t.prueba ? 9 : 1} />
+                  {chk!.duplicados > 0 && <p className="app-pal-err" role="alert">Hay {chk!.duplicados} seriales repetidos: quítalos o vuelve a encender el modo prueba.</p>}
                   {chk!.qty > 0 && chk!.seriales !== chk!.qty && <p className="app-muted">{chk!.seriales < chk!.qty ? `Faltan ${chk!.qty - chk!.seriales} seriales para cuadrar con las piezas.` : `Sobran ${chk!.seriales - chk!.qty} seriales.`}</p>}
                   {wip && (chk!.sinStock.length || chk!.fueraWip.length) ? (
                     <div className="app-pal-wip" role="status">
@@ -167,7 +173,7 @@ export default function Pallets() {
                 <div className="yc-card app-pal-side">
                   <header><h2 className="app-h3">Etiqueta 4×6 in</h2><Segmented label="Variante" options={VARIANTES} value={variant} onChange={setVariant} /></header>
                   <div className="yc-label-wrap yc-label-print" key={JSON.stringify(t) + variant}><PalletLabel d={labelOf(t)} qr={qrText(t)} variant={variant} /></div>
-                  {!chk!.listo && <p className="app-muted">{chk!.faltan.length ? `Faltan ${chk!.faltan.length}: ${chk!.faltan.slice(0, 3).join(', ')}${chk!.faltan.length > 3 ? '…' : ''}.` : chk!.seriales !== chk!.qty ? 'Los seriales no cuadran con las piezas.' : 'Revisa el Pallet # y los pesos.'}</p>}
+                  {!chk!.listo && <p className="app-muted">{chk!.faltan.length ? `Faltan ${chk!.faltan.length}: ${chk!.faltan.slice(0, 3).join(', ')}${chk!.faltan.length > 3 ? '…' : ''}.` : chk!.duplicados ? 'Hay seriales repetidos.' : chk!.seriales !== chk!.qty ? 'Los seriales no cuadran con las piezas.' : 'Revisa el Pallet # y los pesos.'}</p>}
                   <div className="yc-row">
                     <Button variant="primary" disabled={!chk!.listo || busy} onClick={() => pdf(t)}>{busy ? 'Generando…' : 'Descargar PDF'}</Button>
                     <Button disabled={!chk!.listo} onClick={() => { window.print(); guardar({ ...t, printed: shortDate(new Date()) }); }}>Imprimir</Button>

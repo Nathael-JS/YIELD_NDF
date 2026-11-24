@@ -63,25 +63,25 @@ export function readWip(f: ParsedFile, cargado?: string) {
   const seen = new Map<string, Pieza>();
   let corte = 0;
   f.rows.forEach((r, i) => {
+    // sin HOUR en la fila (reporte por orden, o mezclado con uno general): se cuenta después hasta el corte
+    const h = conHoras ? text(r[at.HOUR]) : '';
     const p: Pieza = {
       serial: text(r[at.SERIAL_NUMBER]), model: text(r[at.MODEL_NAME]), mo: text(r[at.MO_NUMBER]),
       section: text(r[at.SECTION_NAME]), station: text(r[at.WIP_GROUP]), at: when(r[at.IN_STATION_TIME]),
-      hours: conHoras ? Number(text(r[at.HOUR]).replace(',', '.')) : 0, // CSV en español: «20,5»
+      hours: h ? Number(h.replace(',', '.')) : -1, // CSV en español: «20,5»; -1 = falta
       prev: at.GROUP_NAME >= 0 ? text(r[at.GROUP_NAME]) : '', line: at.LINE_NAME >= 0 ? text(r[at.LINE_NAME]) : '',
       blocked: !['', '0'].includes(text(r[at.ERROR_FLAG])), estado: 'Línea',
     };
     if (!p.serial || !p.station || !p.at || !Number.isFinite(p.hours)) { out.bad.push(i + 2); return; }
-    if (conHoras) corte = Math.max(corte, ms(p.at) + p.hours * 36e5);
+    if (p.hours >= 0) corte = Math.max(corte, ms(p.at) + p.hours * 36e5);
     if (p.at > out.ultimo) out.ultimo = p.at;
     const old = seen.get(p.serial);
     if (old) out.repetidas++;
     if (!old || old.at < p.at) seen.set(p.serial, { ...p, estado: estadoOf(p.station) });
   });
-  if (!conHoras) {
-    // el reporte por orden no trae horas: se cuentan hasta la carga (nunca antes del último movimiento)
-    corte = ms(cargado && cargado > out.ultimo ? cargado : out.ultimo);
-    for (const p of seen.values()) p.hours = Math.max(0, (corte - ms(p.at)) / 36e5);
-  }
+  // filas sin horas: hasta el corte del reporte general si lo hay; si no, hasta la carga (nunca antes del último movimiento)
+  if (!corte) corte = ms(cargado && cargado > out.ultimo ? cargado : out.ultimo);
+  for (const p of seen.values()) if (p.hours < 0) p.hours = Math.max(0, (corte - ms(p.at)) / 36e5);
   for (const p of seen.values()) {
     if (/STOCKIN|SHIP/.test(p.station)) out.terminadas.push(p);
     else if (OCULTAS.has(p.station)) out.ocultas.push(p);
