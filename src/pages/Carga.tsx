@@ -1,6 +1,8 @@
 import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, FileChip } from '../components/ui.tsx';
+import { Badge, Button, FileChip, type Tone } from '../components/ui.tsx';
+import { savePalletCarga } from '../lib/db.ts';
+import { readEntregas } from '../lib/pallets.ts';
 import { mergeParsed, parseFile } from '../lib/files.ts';
 import { local } from '../lib/wip.ts';
 import { shortDate, useApp, type FileType } from '../store.ts';
@@ -13,7 +15,6 @@ const SLOTS: { type: FileType; label: string; accept: string; hint: string; mult
   { type: 'FALLAS', label: 'PRIMERAS FALLAS', accept: '.csv,.xlsx', hint: 'FirstFail por unidad con su código de error (.csv o .xlsx): para NDF' },
   { type: 'WIP', label: 'WIP', accept: '.xlsx,.csv', hint: 'Reporte WIP del MES por pieza, general o de una o varias órdenes (.xlsx): dónde está cada una y desde hace cuánto', multiple: true },
   { type: 'DN', label: 'LISTADO DE ENTREGAS', accept: '.xlsx,.csv', hint: 'Entregas de SAP (download), uno o varios archivos: SO, T/O, modelo y piezas, para Pallets', multiple: true },
-  { type: 'SHIPPING', label: 'SHIPPING REPORT', accept: '.xlsx', hint: 'Bitácora de embarques (FINISH GOOD): tarimas ya enviadas y datos por número de parte' },
   { type: 'TARIMAS', label: 'TARIMAS', accept: '.csv,.xlsx', hint: 'CSV de tarimas exportado desde Pallets (se puede editar en Excel y volver a cargar)' },
 ];
 
@@ -21,7 +22,7 @@ function Slot({ type, label, accept, hint, multiple }: (typeof SLOTS)[number]) {
   const f = useApp((s) => s.files[type]), err = useApp((s) => s.errors[type]);
   const setFile = useApp((s) => s.setFile), setError = useApp((s) => s.setError), removeFile = useApp((s) => s.removeFile);
   const pick = useRef<HTMLInputElement>(null);
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState(false), [db, setDb] = useState<[Tone, string]>();
 
   // varios archivos del mismo reporte se unen en uno (los repetidos se quitan al leerlo: una pieza por serial, una entrega por DN)
   async function load(...fs: File[]) {
@@ -29,7 +30,14 @@ function Slot({ type, label, accept, hint, multiple }: (typeof SLOTS)[number]) {
     const name = fs.length > 1 ? `${fs.length} archivos: ${fs.map((x) => x.name).join(', ')}` : fs[0].name;
     try {
       const parts = await Promise.all(fs.map((x) => parseFile(x).catch((e) => { throw new Error(`${x.name}: ${e instanceof Error ? e.message : 'no se pudo leer'}`); })));
-      setFile(type, { ...(parts.length > 1 ? mergeParsed(parts) : parts[0]), name, loadedAt: shortDate(new Date()), cargado: local() });
+      const f = { ...(parts.length > 1 ? mergeParsed(parts) : parts[0]), name, loadedAt: shortDate(new Date()), cargado: local() };
+      setFile(type, f);
+      // el listado de entregas se guarda en la base (histórico por fecha y hora de subida); si falla, se sigue usando en el equipo
+      if (type === 'DN') {
+        const { entregas } = readEntregas(f);
+        setDb(entregas.length ? ['info', 'Guardando en el histórico…'] : undefined);
+        if (entregas.length) savePalletCarga(name, entregas).then(() => setDb(['ok', `Guardado en el histórico: ${entregas.length} entregas.`]), (e) => setDb(['warn', `No se guardó en la base: ${e.message}`]));
+      }
     } catch (e) {
       setError(type, e instanceof Error ? e.message : `${name}: no se pudo leer`);
     } finally {
@@ -42,6 +50,7 @@ function Slot({ type, label, accept, hint, multiple }: (typeof SLOTS)[number]) {
       <FileChip type={label} accept={accept} onFile={load} multiple={multiple}
         status={err ? 'error' : busy ? 'comparing' : f ? 'loaded' : 'empty'}
         meta={err ?? (busy ? 'Leyendo…' : f ? `${f.name} · ${detail}` : hint)} />
+      {db && <p className="app-muted" role="status"><Badge tone={db[0]}>Base</Badge> {db[1]}</p>}
       {(f || err) && (
         <div className="yc-row">
           <input ref={pick} type="file" hidden accept={accept} multiple={multiple} onChange={(e) => { const xs = [...(e.target.files ?? [])]; e.target.value = ''; if (xs.length) load(...xs); }} />

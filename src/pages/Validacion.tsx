@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useArea } from '../areas.ts';
-import { readEntregas, readShipping, readTarimas } from '../lib/pallets.ts';
+import { readEntregas, readTarimas } from '../lib/pallets.ts';
 import { Badge, Button, KpiTile, type Tone } from '../components/ui.tsx';
 import { by, congruence, modelKey, pctText } from '../lib/tcqs.ts';
 import { useApp, useData } from '../store.ts';
@@ -142,11 +142,10 @@ function WipCheck({ empty }: { empty?: boolean }) {
 /** Validación de Pallets: qué se leyó de cada archivo y qué falta. */
 function PalletsCheck() {
   const files = useApp((s) => s.files), go = useNavigate();
-  const dn = files.DN && readEntregas(files.DN), sh = files.SHIPPING && readShipping(files.SHIPPING), ta = files.TARIMAS && readTarimas(files.TARIMAS);
-  if (!dn && !sh && !ta) return <p className="yc-card app-empty">Carga el listado de entregas, el shipping report o un CSV de tarimas en <Link to="/pallets/carga">Carga de datos</Link>.</p>;
+  const dn = files.DN && readEntregas(files.DN), ta = files.TARIMAS && readTarimas(files.TARIMAS);
+  if (!dn && !ta) return <p className="yc-card app-empty">Carga el listado de entregas o un CSV de tarimas en <Link to="/pallets/carga">Carga de datos</Link>.</p>;
   const checks: [Tone, string, string][] = [];
   if (dn) checks.push(dn.missing.length ? ['warn', `Listado: faltan ${dn.missing.length} columnas`, dn.missing.join(', ')] : ['ok', `Listado: ${n(dn.entregas.length)} entregas`, 'Cada entrega llena SO, T/O, PO, modelo, piezas, cliente, destino y pesos de su tarima (el DN y el NVIDIA DN se escriben a mano).']);
-  if (sh) checks.push(sh.missing.length ? ['warn', `Shipping report: faltan ${sh.missing.length} columnas`, sh.missing.join(', ')] : ['ok', `Shipping report: ${n(sh.tarimas.length)} tarimas con Pallet #`, `Sirven para no repetir un Pallet # y para reimprimir.${sh.sinPallet ? ` ${n(sh.sinPallet)} filas sin Pallet # no se usan.` : ''}`]);
   if (ta) checks.push(ta.missing.length ? ['warn', `Tarimas: faltan ${ta.missing.length} columnas`, ta.missing.join(', ')] : ['ok', `Tarimas: ${n(ta.tarimas.length)} en este equipo`, 'Se editan y se reimprimen en Etiquetas; se exportan en Descargas.']);
   return (
     <section className="yc-card yc-pad app-checks" aria-label="Comprobaciones de Pallets">

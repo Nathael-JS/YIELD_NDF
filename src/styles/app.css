@@ -363,3 +363,9 @@ a.yc-btn { text-decoration: none; display: inline-flex; align-items: center; }
 .app-pal-test input { margin-top: 2px; accent-color: var(--brand); }
 .app-mfa-qr { display: block; width: 200px; background: #fff; } /* el QR del MFA: negro sobre blanco en cualquier tema */
 .app-mfa-qr .yc-label-qr { width: 100%; fill: #000; }
+.app-pal-src { font: 500 11px var(--font-sans); color: var(--ink-muted); padding: 0 6px; border: 1px solid var(--line); border-radius: var(--radius-pill); }
+.app-pal-fields .is-mano .app-pal-src { border-color: var(--warn-fg); color: var(--warn-fg); }
+.app-tar-filters { grid-template-columns: minmax(160px, 240px) minmax(0, 1fr); }
+.app-tar-day { display: grid; gap: var(--space-3); padding: var(--space-4); }
+.app-tar-day > header { display: flex; justify-content: space-between; align-items: baseline; }
+.app-tar-day .yc-table-wrap { margin: 0 calc(-1 * var(--space-4)) calc(-1 * var(--space-4)); border-radius: 0; border: 0; border-top: 1px solid var(--line); }

@@ -11,6 +11,12 @@ export interface Entrega { dn: string; so: string; to: string; po: string; model
 export const DN_REQUIRED = ['DN_NO', 'SO_NUMBER', 'TO_NO', 'MODEL_NAME', 'SHIPPING_QTY', 'CUST_PO'] as const;
 
 /** Listado de entregas: una por DN. Los ceros a la izquierda del T/O (0001687795) se quitan, como en el reporte. */
+/** Un listado guardado en la base, de vuelta como archivo (las mismas columnas de SAP que lee readEntregas). */
+export const entregasFile = (es: Entrega[]): ParsedFile => ({
+  headers: ['DN_NO', 'SO_NUMBER', 'TO_NO', 'CUST_PO', 'MODEL_NAME', 'MODEL_DESC', 'SHIPPING_QTY', 'CUST_NAME', 'CITY1', 'LOOSE', 'UNIT_NW', 'UNIT_GW'],
+  rows: es.map((e) => [e.dn, e.so, e.to, e.po, e.model, e.desc, e.qty, e.customer, e.destination, e.loose, e.nw, e.gw]),
+});
+
 export function readEntregas(f: ParsedFile) {
   const at = (c: string) => f.headers.findIndex((h) => h.toUpperCase() === c);
   const missing = DN_REQUIRED.filter((c) => at(c) < 0);
@@ -32,12 +38,14 @@ export const TARIMAS_COLS = [
   ['customer', 'Cliente'], ['destination', 'Destino'], ['qty', 'Piezas'], ['cartons', 'Cajas'], ['nw', 'Peso neto (kg)'], ['gw', 'Peso bruto (kg)'],
   ['dims', 'Medidas (cm)'], ['coo', 'COO'], ['hts', 'HTS'], ['battery', 'Nota de batería'], ['shipDate', 'Fecha de envío'], ['carrier', 'Carrier'],
   ['plates', 'Truck / placas'], ['truckHour', 'Hora de solicitud'], ['incoterm', 'Incoterm'], ['seal', 'Sello Foxconn'], ['dock', 'Dock #'],
-  ['serials', 'Seriales'], ['printed', 'Impresa'], ['prueba', 'Prueba'],
+  ['serials', 'Seriales'], ['printed', 'Impresa'], ['prueba', 'Prueba'], ['creada', 'Creada'],
 ] as const;
 export type TarimaKey = (typeof TARIMAS_COLS)[number][0];
 /** Todo es texto (editable tal cual); `serials` separados por espacio; `printed` = fecha de la última impresión. */
 export type Tarima = Record<TarimaKey, string>;
 export const vacia = (): Tarima => Object.fromEntries(TARIMAS_COLS.map(([k]) => [k, ''])) as Tarima;
+/** Tarima en blanco para llenar a mano (sin listado): todas las casillas a la vista. */
+export const nueva = (): Tarima => ({ ...vacia(), coo: 'MX', shipDate: new Date().toISOString().slice(0, 10) });
 export const serialsOf = (t: Tarima) => t.serials.split(/[\s,;]+/).filter(Boolean);
 
 /** Tarima nueva desde una entrega del listado. */
@@ -64,36 +72,7 @@ export const toCsv = (f: ParsedFile) => '﻿' + [f.headers, ...f.rows].map((r) =
   return /[",\n;]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }).join(',')).join('\r\n');
 
-/** Shipping report (FINISH GOOD): renglón 1 = área (SHIPPING, ITC, FULLFILMENT; celdas combinadas), renglón 2 = campo.
- * Devuelve las tarimas ya embarcadas (para no repetir un Pallet # y poder reimprimir) y los valores de cada número de parte. */
-export function readShipping(f: ParsedFile) {
-  // parseFile toma el renglón 1 (las áreas) como encabezado: el de los campos es la primera fila
-  const conAreas = !f.headers.some((h) => norm(h) === 'internal ref');
-  const head = (conAreas ? f.rows[0] ?? [] : f.headers).map((h) => norm(text(h)));
-  const rows = conAreas ? f.rows.slice(1) : f.rows;
-  const col = (name: string) => head.indexOf(norm(name));
-  const missing = ['Internal Ref', 'Pallet #', 'Serial#'].filter((c) => col(c) < 0);
-  const out = { tarimas: [] as Tarima[], missing, sinPallet: 0 };
-  if (missing.length) return out;
-  const g = (r: Cell[], name: string) => (col(name) < 0 ? '' : text(r[col(name)]));
-  let ref = '';
-  for (const r of rows) {
-    if (r.some((v) => text(v) === 'FIN')) break; // fin de la bitácora
-    ref = g(r, 'Internal Ref') || ref; // las filas que siguen sin Internal Ref son del mismo embarque
-    const pallet = g(r, 'Pallet #');
-    if (!pallet) { if (g(r, 'Serial#')) out.sinPallet++; continue; }
-    out.tarimas.push({
-      ...vacia(), pallet, ref, dn: g(r, 'FXNN DN'), nvdn: g(r, 'NVIDIA DN'), so: g(r, 'FXNN SO'), po: g(r, 'NVIDIA PO') || g(r, 'FXNN PO'), to: g(r, 'T/O'), pn: g(r, 'Part Number FXNN'),
-      qty: g(r, 'Quantity (PCS)'), cartons: g(r, 'Carton quantity'), nw: g(r, 'Net weight ( kg )'), gw: g(r, 'Gross weight ( kg)'),
-      dims: [g(r, 'LENGTH'), g(r, 'WIDTH'), g(r, 'HEIGHT')].filter(Boolean).join(' x '), coo: g(r, 'COO'), hts: g(r, 'HTS CODE'),
-      battery: g(r, 'Remark for Battery').replace(/\s*\n\s*/g, ' · '), shipDate: g(r, 'Shipped date'), carrier: g(r, 'Carrier'), plates: g(r, 'Truck # / Plates'),
-      incoterm: g(r, 'Incoterm'), seal: g(r, 'Foxconn Seal (Plastic / Metal)'), dock: g(r, 'Dock #'), serials: g(r, 'Serial#').split(/\s+/).filter(Boolean).join(' '),
-    });
-  }
-  return out;
-}
-
-/** Lo que un número de parte ya usó en el reporte (HTS, COO, batería, medidas…): para llenar una tarima nueva. */
+/** Lo que un número de parte ya usó en otra tarima (HTS, COO, batería, medidas…): para llenar una tarima nueva. */
 export function defaultsFor(pn: string, hist: Tarima[]): Partial<Tarima> {
   const t = [...hist].reverse().find((x) => x.pn === pn);
   return t ? { hts: t.hts, coo: t.coo, battery: t.battery, dims: t.dims, incoterm: t.incoterm, carrier: t.carrier } : {};
@@ -126,7 +105,7 @@ export const qrText = (t: Tarima) => ([
 
 /** Datos de la etiqueta de una tarima. */
 export const labelOf = (t: Tarima, index = 1, total = 1): PalletLabelData => ({
-  pallet: t.pallet || 'PAL—', customer: t.customer || '—', destination: t.destination || '—', ref: t.ref || '—', dn: t.dn, nvdn: t.nvdn, so: t.so, po: t.po, to: t.to, pn: t.pn, desc: t.desc,
+  pallet: t.pallet, customer: t.customer || '—', destination: t.destination || '—', ref: t.ref || '—', dn: t.dn, nvdn: t.nvdn, so: t.so, po: t.po, to: t.to, pn: t.pn, desc: t.desc,
   qty: Number(t.qty) || 0, cartons: Number(t.cartons) || 0, nw: t.nw || '—', gw: t.gw || '—', dims: t.dims, coo: t.coo, hts: t.hts, battery: t.battery, shipDate: t.shipDate, index, total, test: !!t.prueba,
 });
 

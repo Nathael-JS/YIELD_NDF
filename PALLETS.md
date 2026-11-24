@@ -7,13 +7,12 @@ Arma las tarimas de embarque desde el listado de entregas, captura sus seriales 
 | Archivo (Carga) | Qué trae | Para qué |
 | --- | --- | --- |
 | **Listado de entregas** (`download`, SAP) | Una fila por DN: `DN_NO`, `SO_NUMBER`, `TO_NO`, `MODEL_NAME`, `SHIPPING_QTY`, `CUST_PO`, cliente, destino, pesos | Cada entrega crea una tarima con esos datos ya puestos |
-| **Shipping report** (FINISH GOOD) | Renglón 1 = área (SHIPPING, ITC, FULLFILMENT); renglón 2 = campo; una fila por tarima con seriales y cajas por renglón; termina en «FIN» | Tarimas ya embarcadas (para no repetir un Pallet # y poder reimprimir) y los datos de cada número de parte |
 | **Tarimas** (CSV exportado desde Pallets) | La tabla limpia de tarimas | Volver a cargar tarimas editadas en Excel |
 
 - El código vive en `src/lib/pallets.ts` (con pruebas en `pallets.test.ts`) y la página en `src/pages/Pallets.tsx`.
 - Al elegir una entrega se llenan SO, T/O (sin ceros a la izquierda), PO, modelo, piezas, cliente, destino y pesos. **El FXNN DN y el NVIDIA DN se escriben a mano**; el DN del listado se ve como guía dentro del campo. Cargar estos datos desde un archivo o una imagen está pendiente de definir.
 - El listado de entregas (y el WIP) acepta **uno o varios archivos**: se unen por nombre de columna y una entrega repetida queda una sola vez.
-- Del shipping report se toman HTS, COO, nota de batería, medidas, Incoterm y Carrier del mismo número de parte. Se propone el siguiente Internal Ref (`FGNS-AAAAMMDD-NNN`).
+- **El shipping report ya no se carga (0.34):** sus campos siguen en el formulario, que se ve completo aunque no haya archivo. HTS, COO, nota de batería, medidas, Incoterm y Carrier se toman de otra tarima del mismo número de parte, si la hay. Se propone el siguiente Internal Ref (`FGNS-AAAAMMDD-NNN`).
 - El formulario va por áreas, igual que el reporte: **Shipping**, **Fulfillment** e **ITC**. Cada una muestra su avance y marca los campos que vienen «del listado».
 - Las filas del reporte sin Internal Ref pertenecen al embarque de arriba. Las filas sin Pallet # (por ejemplo, el embarque de 154 piezas) se cuentan, pero no se listan.
 
@@ -115,6 +114,13 @@ Una prueba de humo recorre la API en 20 casos:
 - Al salir, el acceso vuelve a dar 401.
 
 `/api/pallets` todavía no existe (404). La sesión es un token firmado: salir borra la cookie, pero el servidor no lo invalida; conviene revisarlo al agregar los endpoints de tarimas.
+
+### Base de datos (0.34)
+
+- `pallet_cargas`: cada listado de entregas cargado (archivo, quién, cuántas entregas, las entregas y la fecha y hora de subida). Se guarda solo al cargarlo en Carga. En **Historial** se ve la lista y «Usar este listado» lo vuelve a cargar sin el archivo.
+- `pallet_tarimas`: una fila por tarima. El **Pallet # es único en toda la base**: una tarima nueva con un Pallet # que ya existe responde 409. Editar la misma tarima la actualiza, y renombrarla a un Pallet # ocupado también da 409 y se deshace todo.
+- `GET/POST /api/pallets/cargas` (`?id=` trae las entregas) y `GET/POST /api/pallets/tarimas` (`antes` = edición), con validación en el servidor (`validateEntregas`, `validateTarima`).
+- **Sin conexión:** las tarimas se guardan en el equipo con aviso. Las de la base se muestran junto con las del equipo en Etiquetas y en la página **Tarimas** (por fecha y hora de subida).
 
 ### Próximo: base de datos (varios endpoints)
 

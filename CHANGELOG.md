@@ -8,6 +8,24 @@ Un cambio de componente se publica primero en el artefacto y después se copia a
 
 Los errores encontrados y cómo se corrigieron están en [ERRORES.md](ERRORES.md); las mejoras y cómo se hicieron, en [MEJORAS.md](MEJORAS.md).
 
+## [0.34.0] — 2026-11-27
+
+### Agregado
+- **Pallets en la base de datos** (primer paso de la conexión):
+  - Tablas `pallet_cargas` (cada listado de entregas, con fecha y hora de subida) y `pallet_tarimas` (Pallet # único en toda la base).
+  - Endpoints `/api/pallets/cargas` y `/api/pallets/tarimas`, con validación y pruebas. Un Pallet # nuevo y repetido responde 409; renombrar una tarima a un Pallet # que ya existe también da 409 y se deshace todo.
+  - `npm run check` revisa las tablas nuevas.
+- **Carga:** cada listado de entregas se guarda solo en el histórico de la base.
+- **Historial de Pallets:** los listados guardados, con «Usar este listado».
+- **Página Tarimas** (botón en Pallets y en el riel): todas las tarimas por fecha y hora de subida, quién las subió, su estado y «Abrir». También las que solo están en este equipo.
+- **Tarimas:** se guardan en la base y en el equipo; sin conexión, solo en el equipo, con aviso. Nueva columna «Creada» (fecha y hora).
+
+### Cambiado
+- **Pallets siempre muestra todas las casillas**, aunque no haya archivo cargado («Tarima en blanco»).
+- **Ya no se carga el shipping report:** todo se llena desde el listado. Solo el DN y el NVIDIA DN se escriben a mano (marcados «a mano»); otra forma de cargarlos queda en desarrollo.
+- La marca «del listado» es una etiqueta discreta, en lugar de un distintivo azul en cada campo.
+- Sin Pallet # la etiqueta ya no muestra el aviso del código de barras.
+
 ## [0.33.0] — 2026-11-27
 
 ### Cambiado (optimización)

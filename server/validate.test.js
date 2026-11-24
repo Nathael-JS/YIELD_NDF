@@ -19,3 +19,21 @@ test('validate acepta un resumen correcto y rechaza lo demás', () => {
   assert.match(validate({ ...ok, filas: [fila], congruencia: [1] }).error, /Congruencia/);
   assert.match(validate({ ...ok, filas: [fila], congruencia: { x: 'a'.repeat(17000) } }).error, /Congruencia/);
 });
+
+test('validateEntregas: guarda solo los campos conocidos; rechaza DN vacío o piezas inválidas', async () => {
+  const { validateEntregas } = await import('./validate.js');
+  const v = validateEntregas({ archivo: 'download.xlsx', entregas: [{ dn: '5278000047', so: '2683000058', qty: 36, extra: 'x' }] });
+  assert.equal(v.entregas[0].dn, '5278000047'); assert.equal(v.entregas[0].extra, undefined); assert.equal(v.entregas[0].po, '');
+  assert.ok(validateEntregas({ archivo: 'a', entregas: [{ dn: '', qty: 1 }] }).error);
+  assert.ok(validateEntregas({ archivo: 'a', entregas: [{ dn: '1', qty: -1 }] }).error);
+  assert.ok(validateEntregas({ archivo: 'a', entregas: [] }).error);
+});
+
+test('validateTarima: Pallet # válido y en mayúsculas, textos acotados, campos desconocidos fuera', async () => {
+  const { validateTarima } = await import('./validate.js');
+  const v = validateTarima({ tarima: { pallet: ' palfx98195 ', dn: '5276000000', serials: 'A B', hack: 'x' } });
+  assert.deepEqual([v.pallet, v.datos.dn, v.datos.serials, v.datos.hack, v.antes], ['PALFX98195', '5276000000', 'A B', undefined, null]);
+  assert.ok(validateTarima({ tarima: { pallet: 'X-1' } }).error);
+  assert.ok(validateTarima({ tarima: { pallet: 'PALFX1234', dn: 'x'.repeat(500) } }).error);
+  assert.ok(validateTarima({}).error);
+});

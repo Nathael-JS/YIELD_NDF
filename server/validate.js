@@ -19,3 +19,32 @@ export function validate(b) {
   if (c != null && (typeof c !== 'object' || Array.isArray(c) || size > 16000)) return { error: 'Congruencia inválida' };
   return { archivo: b.archivo.trim().slice(0, 200), sesion: b.sesion, usuario: b.usuario, filas: b.filas, congruencia: c ?? null };
 }
+
+// ── Pallets ──
+const corto = (v, max = 200) => typeof v === 'string' && v.length <= max;
+const ENTREGA = ['dn', 'so', 'to', 'po', 'model', 'desc', 'customer', 'destination', 'loose', 'nw', 'gw'];
+/** Un listado de entregas (SAP) tal como lo lee la app: se guarda completo para el histórico. */
+export function validateEntregas(b) {
+  if (!b || typeof b !== 'object' || !Array.isArray(b.entregas)) return { error: 'Se esperaba { archivo, entregas: [...] }' };
+  if (!corto(b.archivo) || !b.archivo.trim()) return { error: 'Nombre de archivo inválido' };
+  if (!b.entregas.length || b.entregas.length > 5000) return { error: 'Entre 1 y 5000 entregas' };
+  for (const [i, e] of b.entregas.entries()) {
+    const ok = e && typeof e === 'object' && corto(e.dn, 40) && e.dn.trim() && Number.isInteger(e.qty) && e.qty >= 0 && e.qty <= 1e6
+      && ENTREGA.every((k) => e[k] == null || corto(e[k]));
+    if (!ok) return { error: `Entrega ${i + 1} inválida` };
+  }
+  return { archivo: b.archivo.trim(), entregas: b.entregas.map((e) => Object.fromEntries([...ENTREGA, 'qty'].map((k) => [k, e[k] ?? '']))) };
+}
+
+/** Campos de una tarima (los de src/lib/pallets.ts TARIMAS_COLS). Todo texto; los seriales separados por espacio. */
+export const TARIMA = ['pallet', 'ref', 'dn', 'nvdn', 'so', 'po', 'to', 'pn', 'desc', 'customer', 'destination', 'qty', 'cartons', 'nw', 'gw',
+  'dims', 'coo', 'hts', 'battery', 'shipDate', 'carrier', 'plates', 'truckHour', 'incoterm', 'seal', 'dock', 'serials', 'printed', 'prueba', 'creada'];
+export function validateTarima(b) {
+  const t = b?.tarima;
+  if (!t || typeof t !== 'object' || Array.isArray(t)) return { error: 'Se esperaba { tarima }' };
+  const pallet = typeof t.pallet === 'string' ? t.pallet.trim().toUpperCase() : '';
+  if (!/^PAL[A-Z]{0,4}\d{3,}$/.test(pallet)) return { error: 'Pallet # inválido (como PALFX98195)' };
+  for (const k of TARIMA) if (t[k] != null && !corto(t[k], k === 'serials' ? 40000 : 400)) return { error: `Campo ${k} inválido` };
+  if (b.antes != null && !corto(b.antes, 40)) return { error: 'Pallet # anterior inválido' };
+  return { pallet, antes: b.antes ? b.antes.trim().toUpperCase() : null, datos: Object.fromEntries(TARIMA.map((k) => [k, k === 'pallet' ? pallet : t[k] ?? ''])) };
+}
