@@ -89,3 +89,14 @@ Restaurar: `pg_restore --clean --no-owner -d "$DATABASE_URL" yield-AAAA-MM-DD.du
 - Errores encontrados y cómo se corrigieron: [ERRORES.md](ERRORES.md)
 - Mejoras hechas, cómo y con qué; pendientes: [MEJORAS.md](MEJORAS.md)
 - Pallets (etiqueta 4×6, validación, exportar, impresión y riesgos): [PALLETS.md](PALLETS.md)
+
+## Verificar la base y la API
+
+`npm run check` revisa, **solo lectura**, la base de `DATABASE_URL`: las tablas y columnas que espera la app, el índice, las filas por tabla, los respaldos vencidos y las cuentas (cuántas, administradores, con o sin MFA), sin mostrar datos ni secretos. Con `-- --api https://…` revisa también los endpoints públicos de un servidor: `/api/salud`, que todo lo demás pida sesión (401), y los rechazos 405 y 415. No prueba contraseñas, para no activar el límite de intentos por IP.
+
+```
+DATABASE_URL=… npm run check
+npm run check -- --api https://tu-servicio.onrender.com
+```
+
+En Render: *Shell* del servicio → `npm run check` (ya tiene `DATABASE_URL`). Sale con código 1 si algo falla.

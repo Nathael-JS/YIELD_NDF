@@ -1,14 +1,15 @@
 {
   "name": "yield-control",
   "private": true,
-  "version": "0.31.0",
+  "version": "0.32.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "test": "node --experimental-strip-types --no-warnings --test src/lib/*.test.ts src/pages/*.test.ts server/*.test.js",
-    "start": "node server/index.js"
+    "start": "node server/index.js",
+    "check": "node server/check.js"
   },
   "dependencies": {
     "@fontsource/ibm-plex-mono": "^5.3.0",

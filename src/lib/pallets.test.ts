@@ -23,12 +23,14 @@ test('readShipping: renglón de áreas, filas del mismo embarque sin Internal Re
 });
 
 test('revisar: obligatorios, pesos, formato y repetido de Pallet #, seriales contra piezas y aviso del WIP', () => {
-  const t = { ...vacia(), pallet: 'PALFX98195', ref: 'R', dn: 'D', nvdn: 'N', pn: 'P', qty: '2', cartons: '2', nw: '10', gw: '12', dims: '1x1x1', hts: 'H', coo: 'MX', shipDate: '2026-11-25', serials: 'A B' };
+  const t = { ...vacia(), pallet: 'PALFX98195', ref: 'R', customer: 'NVIDIA', destination: 'IL', dn: 'D', nvdn: 'N', pn: 'P', qty: '2', cartons: '2', nw: '10', gw: '12', dims: '1x1x1', hts: 'H', coo: 'MX', shipDate: '2026-11-25', serials: 'A B' };
   assert.equal(revisar(t, new Set()).listo, true);
   assert.equal(revisar({ ...t, nw: '20' }, new Set()).pesoMal, true);
   assert.equal(revisar(t, new Set(['PALFX98195'])).repetido, true);
   assert.equal(revisar({ ...t, pallet: 'X-1' }, new Set()).formato, true);
   assert.equal(revisar({ ...t, serials: 'A' }, new Set()).listo, false);
+  // el mismo serial dos veces: solo vale en modo prueba
+  assert.deepEqual([revisar({ ...t, serials: 'A A' }, new Set()).duplicados, revisar({ ...t, serials: 'A A' }, new Set()).listo, revisar({ ...t, serials: 'A A', prueba: 'sí' }, new Set()).listo], [1, false, true]);
   const w = revisar(t, new Set(), new Map([['A', 'PACK_CTN'], ['Z', 'FT']]));
   assert.deepEqual([w.fueraWip, w.sinStock, w.listo], [['B'], [], true]); // el WIP solo avisa
 });
@@ -47,8 +49,10 @@ test('tarimas: archivo ↔ tabla ida y vuelta, CSV con comillas y QR solo ASCII'
 });
 
 test('fromQr: el QR de una etiqueta vuelve a ser la tarima (incluye prueba ×9); otro texto no', () => {
-  const t = { ...vacia(), pallet: 'PALFX1', ref: 'R', dn: '5276000000', nvdn: '87728644', so: 'S', qty: '9', serials: Array(9).fill('MT1').join(' '), prueba: 'sí', shipDate: '2026-11-25' };
+  const t = { ...vacia(), pallet: 'PALFX1', ref: 'R', customer: 'MELLANOX TECHNOLOGIES, LTD.', destination: 'Israel · IL', battery: 'UN3091, PI 970', dn: '5276000000', nvdn: '87728644', so: 'S', qty: '9', serials: Array(9).fill('MT1').join(' '), prueba: 'sí', shipDate: '2026-11-25' };
   const back = fromQr(qrText(t))!;
   assert.deepEqual([back.pallet, back.dn, back.nvdn, back.qty, back.prueba, back.serials.split(' ').length], ['PALFX1', '5276000000', '87728644', '9', 'sí', 9]);
+  // cliente, destino y batería viajan en el QR (solo ASCII: «·» pasa a «-»)
+  assert.deepEqual([back.customer, back.destination, back.battery], ['MELLANOX TECHNOLOGIES, LTD.', 'Israel - IL', 'UN3091, PI 970']);
   assert.equal(fromQr('https://example.com'), null);
 });
