@@ -88,3 +88,4 @@ Restaurar: `pg_restore --clean --no-owner -d "$DATABASE_URL" yield-AAAA-MM-DD.du
 - Versiones: [CHANGELOG.md](CHANGELOG.md)
 - Errores encontrados y cómo se corrigieron: [ERRORES.md](ERRORES.md)
 - Mejoras hechas, cómo y con qué; pendientes: [MEJORAS.md](MEJORAS.md)
+- Pallets (etiqueta 4×6, validación, exportar, impresión y riesgos): [PALLETS.md](PALLETS.md)
