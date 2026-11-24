@@ -366,3 +366,8 @@ a.yc-btn { text-decoration: none; display: inline-flex; align-items: center; }
 .app-body.is-home { padding: 0; }
 @media (max-width: 640px) { .app-area-btn span { display: none; } }
 @media (max-width: 480px) { .app-top .yc-nav-mark { font-size: 0; gap: 0; } .app-top { gap: var(--space-2); } } /* celular: solo el logo, para que quepa el botón de área */
+.app-pal-qrin { cursor: pointer; }
+.app-pal-qrin:focus-within { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.app-pal-test { display: flex; gap: var(--space-2); align-items: flex-start; padding: var(--space-3); border: 1px dashed var(--line-strong); border-radius: var(--radius-md); font-size: 12px; color: var(--ink-muted); cursor: pointer; }
+.app-pal-test:has(input:checked) { border-style: solid; border-color: var(--warn-fg); background: var(--warn-bg); color: var(--warn-fg); }
+.app-pal-test input { margin-top: 2px; accent-color: var(--brand); }

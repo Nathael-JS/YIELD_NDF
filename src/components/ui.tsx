@@ -94,9 +94,10 @@ export type FileStatus = 'empty' | 'loaded' | 'comparing' | 'error';
 const FILE_STATUS: Record<FileStatus, [string, Tone]> = {
   empty: ['Sin cargar', 'neutral'], loaded: ['Cargado', 'ok'], comparing: ['En comparación', 'info'], error: ['Error', 'bad'],
 };
-/** Con onFile es la zona de carga (clic o arrastrar y soltar). Sin onFile solo muestra el estado. */
-export function FileChip({ type, status = 'empty', meta, onFile, accept }: {
-  type: string; status?: FileStatus; meta?: string; onFile?: (file: File) => void; accept?: string;
+/** Con onFile es la zona de carga (clic o arrastrar y soltar). Sin onFile solo muestra el estado.
+ * `multiple`: acepta varios archivos a la vez (llegan todos en `onFile`). */
+export function FileChip({ type, status = 'empty', meta, onFile, accept, multiple }: {
+  type: string; status?: FileStatus; meta?: string; onFile?: (file: File, ...more: File[]) => void; accept?: string; multiple?: boolean;
 }) {
   const [over, setOver] = useState(false);
   const [text, tone] = FILE_STATUS[status];
@@ -104,15 +105,15 @@ export function FileChip({ type, status = 'empty', meta, onFile, accept }: {
     <div className={cx('yc-file', `yc-file-${status}`, onFile && 'yc-file-drop', over && 'is-over')}>
       <span className="yc-file-type">{type}</span>
       <Badge tone={tone}>{text}</Badge>
-      <span className="yc-file-meta">{meta || 'Arrastra el archivo o haz clic para cargar'}</span>
+      <span className="yc-file-meta">{meta || (multiple ? 'Arrastra uno o varios archivos o haz clic para cargar' : 'Arrastra el archivo o haz clic para cargar')}</span>
     </div>
   );
   if (!onFile) return chip;
-  const take = (list: FileList | null) => { if (list?.[0]) onFile(list[0]); };
+  const take = (list: FileList | null) => { const fs = [...(list ?? [])]; if (fs.length) onFile(fs[0], ...(multiple ? fs.slice(1) : [])); };
   return (
     <label className="yc-file-label" onDragOver={(e) => { e.preventDefault(); setOver(true); }} onDragLeave={() => setOver(false)}
       onDrop={(e) => { e.preventDefault(); setOver(false); take(e.dataTransfer.files); }}>
-      <input type="file" className="yc-sr-only" accept={accept} aria-label={`Cargar ${type}`} onChange={(e) => { take(e.target.files); e.target.value = ''; }} />
+      <input type="file" className="yc-sr-only" accept={accept} multiple={multiple} aria-label={`Cargar ${type}`} onChange={(e) => { take(e.target.files); e.target.value = ''; }} />
       {chip}
     </label>
   );
@@ -310,16 +311,25 @@ export function Segmented<T extends string>({ label, options, value, onChange }:
 }
 
 /** Captura de seriales con escáner o teclado: Enter (o pegar varios renglones) agrega; un duplicado no entra y tiembla.
- * `expected`: piezas esperadas, para el contador «5 / 7». */
-export function SerialInput({ value, onChange, expected, label = 'Seriales' }: {
-  value: string[]; onChange: (v: string[]) => void; expected?: number; label?: string;
+ * `expected`: piezas esperadas, para el contador «5 / 7». `repeat`: cada lectura entra n veces (modo prueba; ahí sí se repiten).
+ * Distingue escáner de teclado por la velocidad: un escáner USB (modo teclado/HID) escribe cada carácter en menos de ~35 ms. */
+export function SerialInput({ value, onChange, expected, label = 'Seriales', repeat = 1 }: {
+  value: string[]; onChange: (v: string[]) => void; expected?: number; label?: string; repeat?: number;
 }) {
-  const [dup, setDup] = useState<string>();
-  const add = (text: string) => {
+  const [dup, setDup] = useState<string>(), [aviso, setAviso] = useState<string>(), [ultima, setUltima] = useState<{ s: string; ms: number; via: string }>();
+  const t0 = useRef(0), teclas = useRef(0);
+  const add = (text: string, via?: string, ms = 0) => {
     const news = text.split(/[\s,;]+/).map((s) => s.trim().toUpperCase()).filter(Boolean);
+    // un QR de etiqueta escaneado aquí trae «PALLET:…», «DN:…»: no son seriales
+    if (news.some((s) => /^[A-Z]+:/.test(s))) { setAviso('Eso parece el QR de una etiqueta, no un serial. Para abrir esa tarima usa «Cargar QR».'); return; }
+    setAviso(undefined);
     const seen = new Set(value), ok: string[] = [];
-    for (const s of news) { if (seen.has(s)) { setDup(undefined); requestAnimationFrame(() => setDup(s)); } else { seen.add(s); ok.push(s); } }
+    for (const s of news) {
+      if (repeat > 1) { ok.push(...Array(repeat).fill(s)); continue; }
+      if (seen.has(s)) { setDup(undefined); requestAnimationFrame(() => setDup(s)); } else { seen.add(s); ok.push(s); }
+    }
     if (ok.length) onChange([...value, ...ok]);
+    if (via && news.length) setUltima({ s: news.at(-1)!, ms, via });
   };
   const state = expected == null ? '' : value.length === expected ? 'is-ok' : value.length > expected ? 'is-over' : '';
   return (
@@ -327,15 +337,23 @@ export function SerialInput({ value, onChange, expected, label = 'Seriales' }: {
       <label className="yc-field">
         <span className="yc-serials-head">{label}{expected != null && <span className={`yc-serials-count ${state}`} aria-live="polite">{value.length} / {expected}</span>}</span>
         <input className="yc-input yc-mono" placeholder="Escanea o escribe y pulsa Enter" autoComplete="off" spellCheck={false}
-          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); add(e.currentTarget.value); e.currentTarget.value = ''; } }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              const v = e.currentTarget.value, ms = v.length > 1 ? (e.timeStamp - t0.current) / (v.length - 1) : 0;
+              add(v, v.length > 3 && ms < 35 ? 'escáner' : 'teclado', Math.round(ms)); e.currentTarget.value = ''; teclas.current = 0;
+            } else if (e.key.length === 1) { if (!teclas.current++) t0.current = e.timeStamp; }
+          }}
           onPaste={(e) => { const t = e.clipboardData.getData('text'); if (/[\s,;]/.test(t.trim())) { e.preventDefault(); add(t); } }} />
       </label>
+      {ultima && <p className="yc-serials-last" aria-live="polite">Última lectura: <span className="yc-mono">{ultima.s}</span> · <b className={ultima.via === 'escáner' ? 'is-scan' : undefined}>{ultima.via === 'escáner' ? `escáner (${ultima.ms} ms por carácter)` : 'teclado'}</b>{repeat > 1 && ` · ×${repeat}`}</p>}
       {dup && <p className="yc-serials-dup" role="alert">{dup} ya está en la lista.</p>}
+      {aviso && <p className="yc-serials-dup" role="alert">{aviso}</p>}
       <ol className="yc-serials-list">
-        {value.map((s) => (
-          <li key={s} className={s === dup ? 'is-dup' : undefined}>
+        {value.map((s, i) => (
+          <li key={`${s}-${i}`} className={s === dup ? 'is-dup' : undefined}>
             <span className="yc-mono">{s}</span>
-            <button type="button" aria-label={`Quitar ${s}`} onClick={() => onChange(value.filter((x) => x !== s))}>×</button>
+            <button type="button" aria-label={`Quitar ${s}`} onClick={() => onChange(value.filter((_, j) => j !== i))}>×</button>
           </li>
         ))}
       </ol>

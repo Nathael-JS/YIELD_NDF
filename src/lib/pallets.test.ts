@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { defaultsFor, desdeEntrega, qrText, readEntregas, readShipping, readTarimas, revisar, tarimasFile, toCsv, vacia } from './pallets.ts';
+import { defaultsFor, desdeEntrega, fromQr, qrText, readEntregas, readShipping, readTarimas, revisar, tarimasFile, toCsv, vacia } from './pallets.ts';
 
 test('readEntregas: una por DN, T/O sin ceros a la izquierda; sin columnas clave no se lee', () => {
   const H = ['TO_NO', 'DN_NO', 'SO_NUMBER', 'MODEL_NAME', 'MODEL_DESC', 'SHIPPING_QTY', 'CUST_PO', 'CUST_NAME', 'CITY1', 'COUNTRY', 'UNIT_NW', 'UNIT_GW'];
@@ -23,7 +23,7 @@ test('readShipping: renglón de áreas, filas del mismo embarque sin Internal Re
 });
 
 test('revisar: obligatorios, pesos, formato y repetido de Pallet #, seriales contra piezas y aviso del WIP', () => {
-  const t = { ...vacia(), pallet: 'PALFX98195', ref: 'R', dn: 'D', pn: 'P', qty: '2', cartons: '2', nw: '10', gw: '12', dims: '1x1x1', hts: 'H', coo: 'MX', shipDate: '2026-11-25', serials: 'A B' };
+  const t = { ...vacia(), pallet: 'PALFX98195', ref: 'R', dn: 'D', nvdn: 'N', pn: 'P', qty: '2', cartons: '2', nw: '10', gw: '12', dims: '1x1x1', hts: 'H', coo: 'MX', shipDate: '2026-11-25', serials: 'A B' };
   assert.equal(revisar(t, new Set()).listo, true);
   assert.equal(revisar({ ...t, nw: '20' }, new Set()).pesoMal, true);
   assert.equal(revisar(t, new Set(['PALFX98195'])).repetido, true);
@@ -38,5 +38,17 @@ test('tarimas: archivo ↔ tabla ida y vuelta, CSV con comillas y QR solo ASCII'
   const back = readTarimas(tarimasFile([t])).tarimas[0];
   assert.deepEqual(back, t);
   assert.match(toCsv(tarimasFile([t])), /"Switch, 1U"/);
+  // un serial de 14 dígitos va como ="…" (Excel no lo convierte) y vuelve igual
+  const csv = toCsv(tarimasFile([{ ...t, desc: 'Switch', serials: '62061000920002' }]));
+  assert.match(csv, /="62061000920002"/);
+  const rows = csv.slice(1).split('\r\n').map((l) => l.split(','));
+  assert.equal(readTarimas({ headers: rows[0], rows: rows.slice(1) }).tarimas[0].serials, '62061000920002');
   assert.match(qrText({ ...t, dims: '120 × 80' }), /^PALLET:PALFX1\n[\s\S]*DIM:120  80\n[\s\S]*SN:A,B$/);
+});
+
+test('fromQr: el QR de una etiqueta vuelve a ser la tarima (incluye prueba ×9); otro texto no', () => {
+  const t = { ...vacia(), pallet: 'PALFX1', ref: 'R', dn: '5276000000', nvdn: '87728644', so: 'S', qty: '9', serials: Array(9).fill('MT1').join(' '), prueba: 'sí', shipDate: '2026-11-25' };
+  const back = fromQr(qrText(t))!;
+  assert.deepEqual([back.pallet, back.dn, back.nvdn, back.qty, back.prueba, back.serials.split(' ').length], ['PALFX1', '5276000000', '87728644', '9', 'sí', 9]);
+  assert.equal(fromQr('https://example.com'), null);
 });
