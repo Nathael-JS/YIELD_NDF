@@ -22,7 +22,7 @@ La tarima queda **Lista para imprimir** solo cuando:
 
 - Están todos los obligatorios: Pallet #, Internal Ref, DN, NVIDIA DN, Part number, Piezas, Cajas, Peso neto y bruto, Medidas, HTS, COO y Fecha de envío.
 - El peso neto no es mayor que el bruto.
-- El Pallet # tiene el formato `PAL…` + números (por ejemplo `PALFX98195`) y **no se repite** en las tarimas del equipo ni en el shipping report. Su propio número no cuenta, para poder reimprimir.
+- El Pallet # tiene el formato `PAL…` + números (por ejemplo `PALFX98195`) y **no se repite** en las tarimas del equipo ni en la base. Su propio número no cuenta, para poder reimprimir.
 - Los seriales capturados cuadran con las piezas. Un serial duplicado no entra.
 
 Estados: **Incompleta** → **Lista para imprimir** → **Impresa** (con fecha). Cualquier cambio después de imprimir la regresa a «Lista».
@@ -69,7 +69,7 @@ Si hay un WIP cargado, cada serial se busca en él. **Solo avisa, no bloquea la 
 ## Tarimas
 
 - Se guardan **en este equipo** como un archivo más (IndexedDB, tipo `TARIMAS`), con la **misma tabla** del CSV. No hay dos formatos.
-- La pestaña **Tarimas** lista las guardadas (con estado y fecha de impresión) y las del shipping report. Si una del reporte ya se guardó en el equipo, solo aparece la copia guardada.
+- Se guardan también **en la base** (`pallet_tarimas`). La página **Tarimas** las lista por día, con hora de subida, quién la subió, estado y «Abrir»; las que solo están en este equipo llevan la marca «Solo en este equipo».
 - Desde ahí se edita y se reimprime. «Guardar cambios» reemplaza la tarima por su Pallet # original.
 
 ## Exportar
@@ -79,7 +79,7 @@ Si hay un WIP cargado, cada serial se busca en él. **Solo avisa, no bloquea la 
 
 ## Sistema de diseño
 
-En el artefacto *Yield Control* (versión 35):
+En el artefacto *Yield Control* (versión 39):
 
 - **`PalletLabel`**: la etiqueta. Props `d` (datos), `qr` (texto del QR), `variant` (`qr` | `text`) y `sample` (sello «MUESTRA», para ejemplos; no se imprime).
 - **`Qr`** y **`Barcode`**: los códigos sueltos.
@@ -96,9 +96,9 @@ Se compilan con esbuild desde `src/components/label.tsx` y `ui.tsx`: una sola fu
 
 ## Riesgos
 
-- **Tarimas solo en el navegador:** se borran al cerrar sesión (el equipo puede ser compartido) y otro equipo no las ve. **Exporta el CSV antes de salir.**
-- **Datos sensibles:** el shipping report trae direcciones, pedimentos, cuentas y precios. La app solo usa los campos de la etiqueta y los seriales, pero el archivo cargado queda completo en el navegador.
-- **Pallet # repetido:** no se puede guardar ni imprimir, pero se revisa solo contra lo cargado en este equipo. Dos equipos pueden usar el mismo número hasta que haya base de datos.
+- **Tarimas guardadas sin conexión:** quedan solo en el navegador y se borran al cerrar sesión. **Exporta el CSV antes de salir** si viste el aviso.
+- **Datos sensibles:** la base guarda solo los campos de la etiqueta y los seriales; el shipping report (direcciones, pedimentos, precios) ya no se carga.
+- **Pallet # repetido:** la base lo rechaza (409). Sin conexión, solo se revisa contra este equipo.
 - **Sin probar en impresora real:** haz la prueba del paso 4 de la impresión antes de usarlo en piso.
 - **Fechas del reporte en 3 formatos** (ISO, `20/08/2026`, `23/10/2026 10:30 AM`): se muestran tal cual, sin convertir.
 - **El número HDG4** perdió dígitos en el Excel (notación científica); no se usa.
@@ -113,7 +113,7 @@ Una prueba de humo recorre la API en 20 casos:
 - Con sesión, `/api/me`, `/api/cargas`, `/api/resumen`, `/api/modelos`, `/api/usuarios`, `/api/base`, `/api/respaldos` y `/api/comentarios` responden 200.
 - Al salir, el acceso vuelve a dar 401.
 
-`/api/pallets` todavía no existe (404). La sesión es un token firmado: salir borra la cookie, pero el servidor no lo invalida; conviene revisarlo al agregar los endpoints de tarimas.
+Los endpoints de Pallets están abajo. La sesión es un token firmado: salir borra la cookie, pero el servidor no lo invalida; conviene revisarlo al agregar los endpoints de tarimas.
 
 ### Base de datos (0.34)
 
@@ -122,11 +122,9 @@ Una prueba de humo recorre la API en 20 casos:
 - `GET/POST /api/pallets/cargas` (`?id=` trae las entregas) y `GET/POST /api/pallets/tarimas` (`antes` = edición), con validación en el servidor (`validateEntregas`, `validateTarima`).
 - **Sin conexión:** las tarimas se guardan en el equipo con aviso. Las de la base se muestran junto con las del equipo en Etiquetas y en la página **Tarimas** (por fecha y hora de subida).
 
-### Próximo: base de datos (varios endpoints)
+### Próximo: base de datos
 
-Cuando se conecten los endpoints a la BD, después de la separación de entornos y solo para ciertos usuarios:
-
-- **Tabla `tarimas`:** solo los campos de la etiqueta, los seriales, quién la creó y la fecha de impresión. **Pallet # único en toda la base**: eso resuelve el riesgo de duplicados entre equipos.
-- **Endpoints:** listar, crear, editar, marcar como impresa y reimprimir. Cada llamada valida permisos en el servidor, igual que el resto de la app.
-- El CSV sigue siendo el formato de exportar y cargar; la base reemplaza al guardado en el navegador.
-- No guardar direcciones, pedimentos ni precios del shipping report.
+- **WIP** y **Yield por área** con el mismo patrón: tabla + endpoint + validación + línea en `npm run check`.
+- **Permisos por área** (el administrador asigna WIP, YIELD o PALLETS a cada cuenta) y validarlos en cada endpoint.
+- **Cerrar sesión en el servidor** (hoy el token sigue válido hasta vencer).
+- Cargar DN y NVIDIA DN desde un archivo (pendiente de definir).
