@@ -7,6 +7,7 @@ import type { ParsedFile } from './lib/files.ts';
 import { apiLogout, apiMe, loadModelos, setOnExpired, type Modelos, type Sesion } from './lib/db.ts';
 import { dropAll, dropFile, loadFiles, saveFile } from './lib/saved.ts';
 import { modelKey, readTcqs } from './lib/tcqs.ts';
+import { usePallets } from './areas/pallets/items.ts';
 
 // Los modelos de Juliet (BOM) viven en la base (`modelos`); se actualizan en Base de datos.
 // FALLAS = reporte de primeras fallas por unidad (códigos de error), para la página NDF; WIP = reporte WIP del MES por pieza
@@ -68,7 +69,7 @@ export const useApp = create<State>()(
       reloadModelos: () => loadModelos().then((m) => { set({ modelos: m.modelos.length ? m : null }); }).finally(() => set({ modelosListos: true })),
       login: (s) => { set({ user: s.nombre, session: s.sesion, admin: s.admin, cuenta: s, db: null }); useApp.getState().reloadModelos().catch(() => {}); },
       // al salir se borran también los archivos guardados: el equipo puede ser compartido
-      logout: () => { apiLogout().catch(() => {}); dropAll().catch(() => {}); set({ user: null, admin: false, cuenta: NADA, files: {}, errors: {}, savedKey: '', modelos: null, modelosListos: false }); },
+      logout: () => { apiLogout().catch(() => {}); dropAll().catch(() => {}); usePallets.getState().clear(); set({ user: null, admin: false, cuenta: NADA, files: {}, errors: {}, savedKey: '', modelos: null, modelosListos: false }); },
       setPeriod: (period) => set({ period }),
       setFile: (t, f) => { saveFile(t, f).catch(() => {}); set((s) => ({
         db: null, // el aviso «Guardado en el historial» era del archivo anterior

@@ -6,14 +6,14 @@ Pallets se rehace en el frontend. La versión anterior (0.28–0.34: etiqueta ar
 
 ## Flujo nuevo
 
-1. **Carga → «Nuevo Pallet / Shipping Order»**: crea un item dentro de PALLETS, con una animación de una caja que se arma para el embarque (React Three).
+1. **Carga → «Nuevo Pallet / Shipping Order»**: crea un item dentro de PALLETS. (La animación con React Three se descartó.)
 2. Al elegirlo **se pide el archivo SFC** (export de SFC, una fila por serial).
-3. El item se identifica por su **DN** y su **fecha**.
-4. Del SFC se llenan los campos del reporte (tabla de abajo). **Customer PO** y **Customer DN** se escriben a mano, con validación.
+3. **Un item por DN**, con su fecha y hora de creación. Cada DN lleva **9 piezas** (serial + carton); si faltan, se piden con el escáner o a mano (en pruebas).
+4. Del SFC se llenan los campos del reporte (tabla de abajo). **Sales Order, Part number NVIDIA, Shipped day, Customer PO y Customer DN** se escriben a mano.
 5. La página **Pallets** (antes «Etiquetas») muestra cada item por separado: DN, fecha de creación, hora (más adelante, hora de edición) y quién lo trabajó (el usuario de la sesión).
 6. **Ampliar un item** muestra todos los datos llenados desde el SFC.
 7. Los items se ven como **cuadrícula de 5 × 3** (15 por página).
-8. Si el SFC ya trae seriales con caja y tarima, se muestran así; se pueden **corregir con el escáner** (en pruebas, igual que validar por Pallet ID).
+8. Si el SFC ya trae seriales con carton y Pallet ID, se muestran así; se pueden **corregir con el escáner** (en pruebas). La separación por Pallet ID va en Etiquetas.
 9. **Etiquetas** pasa a ser otra opción, **en desarrollo**.
 
 ## Archivos de referencia
@@ -47,14 +47,14 @@ Muestra analizada: 257 seriales, 10 DN, 20 tarimas; **93 seriales sin tarima** y
 
 | Campo (reporte CTO) | Fuente | Estado |
 | --- | --- | --- |
-| Shipped day | No está en el SFC; la hoja de instrucciones dice «Por definir» | ❓ ¿Fecha de embarque manual? `KANBAN_OUT_TIME` no es la de embarque |
+| Shipped day | No está en el SFC | ✍️ Manual (fecha) |
 | PO | SFC `CUST_PO` | ✅ |
-| Sales Order | **No está en el SFC** (`SO_LINE` es la línea) | ❓ Viene del listado de entregas (`SO_NUMBER`) o es manual |
+| Sales Order | No está en el SFC (`SO_LINE` es la línea) | ✍️ Manual, de momento |
 | Project | No está en el SFC; en el ejemplo siempre es `NVIDIA` | 🔧 Plantilla por modelo |
 | Model | No está en el SFC (nombre comercial) | 🔧 Plantilla por modelo |
 | delivery | SFC `DN` | ✅ |
 | hazmat | No está en el SFC; texto fijo de batería («Same info always») | 🔧 Plantilla por modelo |
-| partnumber | **El reporte usa el PN NVIDIA (`692-…`); el SFC trae el FXNN (`920-…`)** | ❓ Plantilla `920-…` → `692-…` por modelo |
+| partnumber | Dos casillas: **PN SFC** (`MODEL_NAME1`, `920-…`) y **PN NVIDIA** (`692-…`, el del reporte) | ✅ SFC + ✍️ NVIDIA a mano (se copia al siguiente item del mismo PN) |
 | qty | 1 por serial (fila del reporte); total = número de seriales | ✅ Calculado |
 | Serial | SFC `SERIAL_NUMBER1` | ✅ |
 | Carton | SFC `MCARTON_NO` | ✅ Si está vacío: «sin caja» |
@@ -65,42 +65,46 @@ Muestra analizada: 257 seriales, 10 DN, 20 tarimas; **93 seriales sin tarima** y
 | Customer PO | Manual (NVIDIA PO: 8 dígitos en el reporte actual) | ✍️ Validar `^\d{8}$` |
 | Customer DN | Manual (NVIDIA DN: 8 dígitos en el reporte actual) | ✍️ Validar `^\d{8}$` |
 
-✅ sale del SFC · 🔧 dato fijo por modelo (se llena una vez) · ✍️ manual · ❓ **por confirmar**
+✅ sale del SFC · 🔧 dato del modelo: se escribe una vez y se copia al siguiente item del mismo PN SFC · ✍️ manual
 
 ### Validaciones
 
 - **Al cargar el SFC:** la hoja `data` y las columnas `DN`, `SERIAL_NUMBER1`, `MCARTON_NO` e `IMEI` son obligatorias. Un serial repetido se rechaza.
-- **Un archivo con varios DN** crea un item por DN (la muestra trae 10). *Por confirmar.*
+- **Un archivo con varios DN** crea un item por DN.
 - **El mismo DN cargado otra vez:** se avisa y se actualiza el item. No se duplica.
 - **Seriales sin tarima o sin caja:** se muestran aparte y no cuentan como listos.
 - **Estado del serial:** `STOCKIN` = listo; cualquier otro `WIP_GROUP` = «en línea» (aviso).
-- **Customer PO y DN:** 8 dígitos; el item queda «incompleto» sin ellos.
+- **9 piezas por DN** (`POR_DN`): una pieza cuenta si tiene serial y carton. Con menos: «Faltan N piezas» y se completan con el escáner o a mano (en pruebas). Con más: aviso.
+- **Campos a mano:** sin ellos el item dice «Faltan datos». Customer PO y DN: 8 dígitos.
 - **Precios:** solo en este equipo, nunca en la base ni en datos de prueba. Lo mismo para direcciones, cuentas y pedimentos.
 
 ## Plan de desarrollo (frontend)
 
-| Fase | Qué | Archivos |
+| Fase | Qué | Estado |
 | --- | --- | --- |
-| **F0** | Pausar el backend de Pallets (una constante en `db.ts`; tablas y endpoints se quedan) | `src/lib/db.ts` |
-| **F1** | `readSfc()`: un item por DN con sus seriales, cajas y tarimas; validaciones; prueba con **datos inventados** | `src/lib/sfc.ts`, `sfc.test.ts` |
-| **F2** | Carga: opción «Nuevo Pallet / Shipping Order» que pide el SFC y crea el item (guardado en el equipo, como los demás archivos) | `src/pages/Carga.tsx`, `src/store.ts` |
-| **F3** | Página **Pallets**: cuadrícula 5 × 3 de items (DN, fecha, hora, quién), con paginación y búsqueda | `src/areas/pallets/Pallets.tsx`, `app.css` |
-| **F4** | **Ampliar item**: los 17 campos, seriales por tarima y caja, campos manuales y plantilla por modelo | `src/areas/pallets/Item.tsx` |
-| **F5** | **Animación** de la caja (React Three), cargada solo al crear un item para no pesar en la carga inicial | `src/components/BoxBuild.tsx` |
-| **F6** | Escáner para corregir serial, caja o tarima (en pruebas) | Reusa `SerialInput` |
-| **F7** | Exportar el **Shipping report CTO** (una fila por serial; los campos «Por definir» vacíos) | `src/lib/sfc.ts` |
-| **F8** | Etiquetas como opción «en desarrollo»; revisión de diseño y sistema de diseño | `src/areas.ts`, artefacto |
-| **F9** | Reactivar el backend con el modelo nuevo (`pallet_items`) | `server/` |
+| **F0** | Backend de Pallets en pausa: `PALLETS_DB = false` en `src/lib/db.ts` (tablas y endpoints se quedan) | ✅ 0.35 |
+| **F1** | `readSfc()`, `faltan()`, `escanear()` y `plantilla()` en `src/lib/sfc.ts`, con prueba de datos inventados | ✅ 0.35 |
+| **F2** | Carga: «Nuevo Pallet / Shipping Order» pide el SFC y crea o actualiza los items (`src/areas/pallets/Nuevo.tsx`) | ✅ 0.35 |
+| **F3** | Página **Pallets**: cuadrícula 5 × 3, búsqueda, filtro y páginas (`Pallets.tsx`) | ✅ 0.35 |
+| **F4** | **Ampliar item**: del SFC, a mano, datos del modelo, piezas y escáner en pruebas (`Item.tsx`) | ✅ 0.35 |
+| **F5** | Exportar el **Shipping report CTO** (una fila por serial) | Pendiente |
+| **F6** | **Etiquetas** por Pallet ID desde los items (hoy: la versión anterior, marcada «en desarrollo») | Pendiente |
+| **F7** | Hora de edición por campo y validaciones con datos reales | Pendiente |
+| **F8** | Reactivar el backend con el modelo nuevo (`pallet_items`) | Pendiente |
+
+Los items viven en este navegador (`localStorage`, clave `yc-pallets`) y se borran al cerrar sesión.
 
 ### Archivos de Pallets hoy
 
-- **Diseño:** `src/areas/pallets/Pallets.tsx`, `Tarimas.tsx`, `Historial.tsx`; `src/components/label.tsx`; `src/styles/app.css` (`.app-pal-*`, `.app-tar-*`); `src/styles/yc.css` (etiqueta).
-- **Función:** `src/lib/pallets.ts` (+ prueba), `src/lib/db.ts`, `server/index.js` (`pallets()`), `server/validate.js`.
+- **Nuevo:** `src/lib/sfc.ts` (+ prueba), `src/areas/pallets/items.ts` (los items), `Nuevo.tsx` (Carga), `Pallets.tsx` (cuadrícula), `Item.tsx` (ampliado); estilos `.app-item*`, `.app-det*` en `src/styles/app.css`.
+- **Etiquetas (en desarrollo, versión anterior):** `src/areas/pallets/Etiquetas.tsx`, `src/lib/pallets.ts`, `src/components/label.tsx`, `src/styles/yc.css`.
+- **Backend en pausa:** `server/index.js` (`pallets()`), `server/validate.js`, funciones de Pallets en `src/lib/db.ts`.
 - **Compartidos:** `src/areas.ts`, `src/main.tsx`, `src/pages/Carga.tsx`, `Validacion.tsx`, `Descargas.tsx`.
 
 ## Riesgos
 
-- **React Three pesa** (~150 kB comprimido con `three`). Va en un chunk aparte que solo se descarga al crear un item; la carga inicial no cambia.
 - **Datos solo en el navegador** mientras el backend esté en pausa: se borran al cerrar sesión y otro equipo no los ve.
 - **PN NVIDIA ≠ PN del SFC:** sin la plantilla, el reporte saldría con el número de parte equivocado.
+- **Serial y carton:** en el SFC el serial (`SERIAL_NUMBER1`) es `MT…` y el carton (`MCARTON_NO`) es `FX…`, igual que en el reporte CTO.
+- **Archivo SFC ancho:** trae miles de columnas vacías (`Column1…`); se lee todo el archivo, puede tardar unos segundos.
 - **El serial tiene 2 formas** en el SFC (`MT…` con letra final y 12 dígitos): las dos se aceptan.

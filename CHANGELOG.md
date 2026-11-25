@@ -8,6 +8,20 @@ Un cambio de componente se publica primero en el artefacto y después se copia a
 
 Los errores encontrados y cómo se corrigieron están en [ERRORES.md](ERRORES.md); las mejoras y cómo se hicieron, en [MEJORAS.md](MEJORAS.md).
 
+## [0.35.0] — 2026-11-25
+
+### Cambiado
+- **Pallets, nueva estructura** (plan en [PALLETS.md](PALLETS.md)):
+  - **Carga → «Nuevo Pallet / Shipping Order»:** se carga el export de SFC y cada DN se vuelve un item. Un DN que ya existe se actualiza y conserva lo escrito a mano.
+  - **Pallets** muestra los items en una cuadrícula de 5 × 3: DN, avance de piezas (9 por DN), Pallet IDs, quién lo creó y la fecha y hora. Tiene búsqueda (DN, PO, serial, carton, Pallet ID), un filtro (todos, incompletos, listos) y páginas.
+  - **Ampliar un item:** muestra lo que llenó el SFC y los campos a mano (Sales Order, PN NVIDIA, Shipped day, Customer PO y DN de 8 dígitos). Los datos del modelo (Project, Model, Hazmat, COO, Unit price) se copian al siguiente item del mismo PN. El Total price se calcula.
+  - **Piezas:** las faltantes se marcan en la tabla. El escáner (en pruebas) agrega un serial o corrige su carton.
+  - **Etiquetas** pasa a otra opción, **en desarrollo** (la versión anterior).
+- **Backend de Pallets en pausa** (`PALLETS_DB` en `src/lib/db.ts`): no se borran tablas ni endpoints. Los items viven en el navegador y se borran al cerrar sesión.
+
+### Quitado
+- Las páginas Tarimas e Historial de Pallets (dependían de la base). El listado de entregas y el CSV de tarimas ya no se cargan en Pallets.
+
 ## [0.34.0] — 2026-11-27
 
 ### Agregado

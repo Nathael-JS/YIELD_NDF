@@ -68,12 +68,15 @@ export const respaldoAccion = (a: { accion: 'crear' | 'borrar'; carga: number } 
 export const loadCargas = () => call<{ cargas: Carga[] }>('/api/cargas').then((b) => b.cargas);
 
 // ── Pallets ──
+/** shortcut: backend de Pallets en pausa mientras se rehace el frontend (PALLETS.md, F0). En true vuelve a usar /api/pallets. */
+export const PALLETS_DB = false;
+const pausa = <T>(f: () => Promise<T>) => (PALLETS_DB ? f() : Promise.reject(Object.assign(new Error('la base de Pallets está en pausa'), { status: 0 })));
 export interface PalletCarga { id: number; archivo: string; usuario: string; filas: number; subida: string }
 /** Cada listado de entregas cargado queda en la base con su fecha y hora (el histórico). */
-export const savePalletCarga = (archivo: string, entregas: Entrega[]) => post<{ id: number; subida: string }>('/api/pallets/cargas', { archivo, entregas });
-export const loadPalletCargas = () => call<{ cargas: PalletCarga[] }>('/api/pallets/cargas').then((b) => b.cargas);
-export const loadPalletCarga = (id: number) => call<{ entregas: Entrega[] }>(`/api/pallets/cargas?id=${id}`).then((b) => b.entregas);
+export const savePalletCarga = (archivo: string, entregas: Entrega[]) => pausa(() => post<{ id: number; subida: string }>('/api/pallets/cargas', { archivo, entregas }));
+export const loadPalletCargas = () => pausa(() => call<{ cargas: PalletCarga[] }>('/api/pallets/cargas')).then((b) => b.cargas);
+export const loadPalletCarga = (id: number) => pausa(() => call<{ entregas: Entrega[] }>(`/api/pallets/cargas?id=${id}`)).then((b) => b.entregas);
 export interface TarimaDb { datos: Tarima; usuario: string; creada: string; actualizada: string; impresa: string | null }
-export const loadTarimasDb = () => call<{ tarimas: TarimaDb[] }>('/api/pallets/tarimas').then((b) => b.tarimas);
+export const loadTarimasDb = () => pausa(() => call<{ tarimas: TarimaDb[] }>('/api/pallets/tarimas')).then((b) => b.tarimas);
 /** Tarima nueva (409 si el Pallet # ya existe en la base) o edición de la que se guardó como `antes`. */
-export const saveTarimaDb = (tarima: Tarima, antes?: string) => post<{ pallet: string }>('/api/pallets/tarimas', { tarima, antes });
+export const saveTarimaDb = (tarima: Tarima, antes?: string) => pausa(() => post<{ pallet: string }>('/api/pallets/tarimas', { tarima, antes }));
