@@ -35,8 +35,9 @@ export const AREAS: Area[] = [
     flow: [...base('yield'), { label: 'Yield por estación', to: '/yield/estaciones', icon: I.yield }],
     views: [{ label: 'Inicio', to: '/yield', icon: I.inicio }, { label: 'Gráficos', to: '/yield/graficos', icon: I.graf }, { label: 'Comparativas', to: '/yield/comparativas', icon: I.comp },
       { label: 'NDF', to: '/yield/ndf', icon: I.ndf }, ...consulta('yield')] },
-  { id: 'pallets', name: 'PALLETS', hint: 'Tarimas de embarque: entregas, seriales y etiqueta 4×6 in con QR.', icon: I.pal, files: ['DN', 'TARIMAS'],
-    flow: [...base('pallets'), { label: 'Etiquetas', to: '/pallets', icon: I.label }], views: [{ label: 'Tarimas', to: '/pallets/tarimas', icon: I.pal }, ...consulta('pallets')] },
+  // Pallets: Carga crea un item por DN desde el SFC; Etiquetas está en desarrollo (PALLETS.md)
+  { id: 'pallets', name: 'PALLETS', hint: 'Shipping orders: un item por DN desde el export de SFC, con sus seriales y cartons.', icon: I.pal, files: [],
+    flow: [base('pallets')[0], { label: 'Pallets', to: '/pallets', icon: I.pal }, { label: 'Etiquetas (en desarrollo)', to: '/pallets/etiquetas', icon: I.label }], views: consulta('pallets') },
 ];
 
 export const areaById = (id?: string) => AREAS.find((a) => a.id === id);

@@ -1,130 +1,110 @@
-# Pallets
+# Pallets · nueva infraestructura (plan)
 
-Arma las tarimas de embarque desde el listado de entregas, captura sus seriales e imprime la etiqueta de 4×6 in. Página **Pallets** (riel izquierdo). Versiones en [CHANGELOG.md](CHANGELOG.md) (0.28.0 diseño, 0.29.0 funcional).
+Pallets se rehace en el frontend. La versión anterior (0.28–0.34: etiqueta armada a mano, listado de entregas, tarimas en la base) sigue en el código y en el historial de git hasta que la reemplace cada fase. **El backend de Pallets queda en pausa** mientras se valida este plan.
 
-## Función
+> Los archivos de ejemplo se analizaron en un directorio aislado y se borraron. Este documento solo guarda la **estructura** (columnas y formas), nunca datos reales.
 
-| Archivo (Carga) | Qué trae | Para qué |
+## Flujo nuevo
+
+1. **Carga → «Nuevo Pallet / Shipping Order»**: crea un item dentro de PALLETS. (La animación con React Three se descartó.)
+2. Al elegirlo **se pide el archivo SFC** (export de SFC, una fila por serial).
+3. **Un item por DN**, con su fecha y hora de creación. Cada DN lleva **9 piezas** (serial + carton); si faltan, se piden con el escáner o a mano (en pruebas).
+4. Del SFC se llenan los campos del reporte (tabla de abajo). **Sales Order, Part number NVIDIA, Shipped day, Customer PO y Customer DN** se escriben a mano.
+5. La página **Pallets** (antes «Etiquetas») muestra cada item por separado: DN, fecha de creación, hora (más adelante, hora de edición) y quién lo trabajó (el usuario de la sesión).
+6. **Ampliar un item** muestra todos los datos llenados desde el SFC.
+7. Los items se ven como **cuadrícula de 5 × 3** (15 por página).
+8. Si el SFC ya trae seriales con carton y Pallet ID, se muestran así; se pueden **corregir con el escáner** (en pruebas). La separación por Pallet ID va en Etiquetas.
+9. **Etiquetas** pasa a ser otra opción, **en desarrollo**.
+
+## Archivos de referencia
+
+| Archivo | Qué es | Papel |
 | --- | --- | --- |
-| **Listado de entregas** (`download`, SAP) | Una fila por DN: `DN_NO`, `SO_NUMBER`, `TO_NO`, `MODEL_NAME`, `SHIPPING_QTY`, `CUST_PO`, cliente, destino, pesos | Cada entrega crea una tarima con esos datos ya puestos |
-| **Tarimas** (CSV exportado desde Pallets) | La tabla limpia de tarimas | Volver a cargar tarimas editadas en Excel |
+| **SFC** (`download_*.xlsx`, hoja `data`) | Una fila por serial; 20 columnas útiles (las `Column1…` vienen vacías) | **Entrada**: crea el item |
+| **Shipping report CTO** (`shipping_report_automatizacion.xlsx`) | 43 columnas, una fila por serial; hoja «Instrucciones» con la fuente de cada campo | **Salida**: el formato a llegar |
+| **Shipping report actual** (`SHIPPING_REPORT…IT_BARCODE.xlsx`, hoja FINISH GOOD) | 63 columnas por área (Shipping, ITC, Fulfillment); renglón 6 = fuente («*», «Same info always», «Total SN Scanned») | **Referencia** para validar |
 
-- El código vive en `src/lib/pallets.ts` (con pruebas en `pallets.test.ts`) y la página en `src/pages/Pallets.tsx`.
-- Al elegir una entrega se llenan SO, T/O (sin ceros a la izquierda), PO, modelo, piezas, cliente, destino y pesos. **El FXNN DN y el NVIDIA DN se escriben a mano**; el DN del listado se ve como guía dentro del campo. Cargar estos datos desde un archivo o una imagen está pendiente de definir.
-- El listado de entregas (y el WIP) acepta **uno o varios archivos**: se unen por nombre de columna y una entrega repetida queda una sola vez.
-- **El shipping report ya no se carga (0.34):** sus campos siguen en el formulario, que se ve completo aunque no haya archivo. HTS, COO, nota de batería, medidas, Incoterm y Carrier se toman de otra tarima del mismo número de parte, si la hay. Se propone el siguiente Internal Ref (`FGNS-AAAAMMDD-NNN`).
-- El formulario va por áreas, igual que el reporte: **Shipping**, **Fulfillment** e **ITC**. Cada una muestra su avance y marca los campos que vienen «del listado».
-- Las filas del reporte sin Internal Ref pertenecen al embarque de arriba. Las filas sin Pallet # (por ejemplo, el embarque de 154 piezas) se cuentan, pero no se listan.
+### SFC: columnas
 
-## Validación
+| Columna | Forma | Qué es |
+| --- | --- | --- |
+| `TO_NO` | 10 dígitos | T/O |
+| `DN` | 10 dígitos | FXNN DN (**llave del item**) |
+| `CUST_PO` | 8 dígitos | PO |
+| `SO_LINE`, `DN_ITEM_NO` | 6 dígitos | Línea (no es el Sales Order) |
+| `SERIAL_NUMBER` | 14 dígitos | Serial interno FXNN |
+| `SERIAL_NUMBER1` | `MT…` 12 caracteres (2 formas) | **Serial del reporte** |
+| `MODEL_NAME` | `SA…` | Modelo SFC interno |
+| `MODEL_NAME1` | `920-…` | Part number FXNN |
+| `MCARTON_NO` | `FX…` 9 caracteres; **vacío si aún no tiene caja** | Carton |
+| `IMEI` | `PALFX…`; **`N/A` si aún no tiene tarima** | Pallet ID |
+| `KANBAN_IN_TIME`, `KANBAN_OUT_TIME` | fecha y hora | Entrada y salida del kanban |
+| `WIP_GROUP` | `STOCKIN` = listo; otros = sigue en línea | Estado |
 
-La tarima queda **Lista para imprimir** solo cuando:
+Muestra analizada: 257 seriales, 10 DN, 20 tarimas; **93 seriales sin tarima** y **53 sin caja**. Un DN tiene de 1 a 54 seriales, y uno no tiene ninguna tarima todavía.
 
-- Están todos los obligatorios: Pallet #, Internal Ref, DN, NVIDIA DN, Part number, Piezas, Cajas, Peso neto y bruto, Medidas, HTS, COO y Fecha de envío.
-- El peso neto no es mayor que el bruto.
-- El Pallet # tiene el formato `PAL…` + números (por ejemplo `PALFX98195`) y **no se repite** en las tarimas del equipo ni en la base. Su propio número no cuenta, para poder reimprimir.
-- Los seriales capturados cuadran con las piezas. Un serial duplicado no entra.
+## Los 17 campos: de dónde salen
 
-Estados: **Incompleta** → **Lista para imprimir** → **Impresa** (con fecha). Cualquier cambio después de imprimir la regresa a «Lista».
+| Campo (reporte CTO) | Fuente | Estado |
+| --- | --- | --- |
+| Shipped day | No está en el SFC | ✍️ Manual (fecha) |
+| PO | SFC `CUST_PO` | ✅ |
+| Sales Order | No está en el SFC (`SO_LINE` es la línea) | ✍️ Manual, de momento |
+| Project | No está en el SFC; en el ejemplo siempre es `NVIDIA` | 🔧 Plantilla por modelo |
+| Model | No está en el SFC (nombre comercial) | 🔧 Plantilla por modelo |
+| delivery | SFC `DN` | ✅ |
+| hazmat | No está en el SFC; texto fijo de batería («Same info always») | 🔧 Plantilla por modelo |
+| partnumber | Dos casillas: **PN SFC** (`MODEL_NAME1`, `920-…`) y **PN NVIDIA** (`692-…`, el del reporte) | ✅ SFC + ✍️ NVIDIA a mano (se copia al siguiente item del mismo PN) |
+| qty | 1 por serial (fila del reporte); total = número de seriales | ✅ Calculado |
+| Serial | SFC `SERIAL_NUMBER1` | ✅ |
+| Carton | SFC `MCARTON_NO` | ✅ Si está vacío: «sin caja» |
+| Pallet ID | SFC `IMEI` | ✅ Si es `N/A`: «sin tarima» |
+| COO | No está en el SFC; en el ejemplo, `MX` | 🔧 Plantilla (por omisión `MX`) |
+| Unit price USD | No está en el SFC («MPM») | 🔧 Plantilla por modelo · **dato sensible** |
+| Total price USD | Unit price × qty | ✅ Calculado |
+| Customer PO | Manual (NVIDIA PO: 8 dígitos en el reporte actual) | ✍️ Validar `^\d{8}$` |
+| Customer DN | Manual (NVIDIA DN: 8 dígitos en el reporte actual) | ✍️ Validar `^\d{8}$` |
 
-## Cruce con el WIP (extra)
+✅ sale del SFC · 🔧 dato del modelo: se escribe una vez y se copia al siguiente item del mismo PN SFC · ✍️ manual
 
-Si hay un WIP cargado, cada serial se busca en él. **Solo avisa, no bloquea la impresión:**
+### Validaciones
 
-- **Aún en línea:** el serial está en una estación de proceso (por ejemplo `WC_PRESSURE`).
-- **No aparece en el WIP cargado.**
-- Los seriales en STOCKIN, FG, PACK_CTN o PACK_PALT cuentan como listos, porque es lo esperado al armar una tarima.
+- **Al cargar el SFC:** la hoja `data` y las columnas `DN`, `SERIAL_NUMBER1`, `MCARTON_NO` e `IMEI` son obligatorias. Un serial repetido se rechaza.
+- **Un archivo con varios DN** crea un item por DN.
+- **El mismo DN cargado otra vez:** se avisa y se actualiza el item. No se duplica.
+- **Seriales sin tarima o sin caja:** se muestran aparte y no cuentan como listos.
+- **Estado del serial:** `STOCKIN` = listo; cualquier otro `WIP_GROUP` = «en línea» (aviso).
+- **9 piezas por DN** (`POR_DN`): una pieza cuenta si tiene serial y carton. Con menos: «Faltan N piezas» y se completan con el escáner o a mano (en pruebas). Con más: aviso.
+- **Campos a mano:** sin ellos el item dice «Faltan datos». Customer PO y DN: 8 dígitos.
+- **Precios:** solo en este equipo, nunca en la base ni en datos de prueba. Lo mismo para direcciones, cuentas y pedimentos.
 
-## Etiqueta
+## Plan de desarrollo (frontend)
 
-- **4×6 in**, negro sobre blanco para impresora térmica, en cualquier tema de la app.
-- **Code128** (juego B) con el Pallet #, para los escáneres de muelle. El codificador es propio: `src/lib/code128.ts`, con prueba.
-- **QR** (nivel M: aguanta ~15 % de daño) con todos los datos, una línea por dato, y los seriales al final, solo en ASCII:
+| Fase | Qué | Estado |
+| --- | --- | --- |
+| **F0** | Backend de Pallets en pausa: `PALLETS_DB = false` en `src/lib/db.ts` (tablas y endpoints se quedan) | ✅ 0.35 |
+| **F1** | `readSfc()`, `faltan()`, `escanear()` y `plantilla()` en `src/lib/sfc.ts`, con prueba de datos inventados | ✅ 0.35 |
+| **F2** | Carga: «Nuevo Pallet / Shipping Order» pide el SFC y crea o actualiza los items (`src/areas/pallets/Nuevo.tsx`) | ✅ 0.35 |
+| **F3** | Página **Pallets**: cuadrícula 5 × 3, búsqueda, filtro y páginas (`Pallets.tsx`) | ✅ 0.35 |
+| **F4** | **Ampliar item**: del SFC, a mano, datos del modelo, piezas y escáner en pruebas (`Item.tsx`) | ✅ 0.35 |
+| **F5** | Exportar el **Shipping report CTO** (una fila por serial) | Pendiente |
+| **F6** | **Etiquetas** por Pallet ID desde los items (hoy: la versión anterior, marcada «en desarrollo») | Pendiente |
+| **F7** | Hora de edición por campo y validaciones con datos reales | Pendiente |
+| **F8** | Reactivar el backend con el modelo nuevo (`pallet_items`) | Pendiente |
 
-  ```
-  PALLET:PALFX98195
-  REF:FGNS-20260805-001
-  DN:5276000000 · SO · PO · TO · PN · QTY · CTN · NW · GW · DIM · COO · HTS · DATE
-  SN:MT262770000T,MT262770000L,…
-  ```
+Los items viven en este navegador (`localStorage`, clave `yc-pallets`) y se borran al cerrar sesión.
 
-  Lo genera `qrcode-generator` (MIT, sin dependencias). Una tarima de 21 piezas da unos 500 caracteres; el QR admite más de 2,000.
-- Jerarquía de la etiqueta:
-  1. Cliente y destino (el cliente se corta con «…»; el destino siempre se ve completo).
-  2. Pallet # en grande con su código de barras.
-  3. Datos en dos columnas.
-  4. Nota de batería en recuadro.
-  5. QR.
-  6. «Tarima 1 de N».
-- Hay dos variantes en pantalla: **QR grande** o **Más texto**.
-- **Comprobado:** ambos códigos se leen con zxing desde el PDF a 300 y a 203 dpi, que es la resolución de una térmica común.
+### Archivos de Pallets hoy
 
-## QR y escáner
-
-- **Descargar QR (PNG):** el QR de la tarima como imagen, con fondo blanco y su margen.
-- **Cargar QR:** lee el QR de una foto o captura (jsQR, solo se descarga al usarlo) y abre esa tarima: la guardada, si ya está en el equipo, o una nueva.
-- **Escáner:** conecta un escáner USB en modo teclado (HID) con sufijo Enter y escanea en «Seriales de la tarima». Cada lectura dice si vino del **escáner** (menos de ~35 ms por carácter, por ejemplo «8 ms por carácter») o del **teclado**: así se comprueba que el escáner está bien configurado. Si escaneas el QR de una etiqueta en ese campo, no lo toma como serial y avisa.
-- **Modo prueba ×9:** cada lectura entra 9 veces (la escaneada más 8 copias) para llenar el QR como una tarima de 9 piezas. Pone las piezas en 9 y la etiqueta sale marcada **PRUEBA**, también impresa; el QR lleva `TEST:1`. Apagado, los duplicados se siguen rechazando.
-
-## Tarimas
-
-- Se guardan **en este equipo** como un archivo más (IndexedDB, tipo `TARIMAS`), con la **misma tabla** del CSV. No hay dos formatos.
-- Se guardan también **en la base** (`pallet_tarimas`). La página **Tarimas** las lista por día, con hora de subida, quién la subió, estado y «Abrir»; las que solo están en este equipo llevan la marca «Solo en este equipo».
-- Desde ahí se edita y se reimprime. «Guardar cambios» reemplaza la tarima por su Pallet # original.
-
-## Exportar
-
-- **Exportar tarimas (CSV)**: `tarimas-AAAA-MM-DD.csv`, una fila por tarima. Los números largos (seriales de 14 dígitos) van como `="…"` para que Excel no los convierta en 6.2E+13. Tiene encabezados en español, codificación UTF-8 con BOM (Excel abre bien los acentos), comillas donde hace falta y los seriales separados por espacio.
-- Se edita en Excel y **se vuelve a cargar** en Carga → *Tarimas*. La tabla cargada reemplaza a la del equipo: es la «nueva carga».
-
-## Sistema de diseño
-
-En el artefacto *Yield Control* (versión 39):
-
-- **`PalletLabel`**: la etiqueta. Props `d` (datos), `qr` (texto del QR), `variant` (`qr` | `text`) y `sample` (sello «MUESTRA», para ejemplos; no se imprime).
-- **`Qr`** y **`Barcode`**: los códigos sueltos.
-- **`SerialInput`**: captura con escáner o teclado, contador «5 / 7», un duplicado no entra y tiembla, y cada serial tiene su «×».
-
-Se compilan con esbuild desde `src/components/label.tsx` y `ui.tsx`: una sola fuente para la app y el sistema de diseño. Los estilos están en `src/styles/yc.css` (bloque «Etiqueta de tarima»).
-
-## Impresión del PDF
-
-1. **Descargar PDF**: `etiqueta-PALFX….pdf`, una página de 288×432 pt (4×6 in). La tarima queda «Impresa».
-2. Ábrelo e imprime con la impresora de etiquetas, en **tamaño real / 100 %**, nunca «Ajustar a la página», y con papel **4×6 in**.
-3. **Zebra:** en el controlador, Preferencias → Papel 4.00 × 6.00 in. El botón «Imprimir» de la página también sirve (`@page` de 4×6 in, una hoja), pero el PDF da el tamaño más confiable.
-4. **Prueba:** escanea el QR con el celular; debe mostrar todos los datos y los seriales.
+- **Nuevo:** `src/lib/sfc.ts` (+ prueba), `src/areas/pallets/items.ts` (los items), `Nuevo.tsx` (Carga), `Pallets.tsx` (cuadrícula), `Item.tsx` (ampliado); estilos `.app-item*`, `.app-det*` en `src/styles/app.css`.
+- **Etiquetas (en desarrollo, versión anterior):** `src/areas/pallets/Etiquetas.tsx`, `src/lib/pallets.ts`, `src/components/label.tsx`, `src/styles/yc.css`.
+- **Backend en pausa:** `server/index.js` (`pallets()`), `server/validate.js`, funciones de Pallets en `src/lib/db.ts`.
+- **Compartidos:** `src/areas.ts`, `src/main.tsx`, `src/pages/Carga.tsx`, `Validacion.tsx`, `Descargas.tsx`.
 
 ## Riesgos
 
-- **Tarimas guardadas sin conexión:** quedan solo en el navegador y se borran al cerrar sesión. **Exporta el CSV antes de salir** si viste el aviso.
-- **Datos sensibles:** la base guarda solo los campos de la etiqueta y los seriales; el shipping report (direcciones, pedimentos, precios) ya no se carga.
-- **Pallet # repetido:** la base lo rechaza (409). Sin conexión, solo se revisa contra este equipo.
-- **Sin probar en impresora real:** haz la prueba del paso 4 de la impresión antes de usarlo en piso.
-- **Fechas del reporte en 3 formatos** (ISO, `20/08/2026`, `23/10/2026 10:30 AM`): se muestran tal cual, sin convertir.
-- **El número HDG4** perdió dígitos en el Excel (notación científica); no se usa.
-
-### Endpoints (revisados el 26 nov)
-
-Una prueba de humo recorre la API en 20 casos:
-- `/api/salud` responde 200.
-- Sin sesión, `/api/me`, `/api/cargas` y `/api/resumen` responden 401.
-- Un POST sin JSON responde 415 y un método incorrecto, 405.
-- El login funciona en sus dos pasos (contraseña y código MFA).
-- Con sesión, `/api/me`, `/api/cargas`, `/api/resumen`, `/api/modelos`, `/api/usuarios`, `/api/base`, `/api/respaldos` y `/api/comentarios` responden 200.
-- Al salir, el acceso vuelve a dar 401.
-
-Los endpoints de Pallets están abajo. La sesión es un token firmado: salir borra la cookie, pero el servidor no lo invalida; conviene revisarlo al agregar los endpoints de tarimas.
-
-### Base de datos (0.34)
-
-- `pallet_cargas`: cada listado de entregas cargado (archivo, quién, cuántas entregas, las entregas y la fecha y hora de subida). Se guarda solo al cargarlo en Carga. En **Historial** se ve la lista y «Usar este listado» lo vuelve a cargar sin el archivo.
-- `pallet_tarimas`: una fila por tarima. El **Pallet # es único en toda la base**: una tarima nueva con un Pallet # que ya existe responde 409. Editar la misma tarima la actualiza, y renombrarla a un Pallet # ocupado también da 409 y se deshace todo.
-- `GET/POST /api/pallets/cargas` (`?id=` trae las entregas) y `GET/POST /api/pallets/tarimas` (`antes` = edición), con validación en el servidor (`validateEntregas`, `validateTarima`).
-- **Sin conexión:** las tarimas se guardan en el equipo con aviso. Las de la base se muestran junto con las del equipo en Etiquetas y en la página **Tarimas** (por fecha y hora de subida).
-
-### Próximo: base de datos
-
-- **WIP** y **Yield por área** con el mismo patrón: tabla + endpoint + validación + línea en `npm run check`.
-- **Permisos por área** (el administrador asigna WIP, YIELD o PALLETS a cada cuenta) y validarlos en cada endpoint.
-- **Cerrar sesión en el servidor** (hoy el token sigue válido hasta vencer).
-- Cargar DN y NVIDIA DN desde un archivo (pendiente de definir).
+- **Datos solo en el navegador** mientras el backend esté en pausa: se borran al cerrar sesión y otro equipo no los ve.
+- **PN NVIDIA ≠ PN del SFC:** sin la plantilla, el reporte saldría con el número de parte equivocado.
+- **Serial y carton:** en el SFC el serial (`SERIAL_NUMBER1`) es `MT…` y el carton (`MCARTON_NO`) es `FX…`, igual que en el reporte CTO.
+- **Archivo SFC ancho:** trae miles de columnas vacías (`Column1…`); se lee todo el archivo, puede tardar unos segundos.
+- **El serial tiene 2 formas** en el SFC (`MT…` con letra final y 12 dígitos): las dos se aceptan.
