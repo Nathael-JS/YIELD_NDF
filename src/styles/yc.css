@@ -244,7 +244,7 @@ body { margin: 0; background: var(--surface-100); color: var(--ink); font: 400 1
 .yc-label-count b { font-family: var(--font-mono); font-size: 6cqw; }
 .yc-label-code { position: relative; display: grid; justify-items: center; }
 .yc-label-qr { display: block; width: 32cqw; fill: #000; }
-.yc-label-sample { position: absolute; top: 50%; left: 50%; translate: -50% -50%; rotate: -18deg; padding: .5cqw 2cqw; background: #fff; border: .5cqw solid #000; font: 700 3cqw/1 var(--font-sans); letter-spacing: .1em; }
+.yc-label-sample { position: absolute; bottom: 100%; left: 50%; translate: -50% -1cqw; /* encima del QR, sin taparlo: se puede probar la lectura */ padding: .5cqw 2cqw; background: #fff; border: .5cqw solid #000; font: 700 3cqw/1 var(--font-sans); letter-spacing: .1em; }
 
 /* Captura de seriales */
 .yc-serials { display: grid; gap: var(--space-2); }

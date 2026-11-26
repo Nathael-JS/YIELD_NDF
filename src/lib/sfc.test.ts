@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { bloques, comparar, conEtiqueta, editarPieza, escanear, etiquetas, faltan, grupos, pegar, plantilla, POR_PALLET, problema, readSfc, type Item } from './sfc.ts';
+import { bloques, comparar, conEtiqueta, paraImprimir, editarPieza, escanear, etiquetas, faltan, grupos, pegar, plantilla, POR_PALLET, problema, readSfc, type Item } from './sfc.ts';
 
 // datos inventados con la forma del export de SFC
 const H = ['TO_NO', 'DN', 'CUST_PO', 'SERIAL_NUMBER', 'MODEL_NAME', 'SERIAL_NUMBER1', 'MODEL_NAME1', 'MCARTON_NO', 'IMEI', 'WIP_GROUP', 'Column1'];
@@ -20,6 +20,7 @@ test('faltan: piezas, manuales y Customer PO/DN de 8 dígitos', () => {
   const base = { ...readSfc({ headers: H, rows: Array.from({ length: POR_PALLET }, (_, i) => fila('100', i + 1)) }).items[0], archivo: '', usuario: '', creado: '' };
   const it: Item = { ...base, ...plantilla(base.pnSfc, []), so: '1', shipped: '2026-01-01', custPo: '12345678', custDn: '87654321', pnNvidia: '692-x' };
   assert.deepEqual(faltan(it), []);
+  assert.ok(paraImprimir(it) && !paraImprimir({ ...it, so: '' }));
   assert.deepEqual(faltan({ ...it, custDn: '123', so: '' }), ['Sales Order', 'Customer DN: 8 dígitos']);
   assert.deepEqual(faltan({ ...it, piezas: it.piezas.map((p, i) => (i ? p : { ...p, carton: '' })) }), ['PALFX00001: sin carton']);
   assert.deepEqual(faltan({ ...it, piezas: [...it.piezas, { ...it.piezas[0], serial: 'MTX' }] }), ['PALFX00001: 1 de más']);

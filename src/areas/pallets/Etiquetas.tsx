@@ -1,12 +1,11 @@
-// Etiquetas: una etiqueta 4×6 in por Pallet ID de cada DN. Los DN sin completar se ven como vista previa (sello MUESTRA) y se editan;
-// el PDF solo sale con el DN completo (cada pallet con 9 seriales y 9 cartons, o liberado) y sus datos llenos.
-// y la hoja con todos sus datos; «Editar» abre el item.
+// Etiquetas: una etiqueta 4×6 in por Pallet ID de cada DN y la hoja con todos sus datos; «Editar» abre el item.
+// Los DN que no están listos se ven como vista previa (sello MUESTRA); el PDF sale con paraImprimir() (pallets completos o liberados y datos llenos).
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Badge, Button } from '../../components/ui.tsx';
 import { PalletLabel } from '../../components/label.tsx';
 import { download } from '../../lib/download.ts';
-import { conEtiqueta, etiquetas, faltan, type Item } from '../../lib/sfc.ts';
+import { etiquetas, faltan, paraImprimir, type Item } from '../../lib/sfc.ts';
 import { PageHead } from '../../pages/Layout.tsx';
 import ItemDetalle from './Item.tsx';
 import { usePallets } from './items.ts';
@@ -14,7 +13,7 @@ import { usePallets } from './items.ts';
 const usd = (n: number) => (n ? n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '');
 
 function Hoja({ it, onEdit }: { it: Item; onEdit: () => void }) {
-  const qty = it.piezas.length, f = faltan(it), ls = etiquetas(it), listo = conEtiqueta(it) && !f.length;
+  const qty = it.piezas.length, f = faltan(it), ls = etiquetas(it), listo = paraImprimir(it);
   const [busy, setBusy] = useState(false), [err, setErr] = useState<string>();
   const pdf = async () => {
     setBusy(true); setErr(undefined);
@@ -57,7 +56,7 @@ function Hoja({ it, onEdit }: { it: Item; onEdit: () => void }) {
 }
 
 export default function Etiquetas() {
-  const { items, sync } = usePallets(), listos = items.filter(conEtiqueta), resto = items.filter((x) => !conEtiqueta(x));
+  const { items, sync } = usePallets(), listos = items.filter(paraImprimir), resto = items.filter((x) => !paraImprimir(x));
   useEffect(() => { sync(); }, [sync]); // los items de la base (otro equipo o sesión nueva)
   const [params, setParams] = useSearchParams(), [editar, setEditar] = useState<string>();
   const it = items.find((x) => x.dn === params.get('dn')) ?? listos[0] ?? items[0], ed = items.find((x) => x.dn === editar);
@@ -71,7 +70,7 @@ export default function Etiquetas() {
           <nav className="yc-card app-tags-list" aria-label="DN">
             {([['completos', listos], ['vista previa', resto]] as const).map(([t, xs]) => !!xs.length && (
               <div key={t} className="app-tags-sec">
-                <p className="app-item-k">{xs.length} {t === 'completos' ? (xs.length === 1 ? 'DN completo' : 'DN completos') : 'en vista previa'}</p>
+                <p className="app-item-k">{xs.length} {t === 'completos' ? (xs.length === 1 ? 'DN listo para imprimir' : 'DN listos para imprimir') : 'en vista previa'}</p>
                 <ul>{xs.map((x) => (
                   <li key={x.dn}><button type="button" aria-current={x.dn === it.dn || undefined} onClick={() => setParams({ dn: x.dn }, { replace: true })}>
                     <b>{x.dn}</b><span>{((n) => `${n} ${n === 1 ? 'pallet' : 'pallets'}`)(new Set(x.piezas.map((p) => p.pallet).filter(Boolean)).size)} · {x.so || 'sin SO'}</span>
