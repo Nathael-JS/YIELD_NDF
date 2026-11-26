@@ -184,8 +184,8 @@ Muestra analizada: 257 seriales, 10 DN, 20 tarimas; **93 seriales sin tarima** y
 
 ### Regla de piezas (0.39)
 
-- **Ya no son 9 por DN, sino 9 por pallet.** Un DN puede tener cualquier número de piezas, repartidas en pallets de hasta 9. El último puede tener menos.
-- **El DN está listo para etiqueta** cuando todas sus piezas tienen carton y Pallet ID, y ningún pallet pasa de 9.
+- **Ya no son 9 por DN, sino 9 por pallet:** un DN tiene varios Pallet ID, y **cada pallet lleva 9 seriales y 9 cartons distintos** (`problema()` en `src/lib/sfc.ts`).
+- **El DN está listo para etiqueta** cuando todos sus pallets están completos. Si un pallet tiene menos de 9, más de 9, alguna pieza sin carton o un carton repetido, queda «por completar» y aparece en Conexión con WIP.
 - Las piezas sin Pallet ID quedan en el bloque «Sin Pallet ID»; se les pone con el escáner, escribiéndolo o cargando el SFC otra vez.
 
 ## Plan de desarrollo (frontend)

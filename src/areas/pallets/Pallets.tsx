@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Badge, Button, Segmented } from '../../components/ui.tsx';
-import { completas, faltan, grupos, POR_PALLET, type Item } from '../../lib/sfc.ts';
+import { completas, faltan, grupos, problema, type Item } from '../../lib/sfc.ts';
 import { PageHead } from '../../pages/Layout.tsx';
 import { I } from '../../areas.ts';
 import { usePallets } from './items.ts';
@@ -53,7 +53,7 @@ export default function Pallets() {
                       <span className="app-item-top"><span className="app-item-k">DN</span><Estado it={x} /></span>
                       <strong className="app-item-dn">{x.dn}</strong>
                       <span className="app-item-bar" aria-label={`${n} de ${t} piezas en pallet`}><i style={{ width: `${t ? (n / t) * 100 : 0}%` }} className={t && n === t ? 'is-full' : ''} /></span>
-                      <span className="app-item-meta"><span>{n} / {t} piezas</span><span>{ps.length} {ps.length === 1 ? 'pallet' : 'pallets'} · {ps.filter((g) => g.piezas.length === POR_PALLET).length} de {POR_PALLET}</span></span>
+                      <span className="app-item-meta"><span>{n} / {t} piezas</span><span>{ps.filter((g) => !problema(g)).length}/{ps.length} {ps.length === 1 ? 'pallet completo' : 'pallets completos'}</span></span>
                       <span className="app-item-foot">
                         <span className="app-item-who" aria-hidden>{(x.usuario || '?').slice(0, 1).toUpperCase()}</span>
                         <span><b>{x.usuario || 'Sin usuario'}</b><span>{fecha} · {hora?.slice(0, 5)}{x.editado ? ' · editado' : ''}</span></span>

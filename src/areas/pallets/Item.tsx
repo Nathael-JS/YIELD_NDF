@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type RefObject } from 'react';
 import { Link } from 'react-router-dom';
 import { Badge, Button } from '../../components/ui.tsx';
-import { completas, conEtiqueta, escanear, excedidos, faltan, grupos, lista, MANUAL, ocho, PLANTILLA, POR_PALLET, type Item } from '../../lib/sfc.ts';
+import { completas, conEtiqueta, escanear, faltan, grupos, lista, MANUAL, ocho, pendientes, PLANTILLA, POR_PALLET, problema, type Item } from '../../lib/sfc.ts';
 import { local } from '../../lib/wip.ts';
 import { usePallets } from './items.ts';
 
@@ -10,9 +10,9 @@ const Dato = ({ k, v }: { k: string; v: string | number }) => <div className="ap
 
 /** Qué le falta: primero las piezas (se ven en la barra), luego los datos a mano. */
 export function Estado({ it }: { it: Item }) {
-  const sin = it.piezas.length - completas(it), f = faltan(it);
-  if (sin) return <Badge tone="warn">{sin} sin pallet o carton</Badge>;
-  if (excedidos(it).length) return <Badge tone="warn">Pallet con más de {POR_PALLET}</Badge>;
+  const n = pendientes(it).length, f = faltan(it);
+  if (!it.piezas.length) return <Badge tone="warn">Sin piezas</Badge>;
+  if (n) return <Badge tone="warn" title={f.join(' · ')}>{n} {n === 1 ? 'pallet' : 'pallets'} por completar</Badge>;
   return f.length ? <Badge tone="info" title={f.join(' · ')}>Faltan datos</Badge> : <Badge tone="ok">Listo</Badge>;
 }
 
@@ -69,7 +69,7 @@ export default function ItemDetalle({ it, onClose }: { it: Item; onClose: () => 
           <div className="app-det-form">{PLANTILLA.map(([k, l]) => campo(k, l))}<Dato k="Total price USD" v={total ? total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : ''} /></div>
         </section>
         <section aria-labelledby="det-piezas" className="app-det-piezas">
-          <h3 id="det-piezas" className="app-h3">Piezas <span className="app-muted">{n} / {qty} con carton y Pallet ID · {gs.filter((g) => g.pallet).length} pallets de hasta {POR_PALLET} · el estado en línea está en Conexión con WIP</span></h3>
+          <h3 id="det-piezas" className="app-h3">Piezas <span className="app-muted">{n} / {qty} con carton y Pallet ID · {gs.filter((g) => g.pallet).length} pallets de {POR_PALLET} seriales y {POR_PALLET} cartons · el estado en línea está en Conexión con WIP</span></h3>
           <div className="yc-table-wrap">
             <table className="yc-table">
               <thead><tr><th className="num">#</th><th>Serial</th><th>SN</th><th>Carton ID</th><th>Pallet ID</th><th /></tr></thead>
@@ -79,7 +79,7 @@ export default function ItemDetalle({ it, onClose }: { it: Item; onClose: () => 
                     <span className="code">{g.pallet || 'Sin Pallet ID'}</span>
                     {g.pallet && <span className="app-muted">Pallet {gi + 1}</span>}
                     <span className="app-grp-n">{g.piezas.filter(lista).length} / {g.pallet ? POR_PALLET : g.piezas.length}</span>
-                    {!g.pallet ? <Badge tone="warn">Escanea su Pallet ID</Badge> : g.piezas.length > POR_PALLET ? <Badge tone="bad">{g.piezas.length - POR_PALLET} de más</Badge> : g.piezas.length === POR_PALLET ? <Badge tone="ok">Completo</Badge> : <Badge tone="neutral">{g.piezas.length} de {POR_PALLET}</Badge>}
+                    {!g.pallet ? <Badge tone="warn">Escanea su Pallet ID</Badge> : problema(g) ? <Badge tone={g.piezas.length > POR_PALLET || problema(g) === 'carton repetido' ? 'bad' : 'warn'}>{problema(g)}</Badge> : <Badge tone="ok">Completo</Badge>}
                   </th></tr>
                   {g.piezas.map((p) => (
                     <tr key={p.serial}>

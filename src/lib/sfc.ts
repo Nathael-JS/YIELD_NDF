@@ -55,18 +55,25 @@ export function grupos(it: Pick<Item, 'piezas'>) {
   const gs = [...m].map(([pallet, piezas]) => ({ pallet, piezas }));
   return [...gs.filter((g) => g.pallet), ...gs.filter((g) => !g.pallet)];
 }
-/** Pallets con más de 9 piezas: no se puede imprimir su etiqueta. */
-export const excedidos = (it: Pick<Item, 'piezas'>) => grupos(it).filter((g) => g.pallet && g.piezas.length > POR_PALLET);
-/** El DN ya tiene todas sus piezas en pallets de hasta 9: se puede ver su etiqueta. */
-export const conEtiqueta = (it: Pick<Item, 'piezas'>) => it.piezas.length > 0 && completas(it) === it.piezas.length && !excedidos(it).length;
+/** Qué le falta a un pallet para estar completo: 9 seriales con 9 cartons distintos ('' = completo). */
+export function problema(g: { pallet: string; piezas: Pieza[] }) {
+  const n = g.piezas.length, cartons = new Set(g.piezas.map((p) => p.carton).filter(Boolean)).size;
+  if (!g.pallet) return 'sin Pallet ID';
+  if (n > POR_PALLET) return `${n - POR_PALLET} de más`;
+  if (n < POR_PALLET) return `faltan ${POR_PALLET - n}`;
+  if (cartons < n) return g.piezas.some((p) => !p.carton) ? 'sin carton' : 'carton repetido';
+  return '';
+}
+/** Pallets por completar. */
+export const pendientes = (it: Pick<Item, 'piezas'>) => grupos(it).filter((g) => problema(g));
+/** Todos sus pallets tienen 9 seriales y 9 cartons: se puede ver su etiqueta. */
+export const conEtiqueta = (it: Pick<Item, 'piezas'>) => it.piezas.length > 0 && !pendientes(it).length;
 export const ocho = /^\d{8}$/;
 /** Lo que le falta a un item para estar listo (vacío = listo). */
 export function faltan(it: Item) {
   const out: string[] = [];
-  const sin = it.piezas.length - completas(it);
   if (!it.piezas.length) out.push('Sin piezas');
-  if (sin) out.push(`${sin} ${sin === 1 ? 'pieza' : 'piezas'} sin carton o Pallet ID`);
-  for (const g of excedidos(it)) out.push(`${g.pallet}: ${g.piezas.length} piezas (máx. ${POR_PALLET})`);
+  for (const g of pendientes(it)) out.push(g.pallet ? `${g.pallet}: ${problema(g)}` : `${g.piezas.length} ${g.piezas.length === 1 ? 'pieza' : 'piezas'} sin Pallet ID`);
   for (const [k, label] of MANUAL) if (!it[k].trim()) out.push(label);
   for (const k of ['custPo', 'custDn'] as const) if (it[k].trim() && !ocho.test(it[k].trim())) out.push(`${k === 'custPo' ? 'Customer PO' : 'Customer DN'}: 8 dígitos`);
   return out;
@@ -80,7 +87,7 @@ export function plantilla(pnSfc: string, items: Item[]): Pick<Item, (typeof PLAN
 
 /** Agrega o corrige una pieza con el escáner: un serial que ya está toma el carton y el Pallet ID nuevos (los vacíos no borran); si no, entra como pieza nueva. */
 export function escanear(piezas: Pieza[], serial: string, carton: string, pallet = ''): Pieza[] {
-  const s = serial.trim().toUpperCase(), c = carton.trim().toUpperCase(), pl = pallet.trim().toUpperCase();
+  const s = serial.trim().toUpperCase(), c = vacio(carton.trim().toUpperCase()), pl = vacio(pallet.trim().toUpperCase()); // «N/A» = vacío, como en el SFC
   if (!s) return piezas;
   const i = piezas.findIndex((p) => p.serial.toUpperCase() === s);
   if (i < 0) return [...piezas, { serial: s, sn: '', carton: c, pallet: pl, estado: '', manual: true }];
@@ -92,13 +99,11 @@ const ascii = (s: string) => s.normalize('NFD').replace(/[^\x20-\x7e]/g, '').tri
 
 /** Una etiqueta por Pallet ID del DN, en el orden en que aparecen; el QR lleva sus datos y sus seriales. Sin precios. */
 export function etiquetas(it: Item): { d: PalletLabelData; qr: string }[] {
-  const porPallet = new Map<string, Pieza[]>();
-  for (const p of it.piezas) if (p.pallet) (porPallet.get(p.pallet) ?? porPallet.set(p.pallet, []).get(p.pallet)!).push(p);
-  const total = porPallet.size;
-  return [...porPallet].map(([pallet, ps], i) => {
+  const gs = grupos(it).filter((g) => g.pallet);
+  return gs.map(({ pallet, piezas: ps }, i) => {
     const cartons = [...new Set(ps.map((p) => p.carton).filter(Boolean))];
     const d: PalletLabelData = { pallet, project: it.project, model: it.model, dn: it.dn, po: it.po, so: it.so, custPo: it.custPo, custDn: it.custDn,
-      pn: it.pnNvidia, pnSfc: it.pnSfc, qty: ps.length, cartons: cartons.length, shipped: it.shipped, coo: it.coo, hazmat: it.hazmat, index: i + 1, total };
+      pn: it.pnNvidia, pnSfc: it.pnSfc, qty: ps.length, cartons: cartons.length, shipped: it.shipped, coo: it.coo, hazmat: it.hazmat, index: i + 1, total: gs.length };
     const qr = [`PALLET:${pallet}`, `DN:${it.dn}`, `PO:${it.po}`, `SO:${it.so}`, `CPO:${it.custPo}`, `CDN:${it.custDn}`, `PN:${it.pnNvidia}`, `QTY:${ps.length}`,
       `DATE:${it.shipped}`, `COO:${it.coo}`, `CTN:${cartons.join(',')}`, `SN:${ps.map((p) => p.serial).join(',')}`].map(ascii).join('\n');
     return { d, qr };
