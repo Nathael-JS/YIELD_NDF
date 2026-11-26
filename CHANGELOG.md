@@ -8,6 +8,21 @@ Un cambio de componente se publica primero en el artefacto y después se copia a
 
 Los errores encontrados y cómo se corrigieron están en [ERRORES.md](ERRORES.md); las mejoras y cómo se hicieron, en [MEJORAS.md](MEJORAS.md).
 
+## [0.36.0] — 2026-11-26
+
+### Agregado
+- **Los items de Pallets se guardan en la base** (tabla `pallet_items`, un DN por fila):
+  - Se guardan al cargar el SFC y al cerrar un item ampliado.
+  - Otro equipo ve los mismos items, con lo escrito a mano.
+  - Volver a cargar el SFC conserva lo escrito a mano aunque venga de otro equipo.
+  - Sin conexión se trabaja en el equipo con aviso, y se sube al volver a abrir Pallets.
+  - `GET/POST /api/pallets/items`, con validación y prueba.
+  - `npm run check` revisa la tabla.
+- **El Unit price no va a la base:** el servidor lo descarta y se queda en el navegador de quien lo escribió.
+
+### Cambiado
+- Los items se ordenan igual en todos los equipos: los más nuevos primero y luego por DN.
+
 ## [0.35.0] — 2026-11-25
 
 ### Cambiado

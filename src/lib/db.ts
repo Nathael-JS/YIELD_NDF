@@ -2,6 +2,7 @@
 // cookie que JavaScript no puede leer, y ninguna clave vive en el navegador.
 import type { Congruencia, DbRow } from './tcqs.ts';
 import type { Entrega, Tarima } from './pallets.ts';
+import type { Item } from './sfc.ts';
 
 /** Lo llama la app cuando el servidor dice que la sesión ya no vale (vencida o cerrada). */
 export let onExpired = () => {};
@@ -68,7 +69,10 @@ export const respaldoAccion = (a: { accion: 'crear' | 'borrar'; carga: number } 
 export const loadCargas = () => call<{ cargas: Carga[] }>('/api/cargas').then((b) => b.cargas);
 
 // ── Pallets ──
-/** shortcut: backend de Pallets en pausa mientras se rehace el frontend (PALLETS.md, F0). En true vuelve a usar /api/pallets. */
+/** Items por DN (0.36): en la base sin precio; el Unit price se queda en este navegador. */
+export const loadItems = () => call<{ items: Omit<Item, 'price'>[] }>('/api/pallets/items').then((b) => b.items);
+export const saveItems = (items: Item[]) => post<{ guardados: number }>('/api/pallets/items', { items: items.map(({ price: _, ...x }) => x) });
+/** shortcut: endpoints del modelo anterior (listado y tarimas, usados por Etiquetas) en pausa; en true se vuelven a usar. */
 export const PALLETS_DB = false;
 const pausa = <T>(f: () => Promise<T>) => (PALLETS_DB ? f() : Promise.reject(Object.assign(new Error('la base de Pallets está en pausa'), { status: 0 })));
 export interface PalletCarga { id: number; archivo: string; usuario: string; filas: number; subida: string }

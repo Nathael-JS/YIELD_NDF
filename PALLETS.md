@@ -1,6 +1,6 @@
 # Pallets · nueva infraestructura (plan)
 
-Pallets se rehace en el frontend. La versión anterior (0.28–0.34: etiqueta armada a mano, listado de entregas, tarimas en la base) sigue en el código y en el historial de git hasta que la reemplace cada fase. **El backend de Pallets queda en pausa** mientras se valida este plan.
+Pallets se rehace en el frontend. La versión anterior (0.28–0.34: etiqueta armada a mano, listado de entregas, tarimas en la base) sigue en el código y en el historial de git hasta que la reemplace cada fase. Los items por DN se guardan en la base desde la 0.36 (`pallet_items`).
 
 > Los archivos de ejemplo se analizaron en un directorio aislado y se borraron. Este documento solo guarda la **estructura** (columnas y formas), nunca datos reales.
 
@@ -90,20 +90,30 @@ Muestra analizada: 257 seriales, 10 DN, 20 tarimas; **93 seriales sin tarima** y
 | **F5** | Exportar el **Shipping report CTO** (una fila por serial) | Pendiente |
 | **F6** | **Etiquetas** por Pallet ID desde los items (hoy: la versión anterior, marcada «en desarrollo») | Pendiente |
 | **F7** | Hora de edición por campo y validaciones con datos reales | Pendiente |
-| **F8** | Reactivar el backend con el modelo nuevo (`pallet_items`) | Pendiente |
+| **F8** | Backend con el modelo nuevo: tabla `pallet_items` y `GET/POST /api/pallets/items` | ✅ 0.36 |
 
-Los items viven en este navegador (`localStorage`, clave `yc-pallets`) y se borran al cerrar sesión.
+### Base de datos (0.36)
+
+- **`pallet_items`:** una fila por DN, con `datos` (el item y sus piezas), `usuario` (quién lo creó), `creado`, `edito` (quién lo editó al último) y `editado`.
+- **`GET /api/pallets/items`** trae todos. **`POST /api/pallets/items`** `{ items: [...] }` crea o reemplaza por DN (de 1 a 500 por llamada), con validación en el servidor (`validateItems`).
+- **El Unit price no se guarda en la base:** el servidor lo descarta y se queda solo en el navegador de quien lo escribió. Por eso el Total price solo se ve en ese equipo.
+- **Cuándo se guarda:** al cargar el SFC (los DN del archivo) y al cerrar un item ampliado, si cambió algo. No se guarda en cada tecla.
+- **Al abrir Pallets o Carga** se traen los de la base. De cada DN se queda la versión más reciente, y lo que solo estaba en este equipo (por ejemplo, guardado sin conexión) se sube.
+- **Sin conexión:** se trabaja en el equipo con aviso, y se sube al volver a abrir Pallets.
+- **Copia en el navegador** (`localStorage`, clave `yc-pallets`): se borra al cerrar sesión; la base conserva todo.
+- Los endpoints del modelo anterior (`/api/pallets/cargas` y `/tarimas`) siguen en pausa (`PALLETS_DB = false`); solo los usa Etiquetas.
 
 ### Archivos de Pallets hoy
 
 - **Nuevo:** `src/lib/sfc.ts` (+ prueba), `src/areas/pallets/items.ts` (los items), `Nuevo.tsx` (Carga), `Pallets.tsx` (cuadrícula), `Item.tsx` (ampliado); estilos `.app-item*`, `.app-det*` en `src/styles/app.css`.
 - **Etiquetas (en desarrollo, versión anterior):** `src/areas/pallets/Etiquetas.tsx`, `src/lib/pallets.ts`, `src/components/label.tsx`, `src/styles/yc.css`.
-- **Backend en pausa:** `server/index.js` (`pallets()`), `server/validate.js`, funciones de Pallets en `src/lib/db.ts`.
+- **Backend:** `server/index.js` (`pallets()`, tabla `pallet_items`), `server/validate.js` (`validateItems`), `src/lib/db.ts` (`loadItems`, `saveItems`), `server/check.js`.
 - **Compartidos:** `src/areas.ts`, `src/main.tsx`, `src/pages/Carga.tsx`, `Validacion.tsx`, `Descargas.tsx`.
 
 ## Riesgos
 
-- **Datos solo en el navegador** mientras el backend esté en pausa: se borran al cerrar sesión y otro equipo no los ve.
+- **Gana la última escritura por DN:** si dos personas editan el mismo DN a la vez, se queda lo último que se guardó.
+- **Las horas de edición vienen de cada equipo:** si dos equipos tienen la hora distinta, puede quedarse la versión equivocada al sincronizar.
 - **PN NVIDIA ≠ PN del SFC:** sin la plantilla, el reporte saldría con el número de parte equivocado.
 - **Serial y carton:** en el SFC el serial (`SERIAL_NUMBER1`) es `MT…` y el carton (`MCARTON_NO`) es `FX…`, igual que en el reporte CTO.
 - **Archivo SFC ancho:** trae miles de columnas vacías (`Column1…`); se lee todo el archivo, puede tardar unos segundos.

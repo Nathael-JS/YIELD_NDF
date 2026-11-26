@@ -12,6 +12,7 @@ const ESPERADO = {
   yield_comentarios: ['id', 'grafica', 'usuario', 'texto', 'creado'],
   pallet_cargas: ['id', 'archivo', 'usuario', 'filas', 'entregas', 'subida'],
   pallet_tarimas: ['pallet', 'datos', 'usuario', 'creada', 'actualizada', 'impresa'],
+  pallet_items: ['dn', 'datos', 'usuario', 'creado', 'edito', 'editado'],
 };
 const INDICES = ['yield_comentarios_grafica'];
 
@@ -57,7 +58,7 @@ async function api(url) {
   console.log(`\nAPI · ${url}`);
   const call = (m, p, body, type) => fetch(url + p, { method: m, headers: type ? { 'content-type': type } : {}, body }).then((r) => r.status, () => 0);
   ok(await call('GET', '/api/salud') === 200, 'GET /api/salud', '200');
-  for (const p of ['/api/me', '/api/cargas', '/api/resumen', '/api/modelos', '/api/usuarios', '/api/base', '/api/respaldos', '/api/comentarios?grafica=x', '/api/pallets/cargas', '/api/pallets/tarimas']) ok(await call('GET', p) === 401, `GET ${p} sin sesión`, '401');
+  for (const p of ['/api/me', '/api/cargas', '/api/resumen', '/api/modelos', '/api/usuarios', '/api/base', '/api/respaldos', '/api/comentarios?grafica=x', '/api/pallets/cargas', '/api/pallets/tarimas', '/api/pallets/items']) ok(await call('GET', p) === 401, `GET ${p} sin sesión`, '401');
   ok(await call('GET', '/api/login') === 405, 'GET /api/login', '405 (solo POST)');
   ok(await call('POST', '/api/login', 'x', 'text/plain') === 415, 'POST /api/login sin JSON', '415');
   // sin probar una clave mala: contaría como intento fallido y podría bloquear 15 min a quien comparta la IP

@@ -1,7 +1,7 @@
 // Pallets: un item por DN (creado en Carga desde el SFC), en cuadrícula de 5 × 3; «Ampliar» abre todos sus datos.
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Button, Segmented } from '../../components/ui.tsx';
+import { Badge, Button, Segmented } from '../../components/ui.tsx';
 import { completas, faltan, POR_DN, type Item } from '../../lib/sfc.ts';
 import { PageHead } from '../../pages/Layout.tsx';
 import { I } from '../../areas.ts';
@@ -12,7 +12,8 @@ const POR_PAGINA = 15; // 5 × 3
 type Ver = 'todos' | 'incompletos' | 'listos';
 
 export default function Pallets() {
-  const items = usePallets((s) => s.items), go = useNavigate();
+  const { items, sync, db } = usePallets(), go = useNavigate();
+  useEffect(() => { sync(); }, [sync]);
   const [q, setQ] = useState(''), [ver, setVer] = useState<Ver>('todos'), [pag, setPag] = useState(0), [abierto, setAbierto] = useState<string>();
   const listo = (it: Item) => !faltan(it).length;
   const vis = items.filter((it) => (ver === 'todos' || listo(it) === (ver === 'listos'))
@@ -26,6 +27,7 @@ export default function Pallets() {
       <PageHead title="Pallets" sub="Un item por DN, creado desde el export de SFC. Amplía uno para ver todos sus datos y completar lo que falta.">
         <Button variant="primary" onClick={() => go('/pallets/carga')}>Nuevo Pallet / Shipping Order</Button>
       </PageHead>
+      {db && <p className="app-muted" role="status"><Badge tone={db[0]}>Base</Badge> {db[1]}</p>}
       {!items.length ? (
         <section className="yc-card app-empty app-items-empty">
           <svg className="app-items-icon" viewBox="0 0 24 24" aria-hidden><path d={I.pal} /></svg>

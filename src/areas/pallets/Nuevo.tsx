@@ -1,5 +1,5 @@
 // Carga · Pallets: «Nuevo Pallet / Shipping Order» pide el export de SFC y crea un item por DN.
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Badge, FileChip, type Tone } from '../../components/ui.tsx';
 import { parseFile } from '../../lib/files.ts';
@@ -9,7 +9,8 @@ import { useApp } from '../../store.ts';
 import { usePallets } from './items.ts';
 
 export default function NuevoPallet() {
-  const user = useApp((s) => s.user) ?? '', { items, upsert } = usePallets();
+  const user = useApp((s) => s.user) ?? '', { items, upsert, sync, push, db } = usePallets();
+  useEffect(() => { sync(); }, [sync]); // lo escrito a mano en otro equipo se conserva al volver a cargar un DN
   const [busy, setBusy] = useState(false), [msg, setMsg] = useState<[Tone, string, string[]?]>();
 
   async function load(file: File) {
@@ -20,6 +21,7 @@ export default function NuevoPallet() {
       if (!r.items.length) return setMsg(['warn', `${file.name} no trae seriales con DN.`]);
       const ahora = local(), ya = new Set(items.map((x) => x.dn));
       upsert(r.items.map((x) => ({ ...x, ...plantilla(x.pnSfc, items), so: '', shipped: '', custPo: '', custDn: '', archivo: file.name, usuario: user, creado: ahora })));
+      push(r.items.map((x) => x.dn));
       const nuevos = r.items.filter((x) => !ya.has(x.dn)).length, cortos = r.items.filter((x) => x.piezas.length < POR_DN).length;
       setMsg(['ok', `${nuevos} ${nuevos === 1 ? 'item nuevo' : 'items nuevos'}${r.items.length - nuevos ? ` y ${r.items.length - nuevos} actualizados (lo escrito a mano se conserva)` : ''}.`,
         [cortos ? `${cortos} DN con menos de ${POR_DN} piezas: completa las faltantes al ampliar el item.` : '', r.repetidos ? `${r.repetidos} ${r.repetidos === 1 ? 'serial repetido se contó' : 'seriales repetidos se contaron'} una vez.` : ''].filter(Boolean)]);
@@ -36,6 +38,7 @@ export default function NuevoPallet() {
       </div>
       <FileChip type="SFC" accept=".xlsx,.csv" onFile={load} status={busy ? 'comparing' : msg?.[0] === 'bad' ? 'error' : msg ? 'loaded' : 'empty'}
         meta={busy ? 'Leyendo…' : 'Export de SFC (.xlsx o .csv), una fila por serial'} />
+      {db && <p className="app-muted" role="status"><Badge tone={db[0]}>Base</Badge> {db[1]}</p>}
       {msg && (
         <div role="status" className="app-new-msg">
           <p className="app-muted"><Badge tone={msg[0]}>{msg[0] === 'ok' ? 'Listo' : 'Aviso'}</Badge> {msg[1]} {msg[0] === 'ok' && <Link to="/pallets">Ver pallets</Link>}</p>

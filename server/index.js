@@ -6,7 +6,7 @@ import { extname, join, normalize, resolve } from 'node:path';
 import pg from 'pg';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { checkPassword, checkTotp, cookieOf, failed, hashPassword, HOURS, limited, newSecret, otpUri, sign, verify } from './auth.js';
-import { validate, validateEntregas, validateTarima } from './validate.js';
+import { validate, validateEntregas, validateTarima, validateItems } from './validate.js';
 
 const DIST = resolve('dist');
 const TYPES = { '.ico': 'image/x-icon', '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.woff': 'font/woff', '.json': 'application/json' };
@@ -53,7 +53,11 @@ create table if not exists pallet_cargas (
   id serial primary key, archivo text not null, usuario text not null, filas int not null, entregas jsonb not null, subida timestamptz not null default now());
 create table if not exists pallet_tarimas (
   pallet text primary key, datos jsonb not null, usuario text not null,
-  creada timestamptz not null default now(), actualizada timestamptz not null default now(), impresa timestamptz)`)
+  creada timestamptz not null default now(), actualizada timestamptz not null default now(), impresa timestamptz);
+-- Pallets (0.35+): un item por DN creado desde el SFC, con sus piezas; sin precios (se quedan en el navegador)
+create table if not exists pallet_items (
+  dn text primary key, datos jsonb not null, usuario text not null, creado timestamptz not null default now(),
+  edito text not null, editado timestamptz not null default now())`)
   // cuenta principal (super administrador) desde el entorno: ADMIN_USER (y ADMIN_PASSWORD si hay que crearla)
   .then(async () => {
     // si la cuenta ya existe (creada desde «Crear cuenta») se activa como administradora y conserva su contraseña
@@ -246,6 +250,20 @@ async function comments(req, res, me, url) {
 
 /** Pallets: listados de entregas (histórico) y tarimas. Todos los usuarios con sesión; los permisos por área vendrán después. */
 async function pallets(req, res, me, url) {
+  if (url.pathname === '/api/pallets/items') {
+    if (req.method === 'GET') {
+      const { rows } = await db.query('select datos from pallet_items order by creado desc limit 5000');
+      return json(res, 200, { items: rows.map((r) => r.datos) });
+    }
+    if (req.method === 'POST') {
+      // crea o reemplaza por DN (gana la última escritura); quien lo creó no cambia, quien lo editó sí
+      const v = validateItems(await body(req));
+      if (v.error) return json(res, 400, { error: v.error });
+      await db.query(`insert into pallet_items (dn, datos, usuario, edito) select x->>'dn', x, $2, $2 from jsonb_array_elements($1::jsonb) x
+        on conflict (dn) do update set datos = excluded.datos, edito = excluded.edito, editado = now()`, [JSON.stringify(v.items), me.nombre]);
+      return json(res, 200, { guardados: v.items.length });
+    }
+  }
   if (url.pathname === '/api/pallets/cargas') {
     if (req.method === 'GET') {
       const id = Number(url.searchParams.get('id'));

@@ -18,8 +18,10 @@ export function Estado({ it }: { it: Item }) {
 export default function ItemDetalle({ it, onClose }: { it: Item; onClose: () => void }) {
   const update = usePallets((s) => s.update), ref = useRef<HTMLDialogElement>(null), carton = useRef<HTMLInputElement>(null);
   const [sn, setSn] = useState(''), [ct, setCt] = useState('');
-  useEffect(() => { ref.current?.showModal(); }, []);
-  const set = (patch: Partial<Item>) => update(it.dn, { ...patch, editado: local() });
+  const push = usePallets((s) => s.push), cambio = useRef(false);
+  // se sube a la base al cerrar (no en cada tecla); si falla, queda en el equipo y se reintenta al abrir Pallets
+  useEffect(() => { ref.current?.showModal(); return () => { if (cambio.current) push([it.dn]); }; }, [it.dn, push]);
+  const set = (patch: Partial<Item>) => { cambio.current = true; update(it.dn, { ...patch, editado: local() }); };
   const f = faltan(it), n = completas(it), qty = it.piezas.length, total = Number(it.price) * qty;
   const pallets = [...new Set(it.piezas.map((p) => p.pallet).filter(Boolean))];
   const agregar = () => { if (!sn.trim()) return; set({ piezas: escanear(it.piezas, sn, ct) }); setSn(''); setCt(''); };
@@ -60,7 +62,7 @@ export default function ItemDetalle({ it, onClose }: { it: Item; onClose: () => 
           <div className="app-det-form">{MANUAL.map(([k, l]) => campo(k, l))}</div>
         </section>
         <section aria-labelledby="det-modelo">
-          <h3 id="det-modelo" className="app-h3">Datos del modelo <span className="app-muted">se copian al siguiente item del mismo PN</span></h3>
+          <h3 id="det-modelo" className="app-h3">Datos del modelo <span className="app-muted">se copian al siguiente item del mismo PN · el precio solo se guarda en este equipo</span></h3>
           <div className="app-det-form">{PLANTILLA.map(([k, l]) => campo(k, l))}<Dato k="Total price USD" v={total ? total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : ''} /></div>
         </section>
         <section aria-labelledby="det-piezas" className="app-det-piezas">
