@@ -259,8 +259,10 @@ async function pallets(req, res, me, url) {
       // crea o reemplaza por DN (gana la última escritura); quien lo creó no cambia, quien lo editó sí
       const v = validateItems(await body(req));
       if (v.error) return json(res, 400, { error: v.error });
-      await db.query(`insert into pallet_items (dn, datos, usuario, edito) select x->>'dn', x, $2, $2 from jsonb_array_elements($1::jsonb) x
-        on conflict (dn) do update set datos = excluded.datos, edito = excluded.edito, editado = now()`, [JSON.stringify(v.items), me.nombre]);
+      // el creador (datos.usuario) lo pone el servidor al crear y no cambia al editar: no se confía en lo que manda el navegador
+      await db.query(`insert into pallet_items (dn, datos, usuario, edito)
+        select x->>'dn', jsonb_set(x, '{usuario}', to_jsonb($2::text)), $2, $2 from jsonb_array_elements($1::jsonb) x
+        on conflict (dn) do update set datos = jsonb_set(excluded.datos, '{usuario}', to_jsonb(pallet_items.usuario)), edito = excluded.edito, editado = now()`, [JSON.stringify(v.items), me.nombre]);
       return json(res, 200, { guardados: v.items.length });
     }
   }

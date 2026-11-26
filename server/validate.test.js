@@ -49,4 +49,5 @@ test('validateItems: DN válido, sin precio, piezas acotadas, campos desconocido
   assert.ok(validateItems({ items: [{ dn: '1', piezas: [{ serial: '' }] }] }).error);
   assert.ok(validateItems({ items: [{ dn: '1', so: 'x'.repeat(400), piezas: [] }] }).error);
   assert.ok(validateItems({ items: [] }).error);
+  assert.ok(validateItems({ items: [{ dn: '1', piezas: [] }, { dn: ' 1', piezas: [] }] }).error);
 });

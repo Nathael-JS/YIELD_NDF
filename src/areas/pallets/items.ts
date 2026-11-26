@@ -10,6 +10,8 @@ interface Items {
   items: Item[];
   /** Aviso de la base (sin conexión, no se guardó…); undefined = todo en orden. */
   db?: [Tone, string];
+  /** DN que no se pudieron subir: se reintentan al abrir Pallets y al cerrar sesión. */
+  pend: string[];
   /** Crea o actualiza por DN: lo del SFC se reemplaza y lo escrito a mano se conserva. */
   upsert: (xs: Item[]) => void;
   update: (dn: string, patch: Partial<Item>) => void;
@@ -20,18 +22,19 @@ interface Items {
   push: (dns: string[]) => Promise<void>;
 }
 
-const cuando = (x: Item) => x.editado ?? x.creado;
+const cuando = (x: Item) => x.editado || x.creado; // la base guarda '' si nunca se editó
 const orden = (xs: Item[]) => xs.sort((a, b) => b.creado.localeCompare(a.creado) || a.dn.localeCompare(b.dn)); // lo más nuevo primero
 
 export const usePallets = create<Items>()(persist((set, get) => ({
   items: [],
+  pend: [],
   upsert: (xs) => set((s) => {
     const nuevos = new Map(xs.map((x) => [x.dn, x]));
     const viejos = s.items.map((v) => { const n = nuevos.get(v.dn); if (!n) return v; nuevos.delete(v.dn); return { ...v, po: n.po, to: n.to, pnSfc: n.pnSfc, piezas: n.piezas, archivo: n.archivo, editado: n.creado }; });
     return { items: orden([...nuevos.values(), ...viejos]) };
   }),
   update: (dn, patch) => set((s) => ({ items: s.items.map((x) => (x.dn === dn ? { ...x, ...patch } : x)) })),
-  clear: () => set({ items: [], db: undefined }),
+  clear: () => set({ items: [], pend: [], db: undefined }),
   sync: async () => {
     let base: Omit<Item, 'price'>[];
     try { base = await loadItems(); } catch (e) { set({ db: ['warn', `Sin conexión con la base (${(e as Error).message}): se muestran los items de este equipo.`] }); return; }
@@ -41,10 +44,14 @@ export const usePallets = create<Items>()(persist((set, get) => ({
       if (l && cuando(l) > cuando({ ...b, price: '' })) { subir.push(l.dn); return l; } // editado aquí después (sin conexión)
       return { ...b, price: l?.price ?? '' };
     });
-    subir.push(...loc.keys());
+    subir.push(...loc.keys(), ...get().pend.filter((d) => !subir.includes(d) && !loc.has(d)));
     set({ items: orden([...items, ...loc.values()]), db: undefined });
     if (subir.length) await get().push(subir);
   },
-  push: (dns) => saveItems(get().items.filter((x) => dns.includes(x.dn)))
-    .then(() => { set({ db: undefined }); }, (e) => { set({ db: ['warn', `No se guardó en la base (${(e as Error).message}); quedó en este equipo y se sube al volver a abrir Pallets.`] }); }),
-}), { name: 'yc-pallets', partialize: (s) => ({ items: s.items }) }));
+  push: (dns) => {
+    const xs = get().items.filter((x) => dns.includes(x.dn));
+    if (!xs.length) return Promise.resolve();
+    return saveItems(xs).then(() => { set((s) => ({ db: undefined, pend: s.pend.filter((d) => !dns.includes(d)) })); },
+      (e) => { set((s) => ({ db: ['warn', `No se guardó en la base (${(e as Error).message}); quedó en este equipo y se sube al volver a abrir Pallets.`], pend: [...new Set([...s.pend, ...dns])] })); });
+  },
+}), { name: 'yc-pallets', partialize: (s) => ({ items: s.items, pend: s.pend }) }));

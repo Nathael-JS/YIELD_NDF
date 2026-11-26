@@ -58,6 +58,7 @@ export function validateItems(b) {
   for (const it of b.items) {
     const dn = typeof it?.dn === 'string' ? it.dn.trim() : '';
     if (!/^[A-Za-z0-9-]{1,40}$/.test(dn)) return { error: `DN inválido: ${String(it?.dn).slice(0, 40)}` };
+    if (items.some((x) => x.dn === dn)) return { error: `DN ${dn} repetido` };
     if (!ITEM.every((k) => opcional(it[k], 300))) return { error: `DN ${dn}: un campo es muy largo` };
     if (!Array.isArray(it.piezas) || it.piezas.length > 500) return { error: `DN ${dn}: piezas inválidas` };
     const piezas = [];

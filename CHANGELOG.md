@@ -30,6 +30,16 @@ Los errores encontrados y cómo se corrigieron están en [ERRORES.md](ERRORES.md
 
 ### Quitado
 - El constructor de etiquetas anterior y sus estilos (`.app-pal-*`).
+- Descargas y Validación de Pallets ya no apuntan al flujo de tarimas: Descargas avisa que ahí irá el Shipping report CTO, y Validación lleva a Conexión con WIP.
+
+### Corregido (revisión de código)
+- **Sincronización:** al abrir Pallets se volvían a subir todos los items nunca editados, y la base anotaba como editor a quien solo los vio.
+- **Etiquetas:** si al editar un DN quedaba incompleto, el diálogo saltaba a otro DN.
+- **Al cerrar sesión** se perdían los items que no se habían podido subir; ahora se suben antes de salir.
+- **Servidor:**
+  - Un DN repetido en la misma petición daba 500; ahora da 400.
+  - Quien creó el item lo pone el servidor; el navegador ya no puede cambiarlo.
+- **Conexión con WIP:** un WIP sin fecha decía «Infinity días».
 
 ## [0.36.0] — 2026-11-26
 

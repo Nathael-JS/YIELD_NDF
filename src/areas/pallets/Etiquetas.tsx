@@ -39,8 +39,8 @@ function Hoja({ it, onEdit }: { it: Item; onEdit: () => void }) {
 
 export default function Etiquetas() {
   const items = usePallets((s) => s.items), listos = items.filter(conEtiqueta);
-  const [params, setParams] = useSearchParams(), [editar, setEditar] = useState(false);
-  const it = listos.find((x) => x.dn === params.get('dn')) ?? listos[0];
+  const [params, setParams] = useSearchParams(), [editar, setEditar] = useState<string>();
+  const it = listos.find((x) => x.dn === params.get('dn')) ?? listos[0], ed = items.find((x) => x.dn === editar);
   return (
     <>
       <PageHead title="Etiquetas" sub="Los DN con sus 9 piezas completas (serial, carton y Pallet ID). La etiqueta 4×6 in se diseña después; aquí están sus datos." />
@@ -56,10 +56,11 @@ export default function Etiquetas() {
               </button></li>
             ))}</ul>
           </nav>
-          <Hoja key={it.dn} it={it} onEdit={() => setEditar(true)} />
+          <Hoja key={it.dn} it={it} onEdit={() => setEditar(it.dn)} />
         </div>
       )}
-      {editar && it && <ItemDetalle it={it} onClose={() => setEditar(false)} />}
+      {/* se busca en todos los items: si la edición lo deja incompleto, el diálogo sigue en el mismo DN */}
+      {ed && <ItemDetalle it={ed} onClose={() => setEditar(undefined)} />}
     </>
   );
 }

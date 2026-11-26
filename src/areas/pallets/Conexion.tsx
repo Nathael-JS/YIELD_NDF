@@ -50,8 +50,8 @@ export default function Conexion() {
           <p className="app-muted"><Badge tone="bad">WIP</Badge> El WIP cargado no se puede leer: faltan las columnas {wip.missing.join(', ')}.</p>
         ) : (
           <div role="status">
-            <p className="app-h3">{viejo ? <Badge tone="warn">Desactualizado</Badge> : <Badge tone="ok">Actualizado</Badge>} WIP del {wip?.fecha.slice(0, 16) || '—'}</p>
-            <p className="app-muted">{file.name} · {viejo ? `tiene ${hace(edad)}, más de ${NOMBRE[vig]}: la información puede no ser la actual. Carga un WIP nuevo en ` : `de hace ${hace(edad)}. `}{viejo && <Link to="/wip/carga">WIP → Carga de datos</Link>}</p>
+            <p className="app-h3">{!wip?.fecha ? <Badge tone="warn">Sin fecha</Badge> : viejo ? <Badge tone="warn">Desactualizado</Badge> : <Badge tone="ok">Actualizado</Badge>} WIP del {wip?.fecha.slice(0, 16) || '—'}</p>
+            <p className="app-muted">{file.name} · {!wip?.fecha ? 'no trae fecha: no se sabe si está actualizado. ' : viejo ? `tiene ${hace(edad)}, más de ${NOMBRE[vig]}: la información puede no ser la actual. Carga un WIP nuevo en ` : `de hace ${hace(edad)}. `}{viejo && <Link to="/wip/carga">WIP → Carga de datos</Link>}</p>
           </div>
         )}
         <Segmented label="Vigencia del WIP" value={vig} onChange={setVig} options={[{ value: 'hora', label: 'Hora' }, { value: 'dia', label: 'Día' }, { value: 'semana', label: 'Semana' }, { value: 'mes', label: 'Mes' }]} />
