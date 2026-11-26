@@ -8,6 +8,27 @@ Un cambio de componente se publica primero en el artefacto y después se copia a
 
 Los errores encontrados y cómo se corrigieron están en [ERRORES.md](ERRORES.md); las mejoras y cómo se hicieron, en [MEJORAS.md](MEJORAS.md).
 
+## [0.39.0] — 2026-11-26
+
+### Cambiado
+- **Pallets por grupos de 9 (G1):** la regla pasa de «9 piezas por DN» a **9 por pallet**, como en la hoja de piso (una DN de 154 = 17 pallets de 9 + 1 de 1).
+  - El item ampliado muestra sus piezas **en bloques por Pallet ID**, cada uno con su avance (x / 9) y su estado: Completo, n de 9, «N de más» o «Sin Pallet ID».
+  - **Un DN está listo para etiqueta** cuando todas sus piezas tienen carton y Pallet ID y ningún pallet pasa de 9. Etiquetas da una por pallet.
+  - Las tarjetas de Pallets muestran piezas con pallet (x / total), cuántos pallets y cuántos están completos.
+  - La marca dice qué falta: «N sin pallet o carton» o «Pallet con más de 9».
+  - Al cargar el SFC se informa cuántos pallets hay y cuáles tienen más de 9.
+- **Regla confirmada: un DN tiene varios Pallet ID y cada pallet lleva 9 seriales y 9 cartons distintos.**
+  - Un pallet con menos de 9, con más de 9, sin carton o con un carton repetido queda «por completar».
+  - El DN pasa a Etiquetas solo con todos sus pallets completos.
+- **Conexión con WIP** también lista los pallets por completar («PALFX…: faltan 2», «1 de más», «carton repetido»).
+
+### Corregido (revisión de código)
+- El escáner tomaba «N/A» como un Pallet ID o un carton real.
+- La tarjeta decía «3 pallets · 2 de 9»; ahora dice «2/3 pallets completos».
+- Un item sin piezas decía «Faltan datos».
+- Las etiquetas usan la misma agrupación que el item (`grupos`).
+- Conexión con WIP y Etiquetas no traían los items de la base en una sesión nueva u otro equipo; ahora sí.
+
 ## [0.38.0] — 2026-11-26
 
 ### Agregado
