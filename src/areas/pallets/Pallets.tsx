@@ -53,7 +53,7 @@ export default function Pallets() {
                       <span className="app-item-top"><span className="app-item-k">DN</span><Estado it={x} /></span>
                       <strong className="app-item-dn">{x.dn}</strong>
                       <span className="app-item-bar" aria-label={`${n} de ${t} piezas en pallet`}><i style={{ width: `${t ? (n / t) * 100 : 0}%` }} className={t && n === t ? 'is-full' : ''} /></span>
-                      <span className="app-item-meta"><span>{n} / {t} piezas</span><span>{ps.filter((g) => !problema(g)).length}/{ps.length} {ps.length === 1 ? 'pallet completo' : 'pallets completos'}</span></span>
+                      <span className="app-item-meta"><span>{n} / {t} piezas</span><span>{ps.filter((g) => !problema(g, x.liberados)).length}/{ps.length} {ps.length === 1 ? 'pallet completo' : 'pallets completos'}</span></span>
                       <span className="app-item-foot">
                         <span className="app-item-who" aria-hidden>{(x.usuario || '?').slice(0, 1).toUpperCase()}</span>
                         <span><b>{x.usuario || 'Sin usuario'}</b><span>{fecha} · {hora?.slice(0, 5)}{x.editado ? ' · editado' : ''}</span></span>

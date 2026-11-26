@@ -50,4 +50,8 @@ test('validateItems: DN válido, sin precio, piezas acotadas, campos desconocido
   assert.ok(validateItems({ items: [{ dn: '1', so: 'x'.repeat(400), piezas: [] }] }).error);
   assert.ok(validateItems({ items: [] }).error);
   assert.ok(validateItems({ items: [{ dn: '1', piezas: [] }, { dn: ' 1', piezas: [] }] }).error);
+  const t = validateItems({ items: [{ dn: '2', piezas: [], liberados: ['PAL1'], piso: [{ pallet: 'PAL1', filas: [{ serial: 'MT1', carton: 'FX1', x: 1 }] }] }] });
+  assert.deepEqual([t.items[0].liberados, t.items[0].piso], [['PAL1'], [{ pallet: 'PAL1', filas: [{ serial: 'MT1', carton: 'FX1' }] }]]);
+  assert.ok(validateItems({ items: [{ dn: '3', piezas: [], piso: [{ pallet: 'P', filas: 'x' }] }] }).error);
+  assert.ok(validateItems({ items: [{ dn: '4', piezas: [], liberados: [1] }] }).error);
 });

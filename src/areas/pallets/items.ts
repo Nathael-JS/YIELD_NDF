@@ -15,6 +15,8 @@ interface Items {
   /** Crea o actualiza por DN: lo del SFC se reemplaza y lo escrito a mano se conserva. */
   upsert: (xs: Item[]) => void;
   update: (dn: string, patch: Partial<Item>) => void;
+  /** Mueve una pieza a otro DN; si no existe, lo crea con los datos del SFC del original (los campos a mano van vacíos). */
+  mover: (de: string, serial: string, a: string) => void;
   clear: () => void;
   /** Trae los de la base; se queda la versión más reciente de cada DN y sube lo que solo estaba aquí. */
   sync: () => Promise<void>;
@@ -22,6 +24,8 @@ interface Items {
   push: (dns: string[]) => Promise<void>;
 }
 
+// hora local «2026-11-26 10:15:00» como local() de lib/wip.ts, sin cargar ese módulo en el inicio de la app
+const ahoraLocal = () => new Date(Date.now() - new Date().getTimezoneOffset() * 6e4).toISOString().slice(0, 19).replace('T', ' ');
 const cuando = (x: Item) => x.editado || x.creado; // la base guarda '' si nunca se editó
 const orden = (xs: Item[]) => xs.sort((a, b) => b.creado.localeCompare(a.creado) || a.dn.localeCompare(b.dn)); // lo más nuevo primero
 
@@ -34,6 +38,15 @@ export const usePallets = create<Items>()(persist((set, get) => ({
     return { items: orden([...nuevos.values(), ...viejos]) };
   }),
   update: (dn, patch) => set((s) => ({ items: s.items.map((x) => (x.dn === dn ? { ...x, ...patch } : x)) })),
+  mover: (de, serial, a) => set((s) => {
+    const src = s.items.find((x) => x.dn === de), p = src?.piezas.find((x) => x.serial === serial);
+    if (!src || !p || de === a) return {};
+    const ahora = ahoraLocal(), pieza = { ...p, manual: true };
+    const items = s.items.map((x) => (x.dn === de ? { ...x, piezas: x.piezas.filter((y) => y.serial !== serial), editado: ahora }
+      : x.dn === a ? { ...x, piezas: [...x.piezas.filter((y) => y.serial !== serial), pieza], editado: ahora } : x));
+    if (!s.items.some((x) => x.dn === a)) items.unshift({ ...src, dn: a, piezas: [pieza], so: '', shipped: '', custPo: '', custDn: '', creado: ahora, editado: undefined, edito: undefined, liberados: [], piso: undefined });
+    return { items };
+  }),
   clear: () => set({ items: [], pend: [], db: undefined }),
   sync: async () => {
     let base: Omit<Item, 'price'>[];

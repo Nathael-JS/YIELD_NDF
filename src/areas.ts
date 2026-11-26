@@ -22,7 +22,7 @@ export const I = {
   inicio: 'M4 11l8-7 8 7v8a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1z', graf: 'M4 20V10m6 10V4m6 16v-8m4 8H2', label: 'M4 5h16v14H4zM8 9v6m3-6v6m3-6v6m3-6v6',
   comp: 'M7 7h13m0 0-3-3m3 3-3 3M17 17H4m0 0 3-3m-3 3 3 3', ndf: 'M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5', hist: 'M12 7v5l3 3M12 21a9 9 0 1 0-9-9',
   cuentas: 'M16 19v-1a4 4 0 0 0-8 0v1M12 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM20 19v-1a3 3 0 0 0-2-2.8M17 5.2a3 3 0 0 1 0 5.6', base: 'M4 6c0-1.7 3.6-3 8-3s8 1.3 8 3-3.6 3-8 3-8-1.3-8-3zm0 0v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3',
-  areas: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z',
+  areas: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z', tabla: 'M4 5h16v14H4zM4 10h16M4 15h16M10 5v14',
 };
 
 const base = (a: AreaId) => [{ label: 'Carga de datos', to: `/${a}/carga`, icon: I.carga }, { label: 'Validación', to: `/${a}/validacion`, icon: I.valid }];
@@ -37,7 +37,7 @@ export const AREAS: Area[] = [
       { label: 'NDF', to: '/yield/ndf', icon: I.ndf }, ...consulta('yield')] },
   // Pallets: Carga crea un item por DN desde el SFC; Conexión con WIP muestra lo pendiente; Etiquetas, los DN completos (PALLETS.md)
   { id: 'pallets', name: 'PALLETS', hint: 'Shipping orders: un item por DN desde el export de SFC, con sus seriales y cartons.', icon: I.pal, files: [],
-    flow: [base('pallets')[0], { label: 'Pallets', to: '/pallets', icon: I.pal }, { label: 'Conexión con WIP', to: '/pallets/wip', icon: I.wip }, { label: 'Etiquetas', to: '/pallets/etiquetas', icon: I.label }], views: consulta('pallets') },
+    flow: [base('pallets')[0], { label: 'Pallets', to: '/pallets', icon: I.pal }, { label: 'Tabla de Pallets', to: '/pallets/tabla', icon: I.tabla }, { label: 'Conexión con WIP', to: '/pallets/wip', icon: I.wip }, { label: 'Etiquetas', to: '/pallets/etiquetas', icon: I.label }], views: consulta('pallets') },
 ];
 
 export const areaById = (id?: string) => AREAS.find((a) => a.id === id);

@@ -66,7 +66,13 @@ export function validateItems(b) {
       if (!p || !['serial', 'sn', 'carton', 'pallet', 'estado'].every((k) => opcional(p[k], 60)) || typeof p.serial !== 'string' || !p.serial) return { error: `DN ${dn}: pieza inválida` };
       piezas.push({ serial: p.serial, sn: p.sn ?? '', carton: p.carton ?? '', pallet: p.pallet ?? '', estado: p.estado ?? '', ...(p.manual ? { manual: true } : {}) });
     }
-    items.push({ ...Object.fromEntries(ITEM.map((k) => [k, it[k] ?? ''])), dn, piezas });
+    const liberados = it.liberados ?? [];
+    if (!Array.isArray(liberados) || liberados.length > 500 || !liberados.every((x) => corto(x, 60))) return { error: `DN ${dn}: pallets liberados inválidos` };
+    const piso = it.piso ?? [];
+    const filaOk = (f) => f && opcional(f.serial, 60) && opcional(f.carton, 60);
+    if (!Array.isArray(piso) || piso.length > 500 || !piso.every((b) => b && opcional(b.pallet, 60) && Array.isArray(b.filas) && b.filas.length <= 50 && b.filas.every(filaOk))) return { error: `DN ${dn}: tabla de piso inválida` };
+    items.push({ ...Object.fromEntries(ITEM.map((k) => [k, it[k] ?? ''])), dn, piezas, liberados,
+      piso: piso.map((b) => ({ pallet: b.pallet ?? '', filas: b.filas.map((f) => ({ serial: f.serial ?? '', carton: f.carton ?? '' })) })) });
   }
   return { items };
 }
