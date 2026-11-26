@@ -6,7 +6,7 @@ import { extname, join, normalize, resolve } from 'node:path';
 import pg from 'pg';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { checkPassword, checkTotp, cookieOf, failed, hashPassword, HOURS, limited, newSecret, otpUri, sign, verify } from './auth.js';
-import { validate, validateEntregas, validateTarima, validateItems } from './validate.js';
+import { validate, validateEntregas, validateTarima, validateItems, validateCorte } from './validate.js';
 
 const DIST = resolve('dist');
 const TYPES = { '.ico': 'image/x-icon', '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.woff': 'font/woff', '.json': 'application/json' };
@@ -57,7 +57,11 @@ create table if not exists pallet_tarimas (
 -- Pallets (0.35+): un item por DN creado desde el SFC, con sus piezas; sin precios (se quedan en el navegador)
 create table if not exists pallet_items (
   dn text primary key, datos jsonb not null, usuario text not null, creado timestamptz not null default now(),
-  edito text not null, editado timestamptz not null default now())`)
+  edito text not null, editado timestamptz not null default now());
+-- WIP: cada corte cargado (resumen por estación × modelo); el mismo archivo con el mismo corte se guarda una vez
+create table if not exists wip_cortes (
+  id serial primary key, archivo text not null, usuario text not null, corte text not null, piezas int not null, terminadas int not null,
+  resumen jsonb not null, subida timestamptz not null default now(), unique (archivo, corte))`)
   // cuenta principal (super administrador) desde el entorno: ADMIN_USER (y ADMIN_PASSWORD si hay que crearla)
   .then(async () => {
     // si la cuenta ya existe (creada desde «Crear cuenta») se activa como administradora y conserva su contraseña
@@ -249,6 +253,28 @@ async function comments(req, res, me, url) {
 }
 
 /** Pallets: listados de entregas (histórico) y tarimas. Todos los usuarios con sesión; los permisos por área vendrán después. */
+/** WIP: historial de cortes. */
+async function wip(req, res, me, url) {
+  if (url.pathname !== '/api/wip/cortes') return json(res, 404, { error: 'No encontrado' });
+  if (req.method === 'GET') {
+    const id = Number(url.searchParams.get('id'));
+    if (id) {
+      const { rows: [c] } = await db.query('select resumen from wip_cortes where id = $1', [id]);
+      return c ? json(res, 200, c) : json(res, 404, { error: 'Corte no encontrado' });
+    }
+    const { rows } = await db.query('select id, archivo, usuario, corte, piezas, terminadas, subida from wip_cortes order by subida desc limit 500');
+    return json(res, 200, { cortes: rows });
+  }
+  if (req.method === 'POST') {
+    const v = validateCorte(await body(req));
+    if (v.error) return json(res, 400, { error: v.error });
+    const { rows: [c] } = await db.query(`insert into wip_cortes (archivo, usuario, corte, piezas, terminadas, resumen) values ($1, $2, $3, $4, $5, $6)
+      on conflict (archivo, corte) do nothing returning id`, [v.archivo, me.nombre, v.corte, v.piezas, v.terminadas, JSON.stringify(v.resumen)]);
+    return json(res, 200, { id: c?.id ?? null, repetido: !c });
+  }
+  return json(res, 405, { error: 'Método no permitido' });
+}
+
 async function pallets(req, res, me, url) {
   if (url.pathname === '/api/pallets/items') {
     if (req.method === 'GET') {
@@ -463,6 +489,7 @@ async function api(req, res) {
   if (url.pathname === '/api/comentarios') return comments(req, res, s, url);
   if (url.pathname === '/api/respaldos') return backups(req, res, s, url);
   if (url.pathname.startsWith('/api/pallets/')) return pallets(req, res, s, url);
+  if (url.pathname.startsWith('/api/wip/')) return wip(req, res, s, url);
   if (req.method === 'GET' && url.pathname === '/api/cargas') {
     const { rows } = await db.query(`select id, sesion, usuario, archivo, filas, entradas, primer_pase, primera_falla, segundo_pase,
       to_char(desde, 'YYYY-MM-DD') desde, to_char(hasta, 'YYYY-MM-DD') hasta, guardado_en, congruencia from yield_cargas order by guardado_en desc limit 200`);

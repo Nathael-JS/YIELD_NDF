@@ -183,3 +183,14 @@ export function cruce(ps: Pieza[], recs: Rec[]) {
   const w = new Set(ps.map((p) => p.mo)), t = new Set(recs.flatMap((r) => r.mo.split(',')).filter(Boolean));
   return { soloWip: [...w].filter((x) => !t.has(x)), soloTcqs: [...t].filter((x) => !w.has(x)) };
 }
+
+/** Resumen de un corte para el historial: por estación × modelo, piezas en proceso, bloqueadas y horas (promedio y máxima). Sin seriales. */
+export function resumenWip(r: Pick<ReturnType<typeof readWip>, 'piezas'>) {
+  const m = new Map<string, { estacion: string; modelo: string; piezas: number; bloqueadas: number; horas: number; max: number }>();
+  for (const p of r.piezas) {
+    const k = `${p.station}\u0000${p.model}`, x = m.get(k) ?? m.set(k, { estacion: p.station, modelo: p.model, piezas: 0, bloqueadas: 0, horas: 0, max: 0 }).get(k)!;
+    x.piezas++; x.bloqueadas += p.blocked ? 1 : 0; x.horas += p.hours; x.max = Math.max(x.max, p.hours);
+  }
+  return [...m.values()].map((x) => ({ ...x, horas: Math.round((x.horas / x.piezas) * 10) / 10, max: Math.round(x.max * 10) / 10 }))
+    .sort((a, b) => b.piezas - a.piezas || a.estacion.localeCompare(b.estacion));
+}

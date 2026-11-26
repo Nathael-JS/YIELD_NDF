@@ -22,6 +22,7 @@ const Etiquetas = lazy(() => import('./areas/pallets/Etiquetas.tsx'));
 const Conexion = lazy(() => import('./areas/pallets/Conexion.tsx'));
 const HistorialPallets = lazy(() => import('./areas/pallets/Historial.tsx'));
 const Tabla = lazy(() => import('./areas/pallets/Tabla.tsx'));
+const HistorialWip = lazy(() => import('./areas/wip/Historial.tsx'));
 const Validacion = lazy(() => import('./pages/Validacion.tsx'));
 const Seguridad = lazy(() => import('./pages/Seguridad.tsx'));
 const Ndf = lazy(() => import('./areas/yield/Ndf.tsx'));
@@ -32,8 +33,6 @@ const Comparativas = lazy(() => import('./areas/yield/Comparativas.tsx'));
 const Carga = lazy(() => import('./pages/Carga.tsx'));
 const Base = lazy(() => import('./pages/Base.tsx'));
 
-// Pendiente de la base de datos (WIP todavía no guarda historial)
-const SinHistorial = () => <p className="yc-card app-empty">El historial de esta área se activa al conectar la base de datos. Mientras tanto, exporta desde Descargas.</p>;
 const viejas: [string, string][] = [['/carga', '/yield/carga'], ['/validacion', '/yield/validacion'], ['/graficos', '/yield/graficos'], ['/comparativas', '/yield/comparativas'],
   ['/ndf', '/yield/ndf'], ['/historial', '/yield/historial'], ['/descargas', '/yield/descargas']];
 
@@ -52,7 +51,7 @@ const router = createBrowserRouter([
       { path: '/yield/historial', element: <Historial /> },
       // WIP
       { path: '/wip', element: <Wip /> },
-      { path: '/wip/historial', element: <SinHistorial /> },
+      { path: '/wip/historial', element: <HistorialWip /> },
       // PALLETS
       { path: '/pallets', element: <Pallets /> },
       { path: '/pallets/etiquetas', element: <Etiquetas /> },

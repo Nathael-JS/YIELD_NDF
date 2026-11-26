@@ -1,8 +1,9 @@
 import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, FileChip } from '../components/ui.tsx';
+import { Badge, Button, FileChip, type Tone } from '../components/ui.tsx';
+import { saveWipCorte } from '../lib/db.ts';
 import { mergeParsed, parseFile } from '../lib/files.ts';
-import { local } from '../lib/wip.ts';
+import { local, readWip, resumenWip } from '../lib/wip.ts';
 import { shortDate, useApp, type FileType } from '../store.ts';
 import { PageHead } from './Layout.tsx';
 import { useArea } from '../areas.ts';
@@ -19,7 +20,7 @@ function Slot({ type, label, accept, hint, multiple }: (typeof SLOTS)[number]) {
   const f = useApp((s) => s.files[type]), err = useApp((s) => s.errors[type]);
   const setFile = useApp((s) => s.setFile), setError = useApp((s) => s.setError), removeFile = useApp((s) => s.removeFile);
   const pick = useRef<HTMLInputElement>(null);
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState(false), [db, setDb] = useState<[Tone, string]>();
 
   // varios archivos del mismo reporte se unen en uno (los repetidos se quitan al leerlo: una pieza por serial, una entrega por DN)
   async function load(...fs: File[]) {
@@ -29,6 +30,17 @@ function Slot({ type, label, accept, hint, multiple }: (typeof SLOTS)[number]) {
       const parts = await Promise.all(fs.map((x) => parseFile(x).catch((e) => { throw new Error(`${x.name}: ${e instanceof Error ? e.message : 'no se pudo leer'}`); })));
       const f = { ...(parts.length > 1 ? mergeParsed(parts) : parts[0]), name, loadedAt: shortDate(new Date()), cargado: local() };
       setFile(type, f);
+      // el WIP se guarda en el historial (un resumen por estación × modelo, sin seriales); si falla, se sigue usando en el equipo
+      if (type === 'WIP') {
+        const r = readWip(f, f.cargado), corte = (r.corte || r.ultimo || f.cargado).slice(0, 16);
+        setDb(undefined);
+        if (!r.missing.length && corte) {
+          setDb(['info', 'Guardando en el historial…']);
+          saveWipCorte({ archivo: name.slice(0, 300), corte, piezas: r.piezas.length, terminadas: r.terminadas.length, resumen: resumenWip(r) })
+            .then((x) => setDb(x.repetido ? ['neutral', `Este corte (${corte}) ya estaba en el historial.`] : ['ok', `Guardado en el historial: corte ${corte}, ${r.piezas.length} piezas en proceso.`]),
+              (e) => setDb(['warn', `No se guardó en el historial: ${e.message}`]));
+        }
+      }
     } catch (e) {
       setError(type, e instanceof Error ? e.message : `${name}: no se pudo leer`);
     } finally {
@@ -41,6 +53,7 @@ function Slot({ type, label, accept, hint, multiple }: (typeof SLOTS)[number]) {
       <FileChip type={label} accept={accept} onFile={load} multiple={multiple}
         status={err ? 'error' : busy ? 'comparing' : f ? 'loaded' : 'empty'}
         meta={err ?? (busy ? 'Leyendo…' : f ? `${f.name} · ${detail}` : hint)} />
+      {db && <p className="app-muted" role="status"><Badge tone={db[0]}>Historial</Badge> {db[1]}</p>}
       {(f || err) && (
         <div className="yc-row">
           <input ref={pick} type="file" hidden accept={accept} multiple={multiple} onChange={(e) => { const xs = [...(e.target.files ?? [])]; e.target.value = ''; if (xs.length) load(...xs); }} />

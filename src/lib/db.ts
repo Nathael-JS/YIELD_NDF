@@ -71,3 +71,11 @@ export const loadCargas = () => call<{ cargas: Carga[] }>('/api/cargas').then((b
 /** Items por DN (0.36): en la base sin precio; el Unit price se queda en este navegador. */
 export const loadItems = () => call<{ items: Omit<Item, 'price'>[] }>('/api/pallets/items').then((b) => b.items);
 export const saveItems = (items: Item[]) => post<{ guardados: number }>('/api/pallets/items', { items: items.map(({ price: _, ...x }) => x) });
+
+// ── WIP ──
+export interface WipCorte { id: number; archivo: string; usuario: string; corte: string; piezas: number; terminadas: number; subida: string }
+export type WipResumen = { estacion: string; modelo: string; piezas: number; bloqueadas: number; horas: number; max: number }[];
+/** Guarda un corte; `repetido` = ese archivo con ese corte ya estaba. */
+export const saveWipCorte = (c: { archivo: string; corte: string; piezas: number; terminadas: number; resumen: WipResumen }) => post<{ id: number | null; repetido: boolean }>('/api/wip/cortes', c);
+export const loadWipCortes = () => call<{ cortes: WipCorte[] }>('/api/wip/cortes').then((b) => b.cortes);
+export const loadWipCorte = (id: number) => call<{ resumen: WipResumen }>(`/api/wip/cortes?id=${id}`).then((b) => b.resumen);

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { cruce, desde, estadoOf, nivel, ordenes, readWip, stations, urgente } from './wip.ts';
+import { cruce, desde, estadoOf, nivel, ordenes, readWip, stations, urgente, resumenWip } from './wip.ts';
 import type { Rec } from './tcqs.ts';
 
 const H = ['SERIAL_NUMBER', 'MODEL_NAME', 'MO_NUMBER', 'TARGET_QTY', 'SECTION_NAME', 'WIP_GROUP', 'IN_STATION_TIME', 'HOUR', 'ERROR_FLAG'];
@@ -66,4 +66,14 @@ test('WIP general y por orden juntos: las filas sin HOUR se cuentan hasta el cor
   const r = readWip({ headers: H3, rows: [['g', 'SA1', 'M1', 'SI', 'FT', '2026/11/19 06:00:00', 2, '0'], ['o', 'SA1', 'M2', 'SI', 'FT', '2026/11/17 08:00:00', null, '0']] });
   assert.equal(r.corte, '2026-11-19 08:00:00');
   assert.deepEqual(r.piezas.map((p) => [p.serial, p.hours]), [['g', 2], ['o', 48]]);
+});
+
+test('resumenWip: por estación × modelo, bloqueadas y horas promedio/máxima, de mayor a menor', () => {
+  const p = (station: string, model: string, hours: number, blocked = false) => ({ station, model, hours, blocked }) as Parameters<typeof resumenWip>[0]['piezas'][number];
+  const r = resumenWip({ piezas: [p('TEST', 'A', 2), p('TEST', 'A', 5, true), p('ASSY', 'A', 1), p('TEST', 'B', 3)] });
+  assert.deepEqual(r, [
+    { estacion: 'TEST', modelo: 'A', piezas: 2, bloqueadas: 1, horas: 3.5, max: 5 },
+    { estacion: 'ASSY', modelo: 'A', piezas: 1, bloqueadas: 0, horas: 1, max: 1 },
+    { estacion: 'TEST', modelo: 'B', piezas: 1, bloqueadas: 0, horas: 3, max: 3 },
+  ]);
 });

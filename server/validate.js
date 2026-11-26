@@ -76,3 +76,18 @@ export function validateItems(b) {
   }
   return { items };
 }
+
+// WIP: un corte con su resumen por estación × modelo (no se guardan piezas ni seriales).
+const num = (v, max = 1e6) => typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= max;
+export function validateCorte(b) {
+  if (!b || !corto(b.archivo, 300) || !b.archivo.trim()) return { error: 'Nombre de archivo inválido' };
+  if (!/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}(:\d{2})?$/.test(b.corte ?? '')) return { error: 'Corte inválido (AAAA-MM-DD HH:MM)' };
+  if (!entero(b.piezas) || !entero(b.terminadas)) return { error: 'Piezas inválidas' };
+  if (!Array.isArray(b.resumen) || b.resumen.length > 5000) return { error: 'Resumen inválido' };
+  const resumen = [];
+  for (const r of b.resumen) {
+    if (!r || !corto(r.estacion, 80) || !corto(r.modelo ?? '', 80) || !entero(r.piezas) || !entero(r.bloqueadas) || !num(r.horas) || !num(r.max)) return { error: 'Fila del resumen inválida' };
+    resumen.push({ estacion: r.estacion, modelo: r.modelo ?? '', piezas: r.piezas, bloqueadas: r.bloqueadas, horas: r.horas, max: r.max });
+  }
+  return { archivo: b.archivo.trim(), corte: b.corte, piezas: b.piezas, terminadas: b.terminadas, resumen };
+}

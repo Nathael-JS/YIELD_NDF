@@ -68,7 +68,7 @@ Decisiones tomadas a partir de la guía:
 
 | Área | Carga | Vistas | Historial | Descargas |
 | --- | --- | --- | --- | --- |
-| **WIP** | Reporte WIP (general o por MO) | WIP (flujo y línea de tiempo) | Con la base de datos | HTML y PDF |
+| **WIP** | Reporte WIP (general o por MO) | WIP (flujo y línea de tiempo) | En la base (0.43: un corte por carga) | HTML y PDF |
 | **YIELD** | TCQS y primeras fallas | Inicio, Yield por estación, Gráficos, Comparativas, NDF | En la base | HTML y PDF |
 | **PALLETS** | Listado de entregas, shipping report, CSV de tarimas | Etiquetas | Con la base de datos | CSV y etiquetas en PDF |
 
@@ -80,6 +80,6 @@ Decisiones tomadas a partir de la guía:
 
 **Back**
 1. **Permisos por área:** columna `areas` en `usuarios`, que asigna el administrador en Cuentas. El servidor revisa el área en cada llamada y `areasDe(user)` (`src/areas.ts`) muestra solo las permitidas.
-2. **Endpoints de WIP:** guardar cada corte (fecha × modelo × estación) y el historial.
+2. ✅ **Endpoints de WIP (0.43):** `wip_cortes` guarda cada corte con su resumen por estación × modelo; `GET/POST /api/wip/cortes`; página Historial de WIP.
 3. **Endpoints de Pallets:** tarimas con el Pallet # único en toda la base, historial y reimpresión (ver [PALLETS.md](PALLETS.md)).
 4. **Historial por área** con descarga y vista previa.
