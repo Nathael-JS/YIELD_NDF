@@ -8,6 +8,14 @@ Un cambio de componente se publica primero en el artefacto y después se copia a
 
 Los errores encontrados y cómo se corrigieron están en [ERRORES.md](ERRORES.md); las mejoras y cómo se hicieron, en [MEJORAS.md](MEJORAS.md).
 
+## [0.42.0] — 2026-11-26
+
+### Cambiado
+- **Etiquetas muestra todos los DN**, no solo los completos.
+  - Los que faltan se ven como **vista previa**: sus etiquetas llevan el sello MUESTRA, dicen qué les falta y se pueden **editar**.
+  - El PDF sigue saliendo solo cuando el DN está completo y con sus datos llenos.
+  - El item ampliado tiene el enlace «Vista previa de etiqueta».
+
 ## [0.41.0] — 2026-11-26
 
 ### Agregado

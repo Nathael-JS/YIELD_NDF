@@ -1,4 +1,5 @@
-// Etiquetas: los DN completos (cada pallet con 9 seriales y 9 cartons): una etiqueta 4×6 in por Pallet ID (PDF para la térmica)
+// Etiquetas: una etiqueta 4×6 in por Pallet ID de cada DN. Los DN sin completar se ven como vista previa (sello MUESTRA) y se editan;
+// el PDF solo sale con el DN completo (cada pallet con 9 seriales y 9 cartons, o liberado) y sus datos llenos.
 // y la hoja con todos sus datos; «Editar» abre el item.
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
@@ -13,7 +14,7 @@ import { usePallets } from './items.ts';
 const usd = (n: number) => (n ? n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '');
 
 function Hoja({ it, onEdit }: { it: Item; onEdit: () => void }) {
-  const qty = it.piezas.length, f = faltan(it), ls = etiquetas(it);
+  const qty = it.piezas.length, f = faltan(it), ls = etiquetas(it), listo = conEtiqueta(it) && !f.length;
   const [busy, setBusy] = useState(false), [err, setErr] = useState<string>();
   const pdf = async () => {
     setBusy(true); setErr(undefined);
@@ -28,16 +29,17 @@ function Hoja({ it, onEdit }: { it: Item; onEdit: () => void }) {
     <article className="yc-card app-tag" aria-labelledby="app-tag-t">
       <header className="app-tag-head">
         <div><span className="app-item-k">DN</span><h2 id="app-tag-t">{it.dn}</h2></div>
-        <span className="yc-row">{f.length ? <Badge tone="info" title={f.join(' · ')}>Faltan datos</Badge> : <Badge tone="ok">Completa</Badge>}<Button onClick={onEdit}>Editar</Button></span>
+        <span className="yc-row">{listo ? <Badge tone="ok">Lista para imprimir</Badge> : <Badge tone="warn" title={f.join(' · ')}>Vista previa</Badge>}<Button onClick={onEdit}>Editar</Button></span>
       </header>
-      {!!f.length && <p className="app-muted app-tag-falta">Falta: {f.join(' · ')}. Se puede ver la etiqueta, pero el PDF se descarga cuando esté completa.</p>}
+      {!listo && <p className="app-muted app-tag-falta">Falta: {f.join(' · ')}. Las etiquetas se ven como muestra y se pueden editar; el PDF se descarga cuando el DN esté completo.</p>}
       <section className="app-tag-labels" aria-labelledby="app-tag-l">
         <div className="app-tag-labels-head">
           <h3 id="app-tag-l" className="app-h3">{ls.length} {ls.length === 1 ? 'etiqueta' : 'etiquetas'} 4×6 in <span className="app-muted">una por Pallet ID · sin precios</span></h3>
-          <Button variant="primary" disabled={!!f.length || busy} onClick={pdf}>{busy ? 'Creando PDF…' : `Descargar PDF (${ls.length})`}</Button>
+          <Button variant="primary" disabled={!listo || busy} onClick={pdf}>{busy ? 'Creando PDF…' : `Descargar PDF (${ls.length})`}</Button>
         </div>
         {err && <p className="app-muted" role="alert"><Badge tone="bad">PDF</Badge> {err}</p>}
-        <ul className="app-tag-strip">{ls.map((l) => <li key={l.d.pallet} className="yc-label-wrap"><PalletLabel d={l.d} qr={l.qr} /></li>)}</ul>
+        {ls.length ? <ul className="app-tag-strip">{ls.map((l) => <li key={l.d.pallet} className="yc-label-wrap"><PalletLabel d={l.d} qr={l.qr} sample={!listo} /></li>)}</ul>
+          : <p className="app-muted">Este DN aún no tiene piezas con Pallet ID. Pónselo con «Editar» o en la Tabla de Pallets.</p>}
         <p className="app-muted">Imprime el PDF en tamaño real (100 %) con papel 4×6 in. Antes de usarlo en piso, escanea el código de barras y el QR de una etiqueta impresa.</p>
       </section>
       <dl className="app-tag-grid">
@@ -47,7 +49,7 @@ function Hoja({ it, onEdit }: { it: Item; onEdit: () => void }) {
       <div className="yc-table-wrap">
         <table className="yc-table">
           <thead><tr><th className="num">#</th><th>Serial</th><th>SN</th><th>Carton ID</th><th>Pallet ID</th></tr></thead>
-          <tbody>{it.piezas.map((p, i) => <tr key={p.serial}><td className="num">{i + 1}</td><td className="code">{p.serial}</td><td className="code">{p.sn || '—'}</td><td className="code">{p.carton}</td><td className="code">{p.pallet}</td></tr>)}</tbody>
+          <tbody>{it.piezas.map((p, i) => <tr key={p.serial}><td className="num">{i + 1}</td><td className="code">{p.serial}</td><td className="code">{p.sn || '—'}</td><td className="code">{p.carton || '—'}</td><td className="code">{p.pallet || '—'}</td></tr>)}</tbody>
         </table>
       </div>
     </article>
@@ -55,24 +57,28 @@ function Hoja({ it, onEdit }: { it: Item; onEdit: () => void }) {
 }
 
 export default function Etiquetas() {
-  const { items, sync } = usePallets(), listos = items.filter(conEtiqueta);
+  const { items, sync } = usePallets(), listos = items.filter(conEtiqueta), resto = items.filter((x) => !conEtiqueta(x));
   useEffect(() => { sync(); }, [sync]); // los items de la base (otro equipo o sesión nueva)
   const [params, setParams] = useSearchParams(), [editar, setEditar] = useState<string>();
-  const it = listos.find((x) => x.dn === params.get('dn')) ?? listos[0], ed = items.find((x) => x.dn === editar);
+  const it = items.find((x) => x.dn === params.get('dn')) ?? listos[0] ?? items[0], ed = items.find((x) => x.dn === editar);
   return (
     <>
-      <PageHead title="Etiquetas" sub="Los DN con todos sus pallets completos (9 seriales y 9 cartons cada uno): una etiqueta 4×6 in por pallet y todos sus datos." />
-      {!listos.length ? (
-        <p className="yc-card app-empty">Aún no hay DN completos. {items.length ? <>Complétalos en <Link to="/pallets">Pallets</Link> o revisa los pendientes en <Link to="/pallets/wip">Conexión con WIP</Link>.</> : <>Crea uno con <Link to="/pallets/carga">Nuevo Pallet / Shipping Order</Link>.</>}</p>
+      <PageHead title="Etiquetas" sub="Una etiqueta 4×6 in por pallet de cada DN. Los DN sin completar se ven como vista previa (MUESTRA) y se pueden editar; el PDF sale con el DN completo." />
+      {!it ? (
+        <p className="yc-card app-empty">Aún no hay DN. Crea uno con <Link to="/pallets/carga">Nuevo Pallet / Shipping Order</Link>.</p>
       ) : (
         <div className="app-tags">
-          <nav className="yc-card app-tags-list" aria-label="DN completos">
-            <p className="app-item-k">{listos.length} {listos.length === 1 ? 'DN completo' : 'DN completos'}{items.length > listos.length ? ` · ${items.length - listos.length} sin completar` : ''}</p>
-            <ul>{listos.map((x) => (
-              <li key={x.dn}><button type="button" aria-current={x.dn === it.dn || undefined} onClick={() => setParams({ dn: x.dn }, { replace: true })}>
-                <b>{x.dn}</b><span>{[...new Set(x.piezas.map((p) => p.pallet))].length} pallets · {x.so || 'sin SO'}</span>
-              </button></li>
-            ))}</ul>
+          <nav className="yc-card app-tags-list" aria-label="DN">
+            {([['completos', listos], ['vista previa', resto]] as const).map(([t, xs]) => !!xs.length && (
+              <div key={t} className="app-tags-sec">
+                <p className="app-item-k">{xs.length} {t === 'completos' ? (xs.length === 1 ? 'DN completo' : 'DN completos') : 'en vista previa'}</p>
+                <ul>{xs.map((x) => (
+                  <li key={x.dn}><button type="button" aria-current={x.dn === it.dn || undefined} onClick={() => setParams({ dn: x.dn }, { replace: true })}>
+                    <b>{x.dn}</b><span>{((n) => `${n} ${n === 1 ? 'pallet' : 'pallets'}`)(new Set(x.piezas.map((p) => p.pallet).filter(Boolean)).size)} · {x.so || 'sin SO'}</span>
+                  </button></li>
+                ))}</ul>
+              </div>
+            ))}
           </nav>
           <Hoja key={it.dn} it={it} onEdit={() => setEditar(it.dn)} />
         </div>
