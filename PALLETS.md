@@ -4,17 +4,31 @@ Pallets se rehace en el frontend. La versión anterior (0.28–0.34: etiqueta ar
 
 > Los archivos de ejemplo se analizaron en un directorio aislado y se borraron. Este documento solo guarda la **estructura** (columnas y formas), nunca datos reales.
 
-## Flujo nuevo
+## Flujo
 
-1. **Carga → «Nuevo Pallet / Shipping Order»**: crea un item dentro de PALLETS. (La animación con React Three se descartó.)
-2. Al elegirlo **se pide el archivo SFC** (export de SFC, una fila por serial).
-3. **Un item por DN**, con su fecha y hora de creación. Cada DN lleva **9 piezas** (serial + carton); si faltan, se piden con el escáner o a mano (en pruebas).
-4. Del SFC se llenan los campos del reporte (tabla de abajo). **Sales Order, Part number NVIDIA, Shipped day, Customer PO y Customer DN** se escriben a mano.
-5. La página **Pallets** (antes «Etiquetas») muestra cada item por separado: DN, fecha de creación, hora (más adelante, hora de edición) y quién lo trabajó (el usuario de la sesión).
-6. **Ampliar un item** muestra todos los datos llenados desde el SFC.
-7. Los items se ven como **cuadrícula de 5 × 3** (15 por página).
-8. Si el SFC ya trae seriales con carton y Pallet ID, se muestran así; se pueden **corregir con el escáner** (en pruebas). La separación por Pallet ID va en Etiquetas.
-9. **Etiquetas** pasa a ser otra opción, **en desarrollo**.
+1. **Carga → «Nuevo Pallet / Shipping Order»:** se carga el export de SFC. Se reconoce por sus columnas, no por el nombre del archivo. **Cada DN se vuelve un item.**
+2. **Pallets:** cuadrícula de 5 × 3 con los items. Cada uno muestra su DN, sus piezas (x / 9), sus Pallet IDs, quién lo creó y cuándo. **Ampliar** abre todos sus datos y los campos a mano.
+3. **Conexión con WIP:** las piezas **pendientes** (sin Carton ID o Pallet ID) y **faltantes** (el DN aún no llega a 9), con su **estado en línea** según el WIP cargado en el área WIP.
+   - El cruce es por SN (`SERIAL_NUMBER`), la misma columna en WIP y en SFC.
+   - Una **vigencia** (hora, día, semana o mes) decide si el WIP está **actualizado** o **desactualizado**.
+   - Qué tan actual es el WIP: el corte del reporte general, o el último movimiento del reporte por orden.
+4. **Etiquetas:** los DN **completos**, es decir, 9 piezas con serial, carton y Pallet ID.
+   - Muestran sus datos: Shipped day, PO, Sales Order, Project, Model, delivery, hazmat, partnumber, qty, Unit price y Total price.
+   - Cada pieza lleva Serial, SN, Carton ID y Pallet ID.
+   - Tienen **Editar**, y el item ampliado tiene el enlace «Ver etiqueta».
+   - La estructura de la etiqueta 4×6 in se diseña después.
+5. **Los datos de WIP se quedan en Conexión con WIP.** Pallets y Etiquetas solo muestran lo que trae el SFC. El estado `WIP_GROUP` del SFC se guarda, pero no se muestra.
+
+### Verificación con el SFC real (26 nov)
+
+- **La base coincide con el archivo:** 10 de 10 DN y 257 de 257 piezas (serial, SN, carton y Pallet ID). Una pieza con carton `N/A` se guarda vacía («sin carton»), a propósito.
+- **El SFC real no trae 9 piezas por DN:** sus 10 DN tienen 1, 9, 10, 18, 21, 36, 36, 36, 36 y 54 seriales. Solo 1 DN queda listo para etiqueta. **Por confirmar** si un DN del SFC debe partirse en grupos de 9.
+- **El shipping report (FINISH GOOD) no corresponde a este SFC por DN:**
+  - Ninguno de sus DN, SO, PO ni T/O aparece en el SFC.
+  - Sus filas (9 seriales cada una) traen seriales repartidos en 1 a 4 DN del SFC.
+  - 143 de sus 172 seriales sí están en el SFC.
+  - Solo 3 filas traen Carton # y Pallet #, y casi ninguno coincide con el SFC.
+- **El WIP de ejemplo es de otra orden** (0 seriales en común, mismo formato de 14 dígitos). El cruce se probó con datos inventados.
 
 ## Archivos de referencia
 
@@ -88,7 +102,7 @@ Muestra analizada: 257 seriales, 10 DN, 20 tarimas; **93 seriales sin tarima** y
 | **F3** | Página **Pallets**: cuadrícula 5 × 3, búsqueda, filtro y páginas (`Pallets.tsx`) | ✅ 0.35 |
 | **F4** | **Ampliar item**: del SFC, a mano, datos del modelo, piezas y escáner en pruebas (`Item.tsx`) | ✅ 0.35 |
 | **F5** | Exportar el **Shipping report CTO** (una fila por serial) | Pendiente |
-| **F6** | **Etiquetas** por Pallet ID desde los items (hoy: la versión anterior, marcada «en desarrollo») | Pendiente |
+| **F6** | **Etiquetas** de los DN completos (hoja de datos; la etiqueta 4×6 in después) y **Conexión con WIP** | ✅ 0.37 |
 | **F7** | Hora de edición por campo y validaciones con datos reales | Pendiente |
 | **F8** | Backend con el modelo nuevo: tabla `pallet_items` y `GET/POST /api/pallets/items` | ✅ 0.36 |
 
@@ -101,12 +115,12 @@ Muestra analizada: 257 seriales, 10 DN, 20 tarimas; **93 seriales sin tarima** y
 - **Al abrir Pallets o Carga** se traen los de la base. De cada DN se queda la versión más reciente, y lo que solo estaba en este equipo (por ejemplo, guardado sin conexión) se sube.
 - **Sin conexión:** se trabaja en el equipo con aviso, y se sube al volver a abrir Pallets.
 - **Copia en el navegador** (`localStorage`, clave `yc-pallets`): se borra al cerrar sesión; la base conserva todo.
-- Los endpoints del modelo anterior (`/api/pallets/cargas` y `/tarimas`) siguen en pausa (`PALLETS_DB = false`); solo los usa Etiquetas.
+- Los endpoints del modelo anterior (`/api/pallets/cargas` y `/tarimas`) siguen en pausa (`PALLETS_DB = false`) y ya no los usa ninguna pantalla.
 
 ### Archivos de Pallets hoy
 
 - **Nuevo:** `src/lib/sfc.ts` (+ prueba), `src/areas/pallets/items.ts` (los items), `Nuevo.tsx` (Carga), `Pallets.tsx` (cuadrícula), `Item.tsx` (ampliado); estilos `.app-item*`, `.app-det*` en `src/styles/app.css`.
-- **Etiquetas (en desarrollo, versión anterior):** `src/areas/pallets/Etiquetas.tsx`, `src/lib/pallets.ts`, `src/components/label.tsx`, `src/styles/yc.css`.
+- **Conexión con WIP:** `src/areas/pallets/Conexion.tsx` (lee el WIP del área WIP con `readWip`). **Etiquetas:** `src/areas/pallets/Etiquetas.tsx`; la etiqueta 4×6 in de antes sigue en `src/components/label.tsx` y `src/styles/yc.css`, para la siguiente fase.
 - **Backend:** `server/index.js` (`pallets()`, tabla `pallet_items`), `server/validate.js` (`validateItems`), `src/lib/db.ts` (`loadItems`, `saveItems`), `server/check.js`.
 - **Compartidos:** `src/areas.ts`, `src/main.tsx`, `src/pages/Carga.tsx`, `Validacion.tsx`, `Descargas.tsx`.
 

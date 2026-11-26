@@ -8,6 +8,29 @@ Un cambio de componente se publica primero en el artefacto y después se copia a
 
 Los errores encontrados y cómo se corrigieron están en [ERRORES.md](ERRORES.md); las mejoras y cómo se hicieron, en [MEJORAS.md](MEJORAS.md).
 
+## [0.37.0] — 2026-11-26
+
+### Agregado
+- **Conexión con WIP** (Pallets):
+  - Muestra las piezas pendientes (sin Carton ID o Pallet ID) y los DN con piezas faltantes.
+  - Cada pieza trae su estado en línea según el WIP cargado (en línea, hold, reparación, empaque o terminada), su estación y cuánto lleva ahí.
+  - Una vigencia (hora, día, semana o mes) dice si el WIP está actualizado o desactualizado.
+- **Etiquetas habilitada:**
+  - Muestra los DN completos (9 piezas con serial, carton y Pallet ID) con los datos de su etiqueta, y tiene **Editar**.
+  - El item completo tiene el enlace «Ver etiqueta».
+  - La etiqueta 4×6 in se diseña después.
+- **SN** (`SERIAL_NUMBER` del SFC) en cada pieza: es la llave para cruzar con el WIP.
+- **El escáner (en pruebas) también toma el Pallet ID:** serial → carton → Pallet ID.
+- `FALLOS.md`, para anotar los fallos de las pruebas.
+
+### Cambiado
+- **Una pieza cuenta como completa con serial, carton y Pallet ID** (antes bastaba el carton).
+- Pallets ya no muestra el estado de WIP de cada pieza; ahora está en Conexión con WIP.
+- Un DN con piezas de más dice «N de más».
+
+### Quitado
+- El constructor de etiquetas anterior y sus estilos (`.app-pal-*`).
+
 ## [0.36.0] — 2026-11-26
 
 ### Agregado

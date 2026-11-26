@@ -62,8 +62,8 @@ export function validateItems(b) {
     if (!Array.isArray(it.piezas) || it.piezas.length > 500) return { error: `DN ${dn}: piezas inválidas` };
     const piezas = [];
     for (const p of it.piezas) {
-      if (!p || !['serial', 'carton', 'pallet', 'estado'].every((k) => opcional(p[k], 60)) || typeof p.serial !== 'string' || !p.serial) return { error: `DN ${dn}: pieza inválida` };
-      piezas.push({ serial: p.serial, carton: p.carton ?? '', pallet: p.pallet ?? '', estado: p.estado ?? '', ...(p.manual ? { manual: true } : {}) });
+      if (!p || !['serial', 'sn', 'carton', 'pallet', 'estado'].every((k) => opcional(p[k], 60)) || typeof p.serial !== 'string' || !p.serial) return { error: `DN ${dn}: pieza inválida` };
+      piezas.push({ serial: p.serial, sn: p.sn ?? '', carton: p.carton ?? '', pallet: p.pallet ?? '', estado: p.estado ?? '', ...(p.manual ? { manual: true } : {}) });
     }
     items.push({ ...Object.fromEntries(ITEM.map((k) => [k, it[k] ?? ''])), dn, piezas });
   }
