@@ -8,6 +8,17 @@ Un cambio de componente se publica primero en el artefacto y después se copia a
 
 Los errores encontrados y cómo se corrigieron están en [ERRORES.md](ERRORES.md); las mejoras y cómo se hicieron, en [MEJORAS.md](MEJORAS.md).
 
+## [0.41.0] — 2026-11-26
+
+### Agregado
+- **PISO vs SISTEMA (T2)** en la Tabla de Pallets:
+  - Cada renglón escaneado dice al instante si **cuadra**, si la pieza está **movida** (en otro pallet o DN, y cuál), si el **carton** es otro, si **sobra** o si está **repetida**.
+  - Hay un resumen con los conteos y las vistas **Diferencias** (con «Ir» al renglón) y **Faltan en piso**.
+  - Busca por el serial MT… o por el SN, entre todos los DN.
+
+### Corregido
+- La 0.40 (Tabla de Pallets, liberar pallet y edición de piezas) no había entrado a `main`: el PR 31 se fusionó antes de que llegara ese commit. Se recuperó aquí.
+
 ## [0.40.0] — 2026-11-26
 
 ### Agregado

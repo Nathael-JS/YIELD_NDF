@@ -149,3 +149,30 @@ export function pegar(bs: Bloque[], b: number, i: number, texto: string): Bloque
   }
   return out;
 }
+
+/** PISO vs SISTEMA: cómo cuadra cada renglón escaneado con las piezas del SFC (de todos los DN). */
+export type Cuadre = 'ok' | 'movido' | 'sobra' | 'carton' | 'repetido';
+export interface Renglon { b: number; i: number; pallet: string; serial: string; carton: string; estado: Cuadre; nota: string }
+
+/** Compara la tabla de piso del item con el sistema. Un serial se busca por el de MT… o por el SN. Por conjunto, no por renglón. */
+export function comparar(it: Pick<Item, 'dn' | 'piezas' | 'piso'>, todos: Pick<Item, 'dn' | 'piezas'>[]) {
+  const sis = new Map<string, { dn: string; p: Pieza }>();
+  for (const x of todos) for (const p of x.piezas) { sis.set(p.serial.toUpperCase(), { dn: x.dn, p }); if (p.sn) sis.set(p.sn.toUpperCase(), { dn: x.dn, p }); }
+  const bs = bloques(it), veces = new Map<string, number>();
+  for (const b of bs) for (const f of b.filas) if (f.serial) veces.set(f.serial, (veces.get(f.serial) ?? 0) + 1);
+  const filas: Renglon[] = [], vistos = new Set<string>();
+  bs.forEach((b, bi) => b.filas.forEach((f, i) => {
+    if (!f.serial) return;
+    const s = sis.get(f.serial), base = { b: bi, i, pallet: b.pallet, serial: f.serial, carton: f.carton };
+    if (s) vistos.add(s.p.serial);
+    const r = (veces.get(f.serial)! > 1) ? { estado: 'repetido' as const, nota: `escaneado ${veces.get(f.serial)} veces` }
+      : !s ? { estado: 'sobra' as const, nota: 'no está en el sistema' }
+      : s.dn !== it.dn || s.p.pallet !== b.pallet ? { estado: 'movido' as const, nota: `en sistema: ${s.dn !== it.dn ? `DN ${s.dn} · ` : ''}${s.p.pallet || 'sin Pallet ID'}` }
+      : f.carton && s.p.carton && f.carton !== s.p.carton ? { estado: 'carton' as const, nota: `en sistema: ${s.p.carton}` }
+      : { estado: 'ok' as const, nota: '' };
+    filas.push({ ...base, ...r });
+  }));
+  const faltan = it.piezas.filter((p) => !vistos.has(p.serial));
+  const cuenta = (e: Cuadre) => filas.filter((f) => f.estado === e).length;
+  return { filas, faltan, ok: cuenta('ok'), movido: cuenta('movido'), sobra: cuenta('sobra'), carton: cuenta('carton'), repetido: cuenta('repetido') };
+}

@@ -172,7 +172,7 @@ Muestra analizada: 257 seriales, 10 DN, 20 tarimas; **93 seriales sin tarima** y
 | **G2** | Mover un grupo a un DN nuevo (a mano), con vista previa. |
 | **G3** | Cargar los DN nuevos desde el shipping report (FINISH GOOD: una fila = DN + 9 seriales), validar contra el SFC y mostrar la vista previa antes de aplicar. |
 | **T1** ✅ 0.40 | Tabla de Pallets: bloques por pallet, captura con escáner o teclado, pegar desde Excel, cargar xlsx/CSV y exportar CSV. Se guarda en el item (`piso`), así que va a la base sin tabla nueva. |
-| **T2** | PISO vs SISTEMA: estados por renglón, resumen y filtros. |
+| **T2** ✅ 0.41 | PISO vs SISTEMA en la Tabla de Pallets: estado de cada renglón mientras se escanea, resumen, vista de Diferencias (con «Ir» al renglón) y de Faltan en piso. `comparar()` en `src/lib/sfc.ts`, con prueba. |
 | **T3** ✅ 0.40 | La Tabla de Pallets se guarda en la base dentro de cada item (`datos.piso`). |
 
 ### Confirmado con la hoja de ejemplo (Sheet1)
@@ -181,6 +181,20 @@ Muestra analizada: 257 seriales, 10 DN, 20 tarimas; **93 seriales sin tarima** y
 - **File = sistema, escaneo (Physical) = piso.** Se comparan por conjunto: 113 de 153 seriales coinciden, 40 de File no están escaneados y 4 escaneados no están en File.
 - **Esa hoja no se carga en el sistema** por ahora; solo sirve de referencia.
 - **DN nuevos:** se detectan al volver a cargar el SFC (export `download`), que ya dice cuáles items son nuevos y cuáles se actualizaron. La congruencia se confirma con PISO vs SISTEMA.
+
+### PISO vs SISTEMA (0.41)
+
+- La compara `comparar()`: cada serial de piso se busca en las piezas de **todos** los DN, por el serial MT… o por el SN. Se compara **por conjunto**, no renglón con renglón.
+- **Estados** (ícono y texto, no solo color):
+  - ✓ **Cuadra:** mismo DN y mismo pallet.
+  - ⚠ **Movido:** está en el sistema en otro pallet o en otro DN; dice dónde.
+  - ⚠ **Carton:** el carton de piso no es el del SFC; dice cuál es.
+  - ✗ **Sobra:** no está en el sistema.
+  - ✗ **Repetido:** se escaneó más de una vez.
+  - **Faltan en piso:** son las piezas del DN que nadie escaneó.
+- En la **Tabla de Pallets**:
+  - El estado aparece en cada renglón mientras se escanea.
+  - Arriba va el resumen, con las vistas **Captura**, **Diferencias** («Ir» lleva al renglón) y **Faltan en piso**.
 
 ### Liberar pallet y edición (0.40)
 
