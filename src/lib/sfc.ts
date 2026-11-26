@@ -2,8 +2,8 @@
 import type { Cell, ParsedFile } from './files.ts';
 import type { PalletLabelData } from '../components/label.tsx';
 
-/** Piezas por DN (serial + carton + Pallet ID). Con menos, se piden las faltantes con el escáner o a mano. */
-export const POR_DN = 9;
+/** Piezas por pallet (un bloque de la hoja de piso). Una DN de 154 = 17 pallets de 9 + 1 de 1. */
+export const POR_PALLET = 9;
 export const SFC_REQUIRED = ['DN', 'SERIAL_NUMBER1', 'MCARTON_NO', 'IMEI'] as const;
 
 /** Una pieza: serial (`SERIAL_NUMBER1`, MT…), SN (`SERIAL_NUMBER`, el del MES: se cruza con el WIP), carton (`MCARTON_NO`),
@@ -48,15 +48,25 @@ export function readSfc(f: ParsedFile) {
 /** Pieza lista: con serial, carton y Pallet ID. */
 export const lista = (p: Pieza) => !!(p.serial && p.carton && p.pallet);
 export const completas = (it: Pick<Item, 'piezas'>) => it.piezas.filter(lista).length;
-/** El DN ya tiene sus piezas completas: se puede ver su etiqueta. */
-export const conEtiqueta = (it: Pick<Item, 'piezas'>) => completas(it) >= POR_DN && it.piezas.length === POR_DN;
+/** Grupos de un DN: uno por Pallet ID, en el orden del SFC; las piezas sin Pallet ID van al final (pallet ''). */
+export function grupos(it: Pick<Item, 'piezas'>) {
+  const m = new Map<string, Pieza[]>();
+  for (const p of it.piezas) (m.get(p.pallet) ?? m.set(p.pallet, []).get(p.pallet)!).push(p);
+  const gs = [...m].map(([pallet, piezas]) => ({ pallet, piezas }));
+  return [...gs.filter((g) => g.pallet), ...gs.filter((g) => !g.pallet)];
+}
+/** Pallets con más de 9 piezas: no se puede imprimir su etiqueta. */
+export const excedidos = (it: Pick<Item, 'piezas'>) => grupos(it).filter((g) => g.pallet && g.piezas.length > POR_PALLET);
+/** El DN ya tiene todas sus piezas en pallets de hasta 9: se puede ver su etiqueta. */
+export const conEtiqueta = (it: Pick<Item, 'piezas'>) => it.piezas.length > 0 && completas(it) === it.piezas.length && !excedidos(it).length;
 export const ocho = /^\d{8}$/;
 /** Lo que le falta a un item para estar listo (vacío = listo). */
 export function faltan(it: Item) {
   const out: string[] = [];
-  const n = completas(it);
-  if (n < POR_DN) out.push(`${POR_DN - n} de ${POR_DN} piezas sin serial, carton o Pallet ID`);
-  if (it.piezas.length > POR_DN) out.push(`${it.piezas.length - POR_DN} piezas de más`);
+  const sin = it.piezas.length - completas(it);
+  if (!it.piezas.length) out.push('Sin piezas');
+  if (sin) out.push(`${sin} ${sin === 1 ? 'pieza' : 'piezas'} sin carton o Pallet ID`);
+  for (const g of excedidos(it)) out.push(`${g.pallet}: ${g.piezas.length} piezas (máx. ${POR_PALLET})`);
   for (const [k, label] of MANUAL) if (!it[k].trim()) out.push(label);
   for (const k of ['custPo', 'custDn'] as const) if (it[k].trim() && !ocho.test(it[k].trim())) out.push(`${k === 'custPo' ? 'Customer PO' : 'Customer DN'}: 8 dígitos`);
   return out;

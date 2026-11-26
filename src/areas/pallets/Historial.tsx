@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Badge, Select } from '../../components/ui.tsx';
-import { completas, POR_DN } from '../../lib/sfc.ts';
+import { completas } from '../../lib/sfc.ts';
 import { PageHead } from '../../pages/Layout.tsx';
 import { Estado } from './Item.tsx';
 import { usePallets } from './items.ts';
@@ -27,7 +27,7 @@ export default function HistorialPallets() {
                   <thead><tr><th>Hora</th><th>DN</th><th className="num">Piezas</th><th>Estado</th><th>Creó</th><th>Última edición</th><th>Archivo</th><th /></tr></thead>
                   <tbody>{xs.map((x) => (
                     <tr key={x.dn}>
-                      <td className="code">{x.creado.slice(11, 16)}</td><td className="code">{x.dn}</td><td className="num">{completas(x)} / {POR_DN}</td>
+                      <td className="code">{x.creado.slice(11, 16)}</td><td className="code">{x.dn}</td><td className="num">{completas(x)} / {x.piezas.length}</td>
                       <td><Estado it={x} /></td><td>{x.usuario || '—'}</td>
                       <td>{x.editado ? <>{x.edito || x.usuario} <span className="app-muted">{x.editado.slice(0, 16)}</span></> : <span className="app-muted">Sin editar</span>}</td>
                       <td className="app-muted">{x.archivo}</td>

@@ -1,4 +1,4 @@
-// Etiquetas: los DN completos (9 piezas con serial, carton y Pallet ID): una etiqueta 4×6 in por Pallet ID (PDF para la térmica)
+// Etiquetas: los DN completos (todas sus piezas con carton y Pallet ID, hasta 9 por pallet): una etiqueta 4×6 in por Pallet ID (PDF para la térmica)
 // y la hoja con todos sus datos; «Editar» abre el item.
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
@@ -60,7 +60,7 @@ export default function Etiquetas() {
   const it = listos.find((x) => x.dn === params.get('dn')) ?? listos[0], ed = items.find((x) => x.dn === editar);
   return (
     <>
-      <PageHead title="Etiquetas" sub="Los DN con sus 9 piezas completas (serial, carton y Pallet ID): una etiqueta 4×6 in por Pallet ID y todos sus datos." />
+      <PageHead title="Etiquetas" sub="Los DN con todas sus piezas en pallets de hasta 9 (con carton y Pallet ID): una etiqueta 4×6 in por pallet y todos sus datos." />
       {!listos.length ? (
         <p className="yc-card app-empty">Aún no hay DN completos. {items.length ? <>Complétalos en <Link to="/pallets">Pallets</Link> o revisa los pendientes en <Link to="/pallets/wip">Conexión con WIP</Link>.</> : <>Crea uno con <Link to="/pallets/carga">Nuevo Pallet / Shipping Order</Link>.</>}</p>
       ) : (

@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type RefObject } from 'react';
 import { Link } from 'react-router-dom';
 import { Badge, Button } from '../../components/ui.tsx';
-import { completas, conEtiqueta, escanear, faltan, MANUAL, ocho, PLANTILLA, POR_DN, type Item } from '../../lib/sfc.ts';
+import { completas, conEtiqueta, escanear, excedidos, faltan, grupos, lista, MANUAL, ocho, PLANTILLA, POR_PALLET, type Item } from '../../lib/sfc.ts';
 import { local } from '../../lib/wip.ts';
 import { usePallets } from './items.ts';
 
@@ -10,9 +10,9 @@ const Dato = ({ k, v }: { k: string; v: string | number }) => <div className="ap
 
 /** Qué le falta: primero las piezas (se ven en la barra), luego los datos a mano. */
 export function Estado({ it }: { it: Item }) {
-  const n = completas(it), f = faltan(it);
-  if (n < POR_DN) return <Badge tone="warn">Faltan {POR_DN - n} {POR_DN - n === 1 ? 'pieza' : 'piezas'}</Badge>;
-  if (it.piezas.length > POR_DN) return <Badge tone="warn">{it.piezas.length - POR_DN} de más</Badge>;
+  const sin = it.piezas.length - completas(it), f = faltan(it);
+  if (sin) return <Badge tone="warn">{sin} sin pallet o carton</Badge>;
+  if (excedidos(it).length) return <Badge tone="warn">Pallet con más de {POR_PALLET}</Badge>;
   return f.length ? <Badge tone="info" title={f.join(' · ')}>Faltan datos</Badge> : <Badge tone="ok">Listo</Badge>;
 }
 
@@ -28,7 +28,7 @@ export default function ItemDetalle({ it, onClose }: { it: Item; onClose: () => 
   const agregar = () => { if (!sn.trim()) return; set({ piezas: escanear(it.piezas, sn, ct, pl) }); setSn(''); setCt(''); setPl(''); };
   // escáner con sufijo Enter: serial → carton → Pallet ID → agrega
   const sigue = (next: RefObject<HTMLInputElement | null>) => (e: KeyboardEvent) => { if (e.key === 'Enter') { e.preventDefault(); next.current?.focus(); } };
-  const filas = [...it.piezas, ...Array.from({ length: Math.max(0, POR_DN - qty) }, () => null)];
+  const gs = grupos(it);
   const campo = (k: (typeof MANUAL)[number][0] | (typeof PLANTILLA)[number][0], label: string) => {
     const v = it[k], mal = (k === 'custPo' || k === 'custDn') && v.trim() !== '' && !ocho.test(v.trim());
     return (
@@ -69,18 +69,28 @@ export default function ItemDetalle({ it, onClose }: { it: Item; onClose: () => 
           <div className="app-det-form">{PLANTILLA.map(([k, l]) => campo(k, l))}<Dato k="Total price USD" v={total ? total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : ''} /></div>
         </section>
         <section aria-labelledby="det-piezas" className="app-det-piezas">
-          <h3 id="det-piezas" className="app-h3">Piezas <span className="app-muted">{n} / {POR_DN} con serial, carton y Pallet ID · el estado en línea está en Conexión con WIP</span></h3>
+          <h3 id="det-piezas" className="app-h3">Piezas <span className="app-muted">{n} / {qty} con carton y Pallet ID · {gs.filter((g) => g.pallet).length} pallets de hasta {POR_PALLET} · el estado en línea está en Conexión con WIP</span></h3>
           <div className="yc-table-wrap">
             <table className="yc-table">
               <thead><tr><th className="num">#</th><th>Serial</th><th>SN</th><th>Carton ID</th><th>Pallet ID</th><th /></tr></thead>
-              <tbody>{filas.map((p, i) => (
-                <tr key={p?.serial ?? `f${i}`} className={p ? '' : 'is-falta'}>
-                  <td className="num">{i + 1}</td>
-                  <td className="code">{p?.serial || '—'}</td><td className="code">{p?.sn || '—'}</td>
-                  <td className="code">{p?.carton || (p ? <Badge tone="warn">Sin carton</Badge> : '—')}</td><td className="code">{p?.pallet || (p ? <Badge tone="warn">Sin pallet</Badge> : '—')}</td>
-                  <td>{!p ? <Badge tone="bad">Falta</Badge> : p.manual ? <Badge tone="info">Escaneada</Badge> : null}</td>
-                </tr>
-              ))}</tbody>
+              {gs.map((g, gi) => (
+                <tbody key={g.pallet || 'sin'} className="app-grp">
+                  <tr className="app-grp-head"><th colSpan={6} scope="rowgroup">
+                    <span className="code">{g.pallet || 'Sin Pallet ID'}</span>
+                    {g.pallet && <span className="app-muted">Pallet {gi + 1}</span>}
+                    <span className="app-grp-n">{g.piezas.filter(lista).length} / {g.pallet ? POR_PALLET : g.piezas.length}</span>
+                    {!g.pallet ? <Badge tone="warn">Escanea su Pallet ID</Badge> : g.piezas.length > POR_PALLET ? <Badge tone="bad">{g.piezas.length - POR_PALLET} de más</Badge> : g.piezas.length === POR_PALLET ? <Badge tone="ok">Completo</Badge> : <Badge tone="neutral">{g.piezas.length} de {POR_PALLET}</Badge>}
+                  </th></tr>
+                  {g.piezas.map((p) => (
+                    <tr key={p.serial}>
+                      <td className="num">{it.piezas.indexOf(p) + 1}</td>
+                      <td className="code">{p.serial}</td><td className="code">{p.sn || '—'}</td>
+                      <td className="code">{p.carton || <Badge tone="warn">Sin carton</Badge>}</td><td className="code">{p.pallet || <Badge tone="warn">Sin pallet</Badge>}</td>
+                      <td>{p.manual ? <Badge tone="info">Escaneada</Badge> : null}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              ))}
             </table>
           </div>
           <form className="app-det-scan" onSubmit={(e) => { e.preventDefault(); agregar(); }} aria-label="Escanear faltantes">

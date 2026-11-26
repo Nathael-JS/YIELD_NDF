@@ -8,6 +8,17 @@ Un cambio de componente se publica primero en el artefacto y después se copia a
 
 Los errores encontrados y cómo se corrigieron están en [ERRORES.md](ERRORES.md); las mejoras y cómo se hicieron, en [MEJORAS.md](MEJORAS.md).
 
+## [0.39.0] — 2026-11-26
+
+### Cambiado
+- **Pallets por grupos de 9 (G1):** la regla pasa de «9 piezas por DN» a **9 por pallet**, como en la hoja de piso (una DN de 154 = 17 pallets de 9 + 1 de 1).
+  - El item ampliado muestra sus piezas **en bloques por Pallet ID**, cada uno con su avance (x / 9) y su estado: Completo, n de 9, «N de más» o «Sin Pallet ID».
+  - **Un DN está listo para etiqueta** cuando todas sus piezas tienen carton y Pallet ID y ningún pallet pasa de 9. Etiquetas da una por pallet.
+  - Las tarjetas de Pallets muestran piezas con pallet (x / total), cuántos pallets y cuántos están completos.
+  - La marca dice qué falta: «N sin pallet o carton» o «Pallet con más de 9».
+  - Al cargar el SFC se informa cuántos pallets hay y cuáles tienen más de 9.
+- Conexión con WIP ya no cuenta «piezas faltantes por DN»: ahora un DN no tiene un número fijo de piezas.
+
 ## [0.38.0] — 2026-11-26
 
 ### Agregado

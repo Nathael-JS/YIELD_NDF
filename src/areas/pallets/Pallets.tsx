@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Badge, Button, Segmented } from '../../components/ui.tsx';
-import { completas, faltan, POR_DN, type Item } from '../../lib/sfc.ts';
+import { completas, faltan, grupos, POR_PALLET, type Item } from '../../lib/sfc.ts';
 import { PageHead } from '../../pages/Layout.tsx';
 import { I } from '../../areas.ts';
 import { usePallets } from './items.ts';
@@ -46,14 +46,14 @@ export default function Pallets() {
           {!vis.length ? <p className="yc-card app-empty">Ningún item con estos filtros.</p> : (
             <ul className="app-items" aria-label="Items por DN">
               {vis.slice(p * POR_PAGINA, (p + 1) * POR_PAGINA).map((x, i) => {
-                const n = completas(x), [fecha, hora] = (x.editado ?? x.creado).split(' ');
+                const n = completas(x), t = x.piezas.length, ps = grupos(x).filter((g) => g.pallet), [fecha, hora] = (x.editado ?? x.creado).split(' ');
                 return (
                   <li key={x.dn} style={{ animationDelay: `${i * 30}ms` }}>
                     <button type="button" className="yc-card app-item" onClick={() => setAbierto(x.dn)} aria-label={`Ampliar DN ${x.dn}`}>
                       <span className="app-item-top"><span className="app-item-k">DN</span><Estado it={x} /></span>
                       <strong className="app-item-dn">{x.dn}</strong>
-                      <span className="app-item-bar" aria-label={`${n} de ${POR_DN} piezas`}><i style={{ width: `${Math.min(100, (n / POR_DN) * 100)}%` }} className={n >= POR_DN ? 'is-full' : ''} /></span>
-                      <span className="app-item-meta"><span>{n} / {POR_DN} piezas</span><span>{new Set(x.piezas.map((y) => y.pallet).filter(Boolean)).size} pallets</span></span>
+                      <span className="app-item-bar" aria-label={`${n} de ${t} piezas en pallet`}><i style={{ width: `${t ? (n / t) * 100 : 0}%` }} className={t && n === t ? 'is-full' : ''} /></span>
+                      <span className="app-item-meta"><span>{n} / {t} piezas</span><span>{ps.length} {ps.length === 1 ? 'pallet' : 'pallets'} · {ps.filter((g) => g.piezas.length === POR_PALLET).length} de {POR_PALLET}</span></span>
                       <span className="app-item-foot">
                         <span className="app-item-who" aria-hidden>{(x.usuario || '?').slice(0, 1).toUpperCase()}</span>
                         <span><b>{x.usuario || 'Sin usuario'}</b><span>{fecha} · {hora?.slice(0, 5)}{x.editado ? ' · editado' : ''}</span></span>

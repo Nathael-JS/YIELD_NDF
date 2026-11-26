@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { conEtiqueta, escanear, etiquetas, faltan, plantilla, POR_DN, readSfc, type Item } from './sfc.ts';
+import { conEtiqueta, escanear, etiquetas, faltan, grupos, plantilla, POR_PALLET, readSfc, type Item } from './sfc.ts';
 
 // datos inventados con la forma del export de SFC
 const H = ['TO_NO', 'DN', 'CUST_PO', 'SERIAL_NUMBER', 'MODEL_NAME', 'SERIAL_NUMBER1', 'MODEL_NAME1', 'MCARTON_NO', 'IMEI', 'WIP_GROUP', 'Column1'];
@@ -17,11 +17,12 @@ test('readSfc: un item por DN; N/A y vacíos quedan sin tarima o sin carton; ser
 });
 
 test('faltan: piezas, manuales y Customer PO/DN de 8 dígitos', () => {
-  const base = { ...readSfc({ headers: H, rows: Array.from({ length: POR_DN }, (_, i) => fila('100', i + 1)) }).items[0], archivo: '', usuario: '', creado: '' };
+  const base = { ...readSfc({ headers: H, rows: Array.from({ length: POR_PALLET }, (_, i) => fila('100', i + 1)) }).items[0], archivo: '', usuario: '', creado: '' };
   const it: Item = { ...base, ...plantilla(base.pnSfc, []), so: '1', shipped: '2026-01-01', custPo: '12345678', custDn: '87654321', pnNvidia: '692-x' };
   assert.deepEqual(faltan(it), []);
   assert.deepEqual(faltan({ ...it, custDn: '123', so: '' }), ['Sales Order', 'Customer DN: 8 dígitos']);
-  assert.deepEqual(faltan({ ...it, piezas: it.piezas.slice(1) }), ['1 de 9 piezas sin serial, carton o Pallet ID']);
+  assert.deepEqual(faltan({ ...it, piezas: it.piezas.map((p, i) => (i ? p : { ...p, carton: '' })) }), ['1 pieza sin carton o Pallet ID']);
+  assert.deepEqual(faltan({ ...it, piezas: [...it.piezas, { ...it.piezas[0], serial: 'MTX' }] }), ['PALFX00001: 10 piezas (máx. 9)']);
 });
 
 test('escanear: corrige carton y Pallet ID de un serial que ya está o agrega uno nuevo', () => {
@@ -36,11 +37,14 @@ test('plantilla: copia los datos fijos del último item del mismo PN', () => {
   assert.equal(plantilla('920-x', [{ pnSfc: '920-x', price: '10', hazmat: 'h', model: 'm', project: 'P', coo: 'VN', pnNvidia: '692-x' } as Item]).price, '10');
 });
 
-test('conEtiqueta: 9 piezas con serial, carton y Pallet ID; una sin Pallet ID o una de más no cuenta', () => {
-  const nueve = Array.from({ length: POR_DN }, (_, i) => ({ serial: `MT${i}`, sn: '', carton: `FX${i}`, pallet: 'PAL1', estado: '' }));
-  assert.ok(conEtiqueta({ piezas: nueve }));
-  assert.ok(!conEtiqueta({ piezas: nueve.map((x, i) => (i ? x : { ...x, pallet: '' })) }));
-  assert.ok(!conEtiqueta({ piezas: [...nueve, { ...nueve[0], serial: 'MTX' }] }));
+test('grupos y conEtiqueta: un grupo por Pallet ID (máx. 9); sin Pallet ID al final; la última puede tener menos', () => {
+  const pz = (n: number, pallet: string) => Array.from({ length: n }, (_, i) => ({ serial: `MT${pallet}${i}`, sn: '', carton: `FX${pallet}${i}`, pallet, estado: '' }));
+  const piezas = [...pz(9, 'PAL2'), ...pz(1, 'PAL1'), ...pz(2, ''), ...pz(9, 'PAL3')];
+  assert.deepEqual(grupos({ piezas }).map((g) => [g.pallet, g.piezas.length]), [['PAL2', 9], ['PAL1', 1], ['PAL3', 9], ['', 2]]);
+  assert.ok(!conEtiqueta({ piezas }));
+  assert.ok(conEtiqueta({ piezas: piezas.filter((p) => p.pallet) }));
+  assert.ok(!conEtiqueta({ piezas: [...pz(9, 'PAL1'), { ...pz(1, 'PAL1')[0], serial: 'MTX' }] }));
+  assert.ok(!conEtiqueta({ piezas: [] }));
 });
 
 test('etiquetas: una por Pallet ID, con sus piezas y cartons; QR solo ASCII y sin precio', () => {

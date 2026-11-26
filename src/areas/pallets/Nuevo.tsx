@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Badge, FileChip, type Tone } from '../../components/ui.tsx';
 import { parseFile } from '../../lib/files.ts';
-import { plantilla, POR_DN, readSfc } from '../../lib/sfc.ts';
+import { excedidos, grupos, plantilla, POR_PALLET, readSfc } from '../../lib/sfc.ts';
 import { local } from '../../lib/wip.ts';
 import { useApp } from '../../store.ts';
 import { usePallets } from './items.ts';
@@ -22,9 +22,9 @@ export default function NuevoPallet() {
       const ahora = local(), ya = new Set(items.map((x) => x.dn));
       upsert(r.items.map((x) => ({ ...x, ...plantilla(x.pnSfc, items), so: '', shipped: '', custPo: '', custDn: '', archivo: file.name, usuario: user, creado: ahora })));
       push(r.items.map((x) => x.dn));
-      const nuevos = r.items.filter((x) => !ya.has(x.dn)).length, cortos = r.items.filter((x) => x.piezas.length < POR_DN).length;
+      const nuevos = r.items.filter((x) => !ya.has(x.dn)).length, pallets = r.items.reduce((n, x) => n + grupos(x).filter((g) => g.pallet).length, 0), exc = r.items.reduce((n, x) => n + excedidos(x).length, 0);
       setMsg(['ok', `${nuevos} ${nuevos === 1 ? 'item nuevo' : 'items nuevos'}${r.items.length - nuevos ? ` y ${r.items.length - nuevos} actualizados (lo escrito a mano se conserva)` : ''}.`,
-        [cortos ? `${cortos} DN con menos de ${POR_DN} piezas: completa las faltantes al ampliar el item.` : '', r.repetidos ? `${r.repetidos} ${r.repetidos === 1 ? 'serial repetido se contó' : 'seriales repetidos se contaron'} una vez.` : ''].filter(Boolean)]);
+        [`${pallets} ${pallets === 1 ? 'pallet' : 'pallets'} en grupos de hasta ${POR_PALLET}.`, exc ? `${exc} ${exc === 1 ? 'pallet' : 'pallets'} con más de ${POR_PALLET} piezas: revísalos al ampliar el item.` : '', r.repetidos ? `${r.repetidos} ${r.repetidos === 1 ? 'serial repetido se contó' : 'seriales repetidos se contaron'} una vez.` : ''].filter(Boolean)]);
     } catch (e) {
       setMsg(['bad', `${file.name}: ${e instanceof Error ? e.message : 'no se pudo leer'}`]);
     } finally { setBusy(false); }

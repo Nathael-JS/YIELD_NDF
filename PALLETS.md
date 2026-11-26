@@ -168,18 +168,25 @@ Muestra analizada: 257 seriales, 10 DN, 20 tarimas; **93 seriales sin tarima** y
 
 | Fase | Qué |
 | --- | --- |
-| **G1** | `grupos(it)`: partir en 9 por Pallet ID, con prueba. Ver los grupos en el item y en Etiquetas (una etiqueta por grupo/pallet). |
+| **G1** ✅ 0.39 | `grupos(it)`: un grupo por Pallet ID (máximo 9), con prueba. El item muestra sus piezas en bloques por pallet y Etiquetas da una etiqueta por pallet. |
 | **G2** | Mover un grupo a un DN nuevo (a mano), con vista previa. |
 | **G3** | Cargar los DN nuevos desde el shipping report (FINISH GOOD: una fila = DN + 9 seriales), validar contra el SFC y mostrar la vista previa antes de aplicar. |
 | **T1** | Tabla de Pallets: bloques, captura con escáner, pegar desde Excel y cargar/exportar xlsx. |
 | **T2** | PISO vs SISTEMA: estados por renglón, resumen y filtros. |
 | **T3** | Guardar la Tabla de Pallets en la base (`pallet_piso`), junto con los items. |
 
-### Por confirmar
+### Confirmado con la hoja de ejemplo (Sheet1)
 
-- **¿154 es el total de piezas de la DN de embarque?** ¿Y 9 / 1 son piezas por pallet / pallets por bloque?
-- **El «otro archivo» para cargar DN nuevos, ¿es el shipping report (FINISH GOOD)?**
-- **Al comparar, ¿«File» es siempre el sistema y «Physical» lo escaneado en piso?**
+- **154 = total de piezas de la DN de embarque, 9 = piezas por pallet, 1 = pallet por bloque.** La DN de ejemplo tiene 18 bloques (17 de 9 + 1 de 1), con un solo SO y un solo DN.
+- **File = sistema, escaneo (Physical) = piso.** Se comparan por conjunto: 113 de 153 seriales coinciden, 40 de File no están escaneados y 4 escaneados no están en File.
+- **Esa hoja no se carga en el sistema** por ahora; solo sirve de referencia.
+- **DN nuevos:** se detectan al volver a cargar el SFC (export `download`), que ya dice cuáles items son nuevos y cuáles se actualizaron. La congruencia se confirma con PISO vs SISTEMA.
+
+### Regla de piezas (0.39)
+
+- **Ya no son 9 por DN, sino 9 por pallet.** Un DN puede tener cualquier número de piezas, repartidas en pallets de hasta 9. El último puede tener menos.
+- **El DN está listo para etiqueta** cuando todas sus piezas tienen carton y Pallet ID, y ningún pallet pasa de 9.
+- Las piezas sin Pallet ID quedan en el bloque «Sin Pallet ID»; se les pone con el escáner, escribiéndolo o cargando el SFC otra vez.
 
 ## Plan de desarrollo (frontend)
 

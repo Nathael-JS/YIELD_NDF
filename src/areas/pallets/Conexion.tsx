@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Badge, Segmented, Select, type Tone } from '../../components/ui.tsx';
-import { lista, POR_DN } from '../../lib/sfc.ts';
+import { lista } from '../../lib/sfc.ts';
 import { local, readWip, type Pieza as PiezaWip } from '../../lib/wip.ts';
 import { PageHead } from '../../pages/Layout.tsx';
 import { useApp } from '../../store.ts';
@@ -35,7 +35,6 @@ export default function Conexion() {
   // una fila por pieza sin carton o Pallet ID, y una por DN con piezas faltantes (aún sin serial)
   const filas = items.flatMap((it) => [
     ...it.piezas.filter((p) => !lista(p)).map((p) => ({ dn: it.dn, p, falta: [!p.carton && 'Carton ID', !p.pallet && 'Pallet ID'].filter(Boolean).join(' y '), w: wip?.m.get((p.sn || p.serial).toUpperCase()) ?? wip?.m.get(p.serial.toUpperCase()) })),
-    ...(it.piezas.length < POR_DN ? [{ dn: it.dn, p: null, falta: `${POR_DN - it.piezas.length} piezas sin serial`, w: undefined }] : []),
   ]);
   const vis = filas.filter((f) => (!dn || f.dn === dn) && (!q || `${f.dn} ${f.p?.serial} ${f.p?.sn} ${f.w?.p.station}`.toLowerCase().includes(q.trim().toLowerCase())));
   const cuenta = (t?: EnWip['tipo']) => filas.filter((f) => f.p && (t ? f.w?.tipo === t : !f.w)).length;
@@ -64,7 +63,6 @@ export default function Conexion() {
           <ul className="app-cx-sum" aria-label="Resumen">
             <li><b>{filas.filter((f) => f.p).length}</b> pendientes</li>
             {wip && <><li><b>{cuenta('linea')}</b> en línea</li><li><b>{cuenta('empaque')}</b> en empaque</li><li><b>{cuenta('terminada')}</b> terminadas</li><li><b>{cuenta()}</b> no están en el WIP</li></>}
-            <li><b>{filas.filter((f) => !f.p).length}</b> DN con piezas faltantes</li>
           </ul>
           <section className="yc-card app-wip-filters app-cx-filters" aria-label="Filtros">
             <Select label="DN" value={dn} onChange={setDn} options={[{ value: '', label: `Todos (${new Set(filas.map((f) => f.dn)).size})` }, ...[...new Set(filas.map((f) => f.dn))].map((d) => ({ value: d, label: d }))]} />
