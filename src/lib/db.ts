@@ -1,7 +1,6 @@
 // API del servidor (server/index.js): cuentas y datos en Neon. Misma dirección que la app: la sesión va en una
 // cookie que JavaScript no puede leer, y ninguna clave vive en el navegador.
 import type { Congruencia, DbRow } from './tcqs.ts';
-import type { Entrega, Tarima } from './pallets.ts';
 import type { Item } from './sfc.ts';
 
 /** Lo llama la app cuando el servidor dice que la sesión ya no vale (vencida o cerrada). */
@@ -72,15 +71,3 @@ export const loadCargas = () => call<{ cargas: Carga[] }>('/api/cargas').then((b
 /** Items por DN (0.36): en la base sin precio; el Unit price se queda en este navegador. */
 export const loadItems = () => call<{ items: Omit<Item, 'price'>[] }>('/api/pallets/items').then((b) => b.items);
 export const saveItems = (items: Item[]) => post<{ guardados: number }>('/api/pallets/items', { items: items.map(({ price: _, ...x }) => x) });
-/** shortcut: endpoints del modelo anterior (listado y tarimas, usados por Etiquetas) en pausa; en true se vuelven a usar. */
-export const PALLETS_DB = false;
-const pausa = <T>(f: () => Promise<T>) => (PALLETS_DB ? f() : Promise.reject(Object.assign(new Error('la base de Pallets está en pausa'), { status: 0 })));
-export interface PalletCarga { id: number; archivo: string; usuario: string; filas: number; subida: string }
-/** Cada listado de entregas cargado queda en la base con su fecha y hora (el histórico). */
-export const savePalletCarga = (archivo: string, entregas: Entrega[]) => pausa(() => post<{ id: number; subida: string }>('/api/pallets/cargas', { archivo, entregas }));
-export const loadPalletCargas = () => pausa(() => call<{ cargas: PalletCarga[] }>('/api/pallets/cargas')).then((b) => b.cargas);
-export const loadPalletCarga = (id: number) => pausa(() => call<{ entregas: Entrega[] }>(`/api/pallets/cargas?id=${id}`)).then((b) => b.entregas);
-export interface TarimaDb { datos: Tarima; usuario: string; creada: string; actualizada: string; impresa: string | null }
-export const loadTarimasDb = () => pausa(() => call<{ tarimas: TarimaDb[] }>('/api/pallets/tarimas')).then((b) => b.tarimas);
-/** Tarima nueva (409 si el Pallet # ya existe en la base) o edición de la que se guardó como `antes`. */
-export const saveTarimaDb = (tarima: Tarima, antes?: string) => pausa(() => post<{ pallet: string }>('/api/pallets/tarimas', { tarima, antes }));

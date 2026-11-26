@@ -92,6 +92,25 @@ Muestra analizada: 257 seriales, 10 DN, 20 tarimas; **93 seriales sin tarima** y
 - **Campos a mano:** sin ellos el item dice «Faltan datos». Customer PO y DN: 8 dígitos.
 - **Precios:** solo en este equipo, nunca en la base ni en datos de prueba. Lo mismo para direcciones, cuentas y pedimentos.
 
+## Etiqueta 4×6 in (0.38)
+
+- **Una por Pallet ID** de cada DN completo, en el orden en que aparecen en el SFC: «Pallet 1 de N».
+- **Contenido:**
+  - Encabezado: Project y Model.
+  - **Pallet ID** en grande con su Code128.
+  - Datos: Delivery (DN), Customer DN, PO, Customer PO, Sales Order, Shipped day, Part number (NVIDIA), PN SFC, Qty y Cartons (los de ese pallet).
+  - Pie: hazmat en recuadro, COO, «Pallet i de N» y el QR.
+- **El QR** lleva PALLET, DN, PO, SO, CPO, CDN, PN, QTY, DATE, COO, CTN (cartons) y SN (seriales del pallet). Está solo en ASCII y con nivel M.
+- **Sin precios:** la etiqueta va pegada a la tarima. Unit price y Total price solo aparecen en la hoja de datos.
+- **PDF** (`etiquetas-DN.pdf`): una página de 288×432 pt por Pallet ID. Solo se descarga cuando el DN no tiene datos pendientes.
+- **Comprobado:** el Code128 y el QR se leen desde el PDF a 300 y 203 dpi (zxing). **Falta probarlo en una impresora real.**
+- Componente: `PalletLabel` en `src/components/label.tsx` (sistema de diseño, versión 40). PDF: `labelsPdf` en `src/pages/pdf.tsx`. Datos: `etiquetas()` en `src/lib/sfc.ts`, con prueba.
+
+## Historial (0.38)
+
+- **Pallets → Historial:** los items de la base por día de creación, con hora, DN, piezas, estado, quién lo creó, quién lo editó al último (lo anota el servidor) y el archivo. **Abrir** lleva al item.
+- El historial de WIP sigue pendiente: el WIP aún no se guarda en la base.
+
 ## Plan de desarrollo (frontend)
 
 | Fase | Qué | Estado |
@@ -103,6 +122,7 @@ Muestra analizada: 257 seriales, 10 DN, 20 tarimas; **93 seriales sin tarima** y
 | **F4** | **Ampliar item**: del SFC, a mano, datos del modelo, piezas y escáner en pruebas (`Item.tsx`) | ✅ 0.35 |
 | **F5** | Exportar el **Shipping report CTO** (una fila por serial) | Pendiente |
 | **F6** | **Etiquetas** de los DN completos (hoja de datos; la etiqueta 4×6 in después) y **Conexión con WIP** | ✅ 0.37 |
+| **F6.1** | **Etiqueta 4×6 in** por Pallet ID (vista previa y PDF) e **Historial** de items desde la base | ✅ 0.38 |
 | **F7** | Hora de edición por campo y validaciones con datos reales | Pendiente |
 | **F8** | Backend con el modelo nuevo: tabla `pallet_items` y `GET/POST /api/pallets/items` | ✅ 0.36 |
 

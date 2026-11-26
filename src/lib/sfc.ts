@@ -1,5 +1,6 @@
 // Pallets: el export de SFC (una fila por serial) crea un item por DN. Ver PALLETS.md.
 import type { Cell, ParsedFile } from './files.ts';
+import type { PalletLabelData } from '../components/label.tsx';
 
 /** Piezas por DN (serial + carton + Pallet ID). Con menos, se piden las faltantes con el escáner o a mano. */
 export const POR_DN = 9;
@@ -17,6 +18,8 @@ type Manual = Record<(typeof MANUAL)[number][0] | (typeof PLANTILLA)[number][0],
 export interface Item extends Manual {
   dn: string; po: string; to: string; pnSfc: string; piezas: Pieza[];
   archivo: string; usuario: string; creado: string; editado?: string;
+  /** Quién lo editó al último, según la base (solo lectura). */
+  edito?: string;
 }
 
 const text = (v: Cell) => (v instanceof Date ? v.toISOString().slice(0, 10) : v == null ? '' : String(v).trim());
@@ -72,4 +75,22 @@ export function escanear(piezas: Pieza[], serial: string, carton: string, pallet
   const i = piezas.findIndex((p) => p.serial.toUpperCase() === s);
   if (i < 0) return [...piezas, { serial: s, sn: '', carton: c, pallet: pl, estado: '', manual: true }];
   return piezas.map((p, j) => (j === i ? { ...p, carton: c || p.carton, pallet: pl || p.pallet, manual: true } : p));
+}
+
+/** Solo ASCII en el QR (cualquier lector lo lee igual). */
+const ascii = (s: string) => s.normalize('NFD').replace(/[^\x20-\x7e]/g, '').trim();
+
+/** Una etiqueta por Pallet ID del DN, en el orden en que aparecen; el QR lleva sus datos y sus seriales. Sin precios. */
+export function etiquetas(it: Item): { d: PalletLabelData; qr: string }[] {
+  const porPallet = new Map<string, Pieza[]>();
+  for (const p of it.piezas) if (p.pallet) (porPallet.get(p.pallet) ?? porPallet.set(p.pallet, []).get(p.pallet)!).push(p);
+  const total = porPallet.size;
+  return [...porPallet].map(([pallet, ps], i) => {
+    const cartons = [...new Set(ps.map((p) => p.carton).filter(Boolean))];
+    const d: PalletLabelData = { pallet, project: it.project, model: it.model, dn: it.dn, po: it.po, so: it.so, custPo: it.custPo, custDn: it.custDn,
+      pn: it.pnNvidia, pnSfc: it.pnSfc, qty: ps.length, cartons: cartons.length, shipped: it.shipped, coo: it.coo, hazmat: it.hazmat, index: i + 1, total };
+    const qr = [`PALLET:${pallet}`, `DN:${it.dn}`, `PO:${it.po}`, `SO:${it.so}`, `CPO:${it.custPo}`, `CDN:${it.custDn}`, `PN:${it.pnNvidia}`, `QTY:${ps.length}`,
+      `DATE:${it.shipped}`, `COO:${it.coo}`, `CTN:${cartons.join(',')}`, `SN:${ps.map((p) => p.serial).join(',')}`].map(ascii).join('\n');
+    return { d, qr };
+  });
 }

@@ -8,6 +8,25 @@ Un cambio de componente se publica primero en el artefacto y después se copia a
 
 Los errores encontrados y cómo se corrigieron están en [ERRORES.md](ERRORES.md); las mejoras y cómo se hicieron, en [MEJORAS.md](MEJORAS.md).
 
+## [0.38.0] — 2026-11-26
+
+### Agregado
+- **Etiqueta 4×6 in de Pallets:**
+  - Hay una etiqueta por Pallet ID de cada DN completo, con vista previa en Etiquetas y **Descargar PDF** (una página por pallet).
+  - Lleva Project y Model, el Pallet ID con su Code128, DN, Customer DN, PO, Customer PO, Sales Order, Shipped day, el Part number NVIDIA y el del SFC, Qty, Cartons, hazmat, COO y «Pallet i de N».
+  - El QR lleva los datos y los seriales.
+  - No lleva precios.
+  - El PDF se descarga cuando el DN no tiene datos pendientes.
+  - El código de barras y el QR se leen desde el PDF a 300 y 203 dpi.
+- **Historial de Pallets:** los items de la base por día, con quién los creó y quién los editó al último. Antes la página decía «se activa al conectar la base de datos».
+
+### Cambiado
+- `PalletLabel` usa los datos del modelo nuevo y ya no tiene variantes; el sistema de diseño se actualizó a la versión 40.
+- `GET /api/pallets/items` también trae quién editó cada item al último.
+
+### Quitado
+- `src/lib/pallets.ts` (el modelo anterior de tarimas) y sus llamadas a la API, que estaban en pausa.
+
 ## [0.37.0] — 2026-11-26
 
 ### Agregado

@@ -235,14 +235,6 @@ body { margin: 0; background: var(--surface-100); color: var(--ink); font: 400 1
 .yc-label-f.is-wide { grid-column: 1 / -1; }
 .yc-label-f span { font: 700 2.4cqw/1.2 var(--font-sans); letter-spacing: .04em; text-transform: uppercase; }
 .yc-label-f b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 600 4cqw/1.25 var(--font-mono); }
-.yc-label.is-text .yc-label-f b { font-size: 3.3cqw; }
-.yc-label.is-text .yc-label-f span { font-size: 2.2cqw; }
-.yc-label.is-text .yc-label-grid { gap: .8cqw 4cqw; padding-top: 2cqw; }
-.yc-label.is-text .yc-label-pallet { padding: 2cqw 0; }
-.yc-label.is-text .yc-label-head { padding-bottom: 2cqw; }
-.yc-label.is-text .yc-label-battery { font-size: 2.4cqw; }
-.yc-label.is-text .yc-label-pallet strong { font-size: 9cqw; }
-.yc-label.is-text .yc-label-bar { height: 9cqw; }
 .yc-label-foot { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 3cqw; padding-top: 2.5cqw; border-top: .3cqw solid #000; }
 .yc-label-side { display: grid; gap: 2cqw; }
 .yc-label-side p { margin: 0; }
@@ -252,7 +244,6 @@ body { margin: 0; background: var(--surface-100); color: var(--ink); font: 400 1
 .yc-label-count b { font-family: var(--font-mono); font-size: 6cqw; }
 .yc-label-code { position: relative; display: grid; justify-items: center; }
 .yc-label-qr { display: block; width: 32cqw; fill: #000; }
-.yc-label.is-text .yc-label-qr { width: 26cqw; }
 .yc-label-sample { position: absolute; top: 50%; left: 50%; translate: -50% -50%; rotate: -18deg; padding: .5cqw 2cqw; background: #fff; border: .5cqw solid #000; font: 700 3cqw/1 var(--font-sans); letter-spacing: .1em; }
 
 /* Captura de seriales */
