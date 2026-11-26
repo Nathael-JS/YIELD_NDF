@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type RefObject } from 'react';
 import { Link } from 'react-router-dom';
 import { Badge, Button } from '../../components/ui.tsx';
-import { completas, conEtiqueta, editarPieza, escanear, faltan, grupos, lista, MANUAL, ocho, pendientes, PLANTILLA, POR_PALLET, problema, type Item, type Pieza } from '../../lib/sfc.ts';
+import { completas, paraImprimir, editarPieza, escanear, faltan, grupos, lista, MANUAL, ocho, pendientes, PLANTILLA, POR_PALLET, problema, type Item, type Pieza } from '../../lib/sfc.ts';
 import { local } from '../../lib/wip.ts';
 import { usePallets } from './items.ts';
 
@@ -67,7 +67,7 @@ export default function ItemDetalle({ it, onClose }: { it: Item; onClose: () => 
           <h2 id="app-det-t">{it.dn}</h2>
           <p className="app-muted">Creado {it.creado.slice(0, 16)} por {it.usuario || '—'}{it.editado ? ` · editado ${it.editado.slice(0, 16)}` : ''} · {it.archivo}</p>
         </div>
-        <span className="yc-row"><Estado it={it} />{conEtiqueta(it) && <Link className="yc-btn yc-btn-secondary" to={`/pallets/etiquetas?dn=${encodeURIComponent(it.dn)}`}>Ver etiqueta</Link>}<Button variant="quiet" onClick={() => ref.current?.close()} aria-label="Cerrar">Cerrar</Button></span>
+        <span className="yc-row"><Estado it={it} /><Link className="yc-btn yc-btn-secondary" to={`/pallets/etiquetas?dn=${encodeURIComponent(it.dn)}`}>{paraImprimir(it) ? 'Ver etiqueta' : 'Vista previa de etiqueta'}</Link><Button variant="quiet" onClick={() => ref.current?.close()} aria-label="Cerrar">Cerrar</Button></span>
       </header>
       {!!f.length && <ul className="app-det-faltan" aria-label="Falta">{f.map((x) => <li key={x}>{x}</li>)}</ul>}
 

@@ -94,6 +94,8 @@ Muestra analizada: 257 seriales, 10 DN, 20 tarimas; **93 seriales sin tarima** y
 
 ## Etiqueta 4×6 in (0.38)
 
+- **Desde la 0.42, Etiquetas muestra todos los DN.** Los incompletos se ven como **vista previa** (sello MUESTRA) y se pueden editar; el PDF sale solo con el DN completo.
+
 - **Una por Pallet ID** de cada DN completo, en el orden en que aparecen en el SFC: «Pallet 1 de N».
 - **Contenido:**
   - Encabezado: Project y Model.

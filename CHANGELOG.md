@@ -8,6 +8,16 @@ Un cambio de componente se publica primero en el artefacto y después se copia a
 
 Los errores encontrados y cómo se corrigieron están en [ERRORES.md](ERRORES.md); las mejoras y cómo se hicieron, en [MEJORAS.md](MEJORAS.md).
 
+## [0.42.0] — 2026-11-26
+
+### Cambiado
+- **Etiquetas muestra todos los DN**, no solo los completos.
+  - Los que faltan se ven como **vista previa**: sus etiquetas llevan el sello MUESTRA, dicen qué les falta y se pueden **editar**.
+  - El PDF sigue saliendo solo cuando el DN está completo y con sus datos llenos.
+  - El item ampliado tiene el enlace «Vista previa de etiqueta».
+- **Una sola regla para «lista para imprimir»** (`paraImprimir`): pallets completos o liberados y datos llenos. La usan la lista de Etiquetas, la página y el enlace del item; antes la lista decía «completo» y la página «vista previa».
+- **El sello MUESTRA va arriba del QR,** sin taparlo, para poder escanear la vista previa. El sistema de diseño se actualizó a la versión 41.
+
 ## [0.41.0] — 2026-11-26
 
 ### Agregado

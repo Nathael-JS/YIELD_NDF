@@ -76,6 +76,8 @@ export const pendientes = (it: Pick<Item, 'piezas' | 'liberados'>) => grupos(it)
 /** Todos sus pallets tienen 9 seriales y 9 cartons: se puede ver su etiqueta. */
 export const conEtiqueta = (it: Pick<Item, 'piezas' | 'liberados'>) => it.piezas.length > 0 && !pendientes(it).length;
 export const ocho = /^\d{8}$/;
+/** Lista para imprimir: pallets completos (o liberados) y sin datos pendientes. */
+export const paraImprimir = (it: Item) => conEtiqueta(it) && !faltan(it).length;
 /** Lo que le falta a un item para estar listo (vacío = listo). */
 export function faltan(it: Item) {
   const out: string[] = [];
