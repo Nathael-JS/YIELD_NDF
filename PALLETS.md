@@ -111,6 +111,76 @@ Muestra analizada: 257 seriales, 10 DN, 20 tarimas; **93 seriales sin tarima** y
 - **Pallets → Historial:** los items de la base por día de creación, con hora, DN, piezas, estado, quién lo creó, quién lo editó al último (lo anota el servidor) y el archivo. **Abrir** lleva al item.
 - El historial de WIP sigue pendiente: el WIP aún no se guarda en la base.
 
+## Plan 0.39+ · Grupos de 9, Tabla de Pallets y PISO vs SISTEMA
+
+### Qué muestra la hoja de referencia (piso)
+
+- **Una DN de embarque** (FXNN SO + FXNN DN, PO line, PN, COO; 154 = total del embarque) se arma en **pallets de 9 piezas**, con 1 pallet por bloque.
+- Cada renglón tiene 4 códigos:
+  - **File**: el serial que dice el sistema (shipping report).
+  - **Physical**: el serial que está físicamente en la tarima.
+  - **palet**: el Pallet ID.
+  - **# carton**: el carton.
+- **File y Physical no son la misma pieza por renglón**: se comparan como conjunto. Esto coincide con la verificación del 26 nov: los 9 seriales de una DN del reporte vienen de varios DN del SFC.
+- El **amarillo** marca el renglón 9 de cada bloque (cierre del pallet) y el **rojo**, un serial que no cuadra.
+
+### Decisiones (26 nov)
+
+1. **Grupos de 9:**
+   - Un DN del SFC con más de 9 piezas se parte en **grupos de 9**, armados por **Pallet ID** en el orden del SFC.
+   - Un grupo se puede **mover a un DN nuevo**, creado a mano o **cargado de otro archivo**. Al cargar se **valida** que los datos coincidan y se muestra una **vista previa** antes de aplicar.
+2. **Pallet ID:** se escanea, se escribe o se carga.
+3. **Tabla de Pallets** (botón y panel nuevos):
+   - Es la tabla de piso (Physical, palet y # carton), unida a los DN ya cargados.
+   - Los códigos se escanean o se escriben.
+4. **PISO vs SISTEMA** (función nueva): compara la Tabla de Pallets (piso) con los DN y el SFC (sistema).
+
+### Diseño de la Tabla de Pallets
+
+- **Bloques por pallet** en vez de celdas combinadas:
+  - Un encabezado fijo con SO · DN · PN · COO y el chip del Pallet ID.
+  - Avance **9 / 9** del bloque y el estado del bloque.
+- **4 columnas de código** en mono: Serial sistema · Serial piso · Pallet ID · Carton. El PN completo va en el encabezado, sin cortarse.
+- **Captura rápida:**
+  - La celda activa recibe el escáner (Enter baja a la siguiente).
+  - Se puede pegar una columna desde Excel (varios renglones de una vez).
+  - Las flechas y Tab mueven la celda, con el mismo `SerialInput` (escáner o teclado).
+- **Estado por renglón con texto e ícono**, no solo color:
+  - ✓ Cuadra.
+  - ⚠ En otro pallet o DN.
+  - ✗ No está en el sistema.
+  - ○ Pendiente.
+- **El renglón 9 cierra el bloque**; al llenarse, el bloque se marca completo.
+- **Filtros:** Todos · Diferencias · Pendientes, y búsqueda por cualquier código.
+- **Carga y exporta** el Excel con las columnas de la referencia (File, Physical, palet, # carton).
+
+### PISO vs SISTEMA (reglas)
+
+| Piso | Sistema | Resultado |
+| --- | --- | --- |
+| Serial en el pallet | En el mismo DN y Pallet ID | ✓ Cuadra |
+| Serial en el pallet | En el sistema, pero en otro pallet o DN | ⚠ Movido (dice dónde) |
+| Serial en el pallet | No está | ✗ Sobra en piso |
+| — | Serial del DN sin escanear | ○ Falta en piso |
+| Carton distinto al del SFC | | ⚠ Carton no cuadra |
+
+### Fases
+
+| Fase | Qué |
+| --- | --- |
+| **G1** | `grupos(it)`: partir en 9 por Pallet ID, con prueba. Ver los grupos en el item y en Etiquetas (una etiqueta por grupo/pallet). |
+| **G2** | Mover un grupo a un DN nuevo (a mano), con vista previa. |
+| **G3** | Cargar los DN nuevos desde el shipping report (FINISH GOOD: una fila = DN + 9 seriales), validar contra el SFC y mostrar la vista previa antes de aplicar. |
+| **T1** | Tabla de Pallets: bloques, captura con escáner, pegar desde Excel y cargar/exportar xlsx. |
+| **T2** | PISO vs SISTEMA: estados por renglón, resumen y filtros. |
+| **T3** | Guardar la Tabla de Pallets en la base (`pallet_piso`), junto con los items. |
+
+### Por confirmar
+
+- **¿154 es el total de piezas de la DN de embarque?** ¿Y 9 / 1 son piezas por pallet / pallets por bloque?
+- **El «otro archivo» para cargar DN nuevos, ¿es el shipping report (FINISH GOOD)?**
+- **Al comparar, ¿«File» es siempre el sistema y «Physical» lo escaneado en piso?**
+
 ## Plan de desarrollo (frontend)
 
 | Fase | Qué | Estado |
