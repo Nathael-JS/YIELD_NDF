@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { escanear, faltan, plantilla, POR_DN, readSfc, type Item } from './sfc.ts';
+import { conEtiqueta, escanear, faltan, plantilla, POR_DN, readSfc, type Item } from './sfc.ts';
 
 // datos inventados con la forma del export de SFC
 const H = ['TO_NO', 'DN', 'CUST_PO', 'SERIAL_NUMBER', 'MODEL_NAME', 'SERIAL_NUMBER1', 'MODEL_NAME1', 'MCARTON_NO', 'IMEI', 'WIP_GROUP', 'Column1'];
@@ -12,7 +12,7 @@ test('readSfc: un item por DN; N/A y vacíos quedan sin tarima o sin carton; ser
   assert.deepEqual(missing, []);
   assert.equal(repetidos, 1);
   assert.deepEqual(items.map((x) => [x.dn, x.piezas.length, x.to, x.pnSfc]), [['100', 2, '123', '920-00000-00AA-AA0'], ['200', 1, '123', '920-00000-00AA-AA0']]);
-  assert.deepEqual(items[0].piezas[1], { serial: 'MT000000002A', carton: '', pallet: '', estado: 'STOCKIN' });
+  assert.deepEqual(items[0].piezas[1], { serial: 'MT000000002A', sn: '00000000000002', carton: '', pallet: '', estado: 'STOCKIN' });
   assert.deepEqual(readSfc({ headers: ['DN'], rows: [] }).missing, ['SERIAL_NUMBER1', 'MCARTON_NO', 'IMEI']);
 });
 
@@ -21,17 +21,24 @@ test('faltan: piezas, manuales y Customer PO/DN de 8 dígitos', () => {
   const it: Item = { ...base, ...plantilla(base.pnSfc, []), so: '1', shipped: '2026-01-01', custPo: '12345678', custDn: '87654321', pnNvidia: '692-x' };
   assert.deepEqual(faltan(it), []);
   assert.deepEqual(faltan({ ...it, custDn: '123', so: '' }), ['Sales Order', 'Customer DN: 8 dígitos']);
-  assert.deepEqual(faltan({ ...it, piezas: it.piezas.slice(1) }), ['1 de 9 piezas sin serial o carton']);
+  assert.deepEqual(faltan({ ...it, piezas: it.piezas.slice(1) }), ['1 de 9 piezas sin serial, carton o Pallet ID']);
 });
 
-test('escanear: corrige el carton de un serial que ya está o agrega uno nuevo', () => {
-  const p = [{ serial: 'MT1', carton: '', pallet: 'PAL1', estado: 'STOCKIN' }];
-  assert.deepEqual(escanear(p, 'mt1', 'fx9'), [{ serial: 'MT1', carton: 'FX9', pallet: 'PAL1', estado: 'STOCKIN', manual: true }]);
-  assert.equal(escanear(p, 'MT2', 'FX2').length, 2);
+test('escanear: corrige carton y Pallet ID de un serial que ya está o agrega uno nuevo', () => {
+  const p = [{ serial: 'MT1', sn: '1', carton: '', pallet: 'PAL1', estado: 'STOCKIN' }];
+  assert.deepEqual(escanear(p, 'mt1', 'fx9'), [{ serial: 'MT1', sn: '1', carton: 'FX9', pallet: 'PAL1', estado: 'STOCKIN', manual: true }]);
+  assert.deepEqual(escanear(p, 'MT2', 'FX2', 'pal2')[1], { serial: 'MT2', sn: '', carton: 'FX2', pallet: 'PAL2', estado: '', manual: true });
   assert.equal(escanear(p, ' ', 'FX2'), p);
 });
 
 test('plantilla: copia los datos fijos del último item del mismo PN', () => {
   assert.deepEqual([plantilla('920-x', []).project, plantilla('920-x', []).coo], ['NVIDIA', 'MX']);
   assert.equal(plantilla('920-x', [{ pnSfc: '920-x', price: '10', hazmat: 'h', model: 'm', project: 'P', coo: 'VN', pnNvidia: '692-x' } as Item]).price, '10');
+});
+
+test('conEtiqueta: 9 piezas con serial, carton y Pallet ID; una sin Pallet ID o una de más no cuenta', () => {
+  const nueve = Array.from({ length: POR_DN }, (_, i) => ({ serial: `MT${i}`, sn: '', carton: `FX${i}`, pallet: 'PAL1', estado: '' }));
+  assert.ok(conEtiqueta({ piezas: nueve }));
+  assert.ok(!conEtiqueta({ piezas: nueve.map((x, i) => (i ? x : { ...x, pallet: '' })) }));
+  assert.ok(!conEtiqueta({ piezas: [...nueve, { ...nueve[0], serial: 'MTX' }] }));
 });

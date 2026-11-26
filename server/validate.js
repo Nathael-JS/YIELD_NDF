@@ -48,3 +48,25 @@ export function validateTarima(b) {
   if (b.antes != null && !corto(b.antes, 40)) return { error: 'Pallet # anterior inválido' };
   return { pallet, antes: b.antes ? b.antes.trim().toUpperCase() : null, datos: Object.fromEntries(TARIMA.map((k) => [k, k === 'pallet' ? pallet : t[k] ?? ''])) };
 }
+
+// Items de Pallets (un DN cada uno). Sin `price`: los precios no se guardan en la base.
+const ITEM = ['dn', 'po', 'to', 'pnSfc', 'archivo', 'usuario', 'creado', 'editado', 'so', 'pnNvidia', 'shipped', 'custPo', 'custDn', 'project', 'model', 'hazmat', 'coo'];
+const opcional = (v, n) => v == null || corto(v, n);
+export function validateItems(b) {
+  if (!b || !Array.isArray(b.items) || !b.items.length || b.items.length > 500) return { error: 'Se esperaba { items: [...] } con 1 a 500 items' };
+  const items = [];
+  for (const it of b.items) {
+    const dn = typeof it?.dn === 'string' ? it.dn.trim() : '';
+    if (!/^[A-Za-z0-9-]{1,40}$/.test(dn)) return { error: `DN inválido: ${String(it?.dn).slice(0, 40)}` };
+    if (items.some((x) => x.dn === dn)) return { error: `DN ${dn} repetido` };
+    if (!ITEM.every((k) => opcional(it[k], 300))) return { error: `DN ${dn}: un campo es muy largo` };
+    if (!Array.isArray(it.piezas) || it.piezas.length > 500) return { error: `DN ${dn}: piezas inválidas` };
+    const piezas = [];
+    for (const p of it.piezas) {
+      if (!p || !['serial', 'sn', 'carton', 'pallet', 'estado'].every((k) => opcional(p[k], 60)) || typeof p.serial !== 'string' || !p.serial) return { error: `DN ${dn}: pieza inválida` };
+      piezas.push({ serial: p.serial, sn: p.sn ?? '', carton: p.carton ?? '', pallet: p.pallet ?? '', estado: p.estado ?? '', ...(p.manual ? { manual: true } : {}) });
+    }
+    items.push({ ...Object.fromEntries(ITEM.map((k) => [k, it[k] ?? ''])), dn, piezas });
+  }
+  return { items };
+}

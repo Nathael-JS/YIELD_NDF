@@ -1,20 +1,34 @@
 # Pallets · nueva infraestructura (plan)
 
-Pallets se rehace en el frontend. La versión anterior (0.28–0.34: etiqueta armada a mano, listado de entregas, tarimas en la base) sigue en el código y en el historial de git hasta que la reemplace cada fase. **El backend de Pallets queda en pausa** mientras se valida este plan.
+Pallets se rehace en el frontend. La versión anterior (0.28–0.34: etiqueta armada a mano, listado de entregas, tarimas en la base) sigue en el código y en el historial de git hasta que la reemplace cada fase. Los items por DN se guardan en la base desde la 0.36 (`pallet_items`).
 
 > Los archivos de ejemplo se analizaron en un directorio aislado y se borraron. Este documento solo guarda la **estructura** (columnas y formas), nunca datos reales.
 
-## Flujo nuevo
+## Flujo
 
-1. **Carga → «Nuevo Pallet / Shipping Order»**: crea un item dentro de PALLETS. (La animación con React Three se descartó.)
-2. Al elegirlo **se pide el archivo SFC** (export de SFC, una fila por serial).
-3. **Un item por DN**, con su fecha y hora de creación. Cada DN lleva **9 piezas** (serial + carton); si faltan, se piden con el escáner o a mano (en pruebas).
-4. Del SFC se llenan los campos del reporte (tabla de abajo). **Sales Order, Part number NVIDIA, Shipped day, Customer PO y Customer DN** se escriben a mano.
-5. La página **Pallets** (antes «Etiquetas») muestra cada item por separado: DN, fecha de creación, hora (más adelante, hora de edición) y quién lo trabajó (el usuario de la sesión).
-6. **Ampliar un item** muestra todos los datos llenados desde el SFC.
-7. Los items se ven como **cuadrícula de 5 × 3** (15 por página).
-8. Si el SFC ya trae seriales con carton y Pallet ID, se muestran así; se pueden **corregir con el escáner** (en pruebas). La separación por Pallet ID va en Etiquetas.
-9. **Etiquetas** pasa a ser otra opción, **en desarrollo**.
+1. **Carga → «Nuevo Pallet / Shipping Order»:** se carga el export de SFC. Se reconoce por sus columnas, no por el nombre del archivo. **Cada DN se vuelve un item.**
+2. **Pallets:** cuadrícula de 5 × 3 con los items. Cada uno muestra su DN, sus piezas (x / 9), sus Pallet IDs, quién lo creó y cuándo. **Ampliar** abre todos sus datos y los campos a mano.
+3. **Conexión con WIP:** las piezas **pendientes** (sin Carton ID o Pallet ID) y **faltantes** (el DN aún no llega a 9), con su **estado en línea** según el WIP cargado en el área WIP.
+   - El cruce es por SN (`SERIAL_NUMBER`), la misma columna en WIP y en SFC.
+   - Una **vigencia** (hora, día, semana o mes) decide si el WIP está **actualizado** o **desactualizado**.
+   - Qué tan actual es el WIP: el corte del reporte general, o el último movimiento del reporte por orden.
+4. **Etiquetas:** los DN **completos**, es decir, 9 piezas con serial, carton y Pallet ID.
+   - Muestran sus datos: Shipped day, PO, Sales Order, Project, Model, delivery, hazmat, partnumber, qty, Unit price y Total price.
+   - Cada pieza lleva Serial, SN, Carton ID y Pallet ID.
+   - Tienen **Editar**, y el item ampliado tiene el enlace «Ver etiqueta».
+   - La estructura de la etiqueta 4×6 in se diseña después.
+5. **Los datos de WIP se quedan en Conexión con WIP.** Pallets y Etiquetas solo muestran lo que trae el SFC. El estado `WIP_GROUP` del SFC se guarda, pero no se muestra.
+
+### Verificación con el SFC real (26 nov)
+
+- **La base coincide con el archivo:** 10 de 10 DN y 257 de 257 piezas (serial, SN, carton y Pallet ID). Una pieza con carton `N/A` se guarda vacía («sin carton»), a propósito.
+- **El SFC real no trae 9 piezas por DN:** sus 10 DN tienen 1, 9, 10, 18, 21, 36, 36, 36, 36 y 54 seriales. Solo 1 DN queda listo para etiqueta. **Por confirmar** si un DN del SFC debe partirse en grupos de 9.
+- **El shipping report (FINISH GOOD) no corresponde a este SFC por DN:**
+  - Ninguno de sus DN, SO, PO ni T/O aparece en el SFC.
+  - Sus filas (9 seriales cada una) traen seriales repartidos en 1 a 4 DN del SFC.
+  - 143 de sus 172 seriales sí están en el SFC.
+  - Solo 3 filas traen Carton # y Pallet #, y casi ninguno coincide con el SFC.
+- **El WIP de ejemplo es de otra orden** (0 seriales en común, mismo formato de 14 dígitos). El cruce se probó con datos inventados.
 
 ## Archivos de referencia
 
@@ -88,22 +102,32 @@ Muestra analizada: 257 seriales, 10 DN, 20 tarimas; **93 seriales sin tarima** y
 | **F3** | Página **Pallets**: cuadrícula 5 × 3, búsqueda, filtro y páginas (`Pallets.tsx`) | ✅ 0.35 |
 | **F4** | **Ampliar item**: del SFC, a mano, datos del modelo, piezas y escáner en pruebas (`Item.tsx`) | ✅ 0.35 |
 | **F5** | Exportar el **Shipping report CTO** (una fila por serial) | Pendiente |
-| **F6** | **Etiquetas** por Pallet ID desde los items (hoy: la versión anterior, marcada «en desarrollo») | Pendiente |
+| **F6** | **Etiquetas** de los DN completos (hoja de datos; la etiqueta 4×6 in después) y **Conexión con WIP** | ✅ 0.37 |
 | **F7** | Hora de edición por campo y validaciones con datos reales | Pendiente |
-| **F8** | Reactivar el backend con el modelo nuevo (`pallet_items`) | Pendiente |
+| **F8** | Backend con el modelo nuevo: tabla `pallet_items` y `GET/POST /api/pallets/items` | ✅ 0.36 |
 
-Los items viven en este navegador (`localStorage`, clave `yc-pallets`) y se borran al cerrar sesión.
+### Base de datos (0.36)
+
+- **`pallet_items`:** una fila por DN, con `datos` (el item y sus piezas), `usuario` (quién lo creó), `creado`, `edito` (quién lo editó al último) y `editado`.
+- **`GET /api/pallets/items`** trae todos. **`POST /api/pallets/items`** `{ items: [...] }` crea o reemplaza por DN (de 1 a 500 por llamada), con validación en el servidor (`validateItems`).
+- **El Unit price no se guarda en la base:** el servidor lo descarta y se queda solo en el navegador de quien lo escribió. Por eso el Total price solo se ve en ese equipo.
+- **Cuándo se guarda:** al cargar el SFC (los DN del archivo) y al cerrar un item ampliado, si cambió algo. No se guarda en cada tecla.
+- **Al abrir Pallets o Carga** se traen los de la base. De cada DN se queda la versión más reciente, y lo que solo estaba en este equipo (por ejemplo, guardado sin conexión) se sube.
+- **Sin conexión:** se trabaja en el equipo con aviso, y se sube al volver a abrir Pallets.
+- **Copia en el navegador** (`localStorage`, clave `yc-pallets`): se borra al cerrar sesión; la base conserva todo.
+- Los endpoints del modelo anterior (`/api/pallets/cargas` y `/tarimas`) siguen en pausa (`PALLETS_DB = false`) y ya no los usa ninguna pantalla.
 
 ### Archivos de Pallets hoy
 
 - **Nuevo:** `src/lib/sfc.ts` (+ prueba), `src/areas/pallets/items.ts` (los items), `Nuevo.tsx` (Carga), `Pallets.tsx` (cuadrícula), `Item.tsx` (ampliado); estilos `.app-item*`, `.app-det*` en `src/styles/app.css`.
-- **Etiquetas (en desarrollo, versión anterior):** `src/areas/pallets/Etiquetas.tsx`, `src/lib/pallets.ts`, `src/components/label.tsx`, `src/styles/yc.css`.
-- **Backend en pausa:** `server/index.js` (`pallets()`), `server/validate.js`, funciones de Pallets en `src/lib/db.ts`.
+- **Conexión con WIP:** `src/areas/pallets/Conexion.tsx` (lee el WIP del área WIP con `readWip`). **Etiquetas:** `src/areas/pallets/Etiquetas.tsx`; la etiqueta 4×6 in de antes sigue en `src/components/label.tsx` y `src/styles/yc.css`, para la siguiente fase.
+- **Backend:** `server/index.js` (`pallets()`, tabla `pallet_items`), `server/validate.js` (`validateItems`), `src/lib/db.ts` (`loadItems`, `saveItems`), `server/check.js`.
 - **Compartidos:** `src/areas.ts`, `src/main.tsx`, `src/pages/Carga.tsx`, `Validacion.tsx`, `Descargas.tsx`.
 
 ## Riesgos
 
-- **Datos solo en el navegador** mientras el backend esté en pausa: se borran al cerrar sesión y otro equipo no los ve.
+- **Gana la última escritura por DN:** si dos personas editan el mismo DN a la vez, se queda lo último que se guardó.
+- **Las horas de edición vienen de cada equipo:** si dos equipos tienen la hora distinta, puede quedarse la versión equivocada al sincronizar.
 - **PN NVIDIA ≠ PN del SFC:** sin la plantilla, el reporte saldría con el número de parte equivocado.
 - **Serial y carton:** en el SFC el serial (`SERIAL_NUMBER1`) es `MT…` y el carton (`MCARTON_NO`) es `FX…`, igual que en el reporte CTO.
 - **Archivo SFC ancho:** trae miles de columnas vacías (`Column1…`); se lee todo el archivo, puede tardar unos segundos.

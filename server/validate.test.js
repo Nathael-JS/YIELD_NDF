@@ -37,3 +37,17 @@ test('validateTarima: Pallet # válido y en mayúsculas, textos acotados, campos
   assert.ok(validateTarima({ tarima: { pallet: 'PALFX1234', dn: 'x'.repeat(500) } }).error);
   assert.ok(validateTarima({}).error);
 });
+
+test('validateItems: DN válido, sin precio, piezas acotadas, campos desconocidos fuera', async () => {
+  const { validateItems } = await import('./validate.js');
+  const v = validateItems({ items: [{ dn: ' 9000000001 ', price: '100', hack: 1, so: '1', piezas: [{ serial: 'MT1', carton: 'FX1', manual: true, x: 1 }] }] });
+  assert.equal(v.items[0].dn, '9000000001');
+  assert.equal(v.items[0].price, undefined);
+  assert.equal(v.items[0].hack, undefined);
+  assert.deepEqual(v.items[0].piezas, [{ serial: 'MT1', sn: '', carton: 'FX1', pallet: '', estado: '', manual: true }]);
+  assert.ok(validateItems({ items: [{ dn: 'a b', piezas: [] }] }).error);
+  assert.ok(validateItems({ items: [{ dn: '1', piezas: [{ serial: '' }] }] }).error);
+  assert.ok(validateItems({ items: [{ dn: '1', so: 'x'.repeat(400), piezas: [] }] }).error);
+  assert.ok(validateItems({ items: [] }).error);
+  assert.ok(validateItems({ items: [{ dn: '1', piezas: [] }, { dn: ' 1', piezas: [] }] }).error);
+});
