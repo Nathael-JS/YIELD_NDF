@@ -1,6 +1,6 @@
 // Pallets: un item por DN (creado en Carga desde el SFC), en cuadrícula de 5 × 3; «Ampliar» abre todos sus datos.
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Badge, Button, Segmented } from '../../components/ui.tsx';
 import { completas, faltan, POR_DN, type Item } from '../../lib/sfc.ts';
 import { PageHead } from '../../pages/Layout.tsx';
@@ -15,6 +15,9 @@ export default function Pallets() {
   const { items, sync, db } = usePallets(), go = useNavigate();
   useEffect(() => { sync(); }, [sync]);
   const [q, setQ] = useState(''), [ver, setVer] = useState<Ver>('todos'), [pag, setPag] = useState(0), [abierto, setAbierto] = useState<string>();
+  // «Abrir» desde el Historial: /pallets?dn=…
+  const [params, setParams] = useSearchParams(), pedido = params.get('dn');
+  useEffect(() => { if (pedido) { setAbierto(pedido); setParams({}, { replace: true }); } }, [pedido, setParams]);
   const listo = (it: Item) => !faltan(it).length;
   const vis = items.filter((it) => (ver === 'todos' || listo(it) === (ver === 'listos'))
     && (!q || `${it.dn} ${it.po} ${it.so} ${it.custDn} ${it.piezas.map((p) => `${p.serial} ${p.carton} ${p.pallet}`).join(' ')}`.toLowerCase().includes(q.trim().toLowerCase())));

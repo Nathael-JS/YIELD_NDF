@@ -252,7 +252,8 @@ async function comments(req, res, me, url) {
 async function pallets(req, res, me, url) {
   if (url.pathname === '/api/pallets/items') {
     if (req.method === 'GET') {
-      const { rows } = await db.query('select datos from pallet_items order by creado desc limit 5000');
+      // `edito`: quién lo editó al último (lo anota el servidor), para el historial
+      const { rows } = await db.query(`select datos || jsonb_build_object('edito', edito) datos from pallet_items order by creado desc limit 5000`);
       return json(res, 200, { items: rows.map((r) => r.datos) });
     }
     if (req.method === 'POST') {

@@ -3,15 +3,14 @@
 import qrcode from 'qrcode-generator';
 import { code128 } from '../lib/code128.ts';
 
+/** Una etiqueta por Pallet ID de un DN (items de Pallets). Sin precios: la etiqueta va pegada a la tarima. */
 export interface PalletLabelData {
-  pallet: string; customer: string; destination: string; ref: string; dn: string; nvdn?: string; so: string; po: string; to: string;
-  pn: string; desc?: string; qty: number; cartons: number; nw: string; gw: string; dims: string; coo: string; hts: string;
-  battery?: string; shipDate: string; index: number; total: number;
-  /** Etiqueta de prueba (modo ×9): sale con la marca PRUEBA, también impresa. */
+  pallet: string; project: string; model: string; dn: string; po: string; so: string; custPo: string; custDn: string;
+  pn: string; pnSfc: string; qty: number; cartons: number; shipped: string; coo: string; hazmat: string;
+  index: number; total: number;
+  /** Etiqueta de prueba: sale con la marca PRUEBA, también impresa. */
   test?: boolean;
 }
-/** qr: QR grande y menos texto · text: más datos y QR mediano. */
-export type LabelVariant = 'qr' | 'text';
 
 /** Módulos del QR (nivel M: aguanta ~15 % de daño); `null` si el texto no cabe. */
 export function qrModules(text: string) {
@@ -41,38 +40,35 @@ export function Barcode({ text }: { text: string }) {
 }
 
 const Field = ({ k, v, wide }: { k: string; v: string | number; wide?: boolean }) => (
-  <div className={`yc-label-f${wide ? ' is-wide' : ''}`}><span>{k}</span><b>{v}</b></div>
+  <div className={`yc-label-f${wide ? ' is-wide' : ''}`}><span>{k}</span><b>{v === '' ? '—' : v}</b></div>
 );
 
-/** `qr`: el texto del QR (todos los datos y los seriales). `sample`: sello «MUESTRA» (no se imprime), para ejemplos. */
-export function PalletLabel({ d, qr, variant = 'qr', sample = false }: { d: PalletLabelData; qr: string; variant?: LabelVariant; sample?: boolean }) {
-  const all = variant === 'text';
+/** `qr`: el texto del QR (datos y seriales). `sample`: sello «MUESTRA» (no se imprime), para ejemplos. */
+export function PalletLabel({ d, qr, sample = false }: { d: PalletLabelData; qr: string; sample?: boolean }) {
   return (
-    <article className={`yc-label is-${variant}`} aria-label={`Etiqueta de la tarima ${d.pallet}`}>
+    <article className="yc-label" aria-label={`Etiqueta del pallet ${d.pallet}`}>
       <header className="yc-label-head">
-        <div><span className="yc-label-k">Cliente</span><strong>{d.customer}</strong></div>
-        <div className="is-right"><span className="yc-label-k">Destino</span><strong>{d.destination}</strong></div>
+        <div><span className="yc-label-k">Project</span><strong>{d.project || '—'}</strong></div>
+        <div className="is-right"><span className="yc-label-k">Model</span><strong>{d.model || '—'}</strong></div>
       </header>
       <section className="yc-label-pallet">
-        <span className="yc-label-k">Pallet #</span>
+        <span className="yc-label-k">Pallet ID</span>
         <strong>{d.pallet || '—'}</strong>
         {d.pallet ? <Barcode text={d.pallet} /> : <span className="yc-label-bar" aria-hidden />}
       </section>
       <section className="yc-label-grid">
-        <Field k="Internal Ref" v={d.ref} wide />
-        <Field k="DN" v={d.dn} /><Field k="NVIDIA DN" v={d.nvdn || '—'} />
-        <Field k="SO" v={d.so} /><Field k="PO" v={d.po} />
+        <Field k="Delivery (DN)" v={d.dn} /><Field k="Customer DN" v={d.custDn} />
+        <Field k="PO" v={d.po} /><Field k="Customer PO" v={d.custPo} />
+        <Field k="Sales Order" v={d.so} /><Field k="Shipped day" v={d.shipped} />
         <Field k="Part number" v={d.pn} wide />
-        {all && d.desc && <Field k="Descripción" v={d.desc} wide />}
-        <Field k="Piezas" v={d.qty} /><Field k="Cajas" v={d.cartons} />
-        <Field k="Peso neto" v={`${d.nw} kg`} /><Field k="Peso bruto" v={`${d.gw} kg`} />
-        {all && <><Field k="T/O" v={d.to} /><Field k="Medidas (cm)" v={d.dims} /><Field k="COO" v={d.coo} /><Field k="HTS" v={d.hts} /><Field k="Fecha de envío" v={d.shipDate} wide /></>}
+        <Field k="PN SFC" v={d.pnSfc} wide />
+        <Field k="Qty" v={d.qty} /><Field k="Cartons" v={d.cartons} />
       </section>
       <footer className="yc-label-foot">
         <div className="yc-label-side">
-          {d.battery && <p className="yc-label-battery">{d.battery}</p>}
-          {!all && <p className="yc-label-k">COO {d.coo} · HTS {d.hts} · {d.dims} cm</p>}
-          <p className="yc-label-count">Tarima <b>{d.index}</b> de <b>{d.total}</b>{d.test && <span className="yc-label-test">PRUEBA</span>}</p>
+          {d.hazmat && <p className="yc-label-battery">{d.hazmat}</p>}
+          <p className="yc-label-k">COO {d.coo || '—'}</p>
+          <p className="yc-label-count">Pallet <b>{d.index}</b> de <b>{d.total}</b>{d.test && <span className="yc-label-test">PRUEBA</span>}</p>
         </div>
         <div className="yc-label-code"><Qr text={qr} />{sample && <span className="yc-label-sample">MUESTRA</span>}</div>
       </footer>

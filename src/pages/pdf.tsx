@@ -341,31 +341,32 @@ const L = StyleSheet.create({
 function LabelPage({ d, qr }: { d: PalletLabelData; qr: string }) {
   const m = qrModules(qr) ?? [], n = m.length, w = code128Safe(d.pallet), total = w.reduce((a, b) => a + b, 0) + 20;
   const F = ({ k, v, wide }: { k: string; v: string | number; wide?: boolean }) => (
-    <View style={{ width: wide ? '100%' : '50%', marginBottom: 4 }}><Text style={L.k}>{k}</Text><Text style={L.v}>{String(v)}</Text></View>
+    <View style={{ width: wide ? '100%' : '50%', marginBottom: 4 }}><Text style={L.k}>{k}</Text><Text style={L.v}>{v === '' ? '—' : String(v)}</Text></View>
   );
   let x = 10;
   return (
     <Page size={[288, 432]} style={L.page}>
       <View style={[L.row, { borderBottomWidth: 2, paddingBottom: 6 }]}>
-        <View><Text style={L.k}>Cliente</Text><Text style={{ fontSize: 12, fontFamily: 'Helvetica-Bold' }}>{d.customer}</Text></View>
-        <View style={{ alignItems: 'flex-end' }}><Text style={L.k}>Destino</Text><Text style={{ fontSize: 12, fontFamily: 'Helvetica-Bold' }}>{d.destination}</Text></View>
+        <View><Text style={L.k}>Project</Text><Text style={{ fontSize: 12, fontFamily: 'Helvetica-Bold' }}>{d.project || '—'}</Text></View>
+        <View style={{ alignItems: 'flex-end' }}><Text style={L.k}>Model</Text><Text style={{ fontSize: 12, fontFamily: 'Helvetica-Bold' }}>{d.model || '—'}</Text></View>
       </View>
       <View style={{ borderBottomWidth: 1, paddingVertical: 7 }}>
-        <Text style={L.k}>Pallet #</Text>
+        <Text style={L.k}>Pallet ID</Text>
         <Text style={{ fontSize: 27, fontFamily: 'Courier-Bold', marginVertical: 2 }}>{d.pallet}</Text>
         {w.length > 0 && <Svg width={262} height={30} viewBox={`0 0 ${total} 40`} preserveAspectRatio="none">
           {w.map((bw, i) => { const r = i % 2 === 0 ? <Rect key={i} x={x} y={0} width={bw} height={40} fill="#000" /> : null; x += bw; return r; })}
         </Svg>}
       </View>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', paddingTop: 7, flexGrow: 1 }}>
-        <F k="Internal Ref" v={d.ref} wide /><F k="DN" v={d.dn} /><F k="NVIDIA DN" v={d.nvdn || '—'} /><F k="SO" v={d.so} /><F k="PO" v={d.po} />
-        <F k="Part number" v={d.pn} wide /><F k="Piezas" v={d.qty} /><F k="Cajas" v={d.cartons} /><F k="Peso neto" v={`${d.nw} kg`} /><F k="Peso bruto" v={`${d.gw} kg`} />
+        <F k="Delivery (DN)" v={d.dn} /><F k="Customer DN" v={d.custDn} /><F k="PO" v={d.po} /><F k="Customer PO" v={d.custPo} />
+        <F k="Sales Order" v={d.so} /><F k="Shipped day" v={d.shipped} /><F k="Part number" v={d.pn} wide /><F k="PN SFC" v={d.pnSfc} wide />
+        <F k="Qty" v={d.qty} /><F k="Cartons" v={d.cartons} />
       </View>
       <View style={[L.row, { borderTopWidth: 1, paddingTop: 7, alignItems: 'flex-end' }]}>
         <View style={{ flex: 1, paddingRight: 8, gap: 5 }}>
-          {d.battery ? <Text style={{ borderWidth: 1.5, padding: 4, fontSize: 7, fontFamily: 'Helvetica-Bold' }}>{d.battery}</Text> : null}
-          <Text style={{ fontSize: 7 }}>{`T/O ${d.to} · COO ${d.coo} · HTS ${d.hts} · ${d.dims} cm · ${d.shipDate}`}</Text>
-          <Text style={{ fontSize: 10 }}>Tarima <Text style={{ fontFamily: 'Courier-Bold', fontSize: 16 }}>{d.index}</Text> de <Text style={{ fontFamily: 'Courier-Bold', fontSize: 16 }}>{d.total}</Text>{d.test ? '   PRUEBA' : ''}</Text>
+          {d.hazmat ? <Text style={{ borderWidth: 1.5, padding: 4, fontSize: 7, fontFamily: 'Helvetica-Bold' }}>{d.hazmat}</Text> : null}
+          <Text style={{ fontSize: 7 }}>{`COO ${d.coo || '—'}`}</Text>
+          <Text style={{ fontSize: 10 }}>Pallet <Text style={{ fontFamily: 'Courier-Bold', fontSize: 16 }}>{d.index}</Text> de <Text style={{ fontFamily: 'Courier-Bold', fontSize: 16 }}>{d.total}</Text>{d.test ? '   PRUEBA' : ''}</Text>
         </View>
         {n > 0 && <Svg width={96} height={96} viewBox={`-4 -4 ${n + 8} ${n + 8}`}>
           {m.flatMap((r, yy) => r.map((on, xx) => (on ? <Rect key={`${xx}.${yy}`} x={xx} y={yy} width={1.02} height={1.02} fill="#000" /> : null)))}

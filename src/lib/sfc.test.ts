@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { conEtiqueta, escanear, faltan, plantilla, POR_DN, readSfc, type Item } from './sfc.ts';
+import { conEtiqueta, escanear, etiquetas, faltan, plantilla, POR_DN, readSfc, type Item } from './sfc.ts';
 
 // datos inventados con la forma del export de SFC
 const H = ['TO_NO', 'DN', 'CUST_PO', 'SERIAL_NUMBER', 'MODEL_NAME', 'SERIAL_NUMBER1', 'MODEL_NAME1', 'MCARTON_NO', 'IMEI', 'WIP_GROUP', 'Column1'];
@@ -41,4 +41,16 @@ test('conEtiqueta: 9 piezas con serial, carton y Pallet ID; una sin Pallet ID o 
   assert.ok(conEtiqueta({ piezas: nueve }));
   assert.ok(!conEtiqueta({ piezas: nueve.map((x, i) => (i ? x : { ...x, pallet: '' })) }));
   assert.ok(!conEtiqueta({ piezas: [...nueve, { ...nueve[0], serial: 'MTX' }] }));
+});
+
+test('etiquetas: una por Pallet ID, con sus piezas y cartons; QR solo ASCII y sin precio', () => {
+  const piezas = [['MT1', 'FX1', 'PAL1'], ['MT2', 'FX1', 'PAL1'], ['MT3', 'FX3', 'PAL2'], ['MT4', 'FX4', '']].map(([serial, carton, pallet]) => ({ serial, sn: '', carton, pallet, estado: '' }));
+  const it = { dn: '100', po: '1', to: '', pnSfc: '920-x', piezas, archivo: '', usuario: '', creado: '', so: '2', pnNvidia: '692-x', shipped: '2026-01-02',
+    custPo: '12345678', custDn: '87654321', project: 'NVIDIA', model: 'Señal', hazmat: '', coo: 'MX', price: '999' } as Item;
+  const ls = etiquetas(it);
+  assert.deepEqual(ls.map((l) => [l.d.pallet, l.d.qty, l.d.cartons, l.d.index, l.d.total]), [['PAL1', 2, 1, 1, 2], ['PAL2', 1, 1, 2, 2]]);
+  assert.match(ls[0].qr, /^PALLET:PAL1\nDN:100\n/);
+  assert.match(ls[0].qr, /\nSN:MT1,MT2$/);
+  assert.ok(!ls[0].qr.includes('999'));
+  assert.ok(/^[\x20-\x7e\n]*$/.test(ls[0].qr));
 });
