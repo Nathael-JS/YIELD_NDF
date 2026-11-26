@@ -408,3 +408,31 @@ a.yc-btn { text-decoration: none; display: inline-flex; align-items: center; }
 .app-grp-head th > * { margin-right: var(--space-3); vertical-align: middle; }
 .app-grp-head .code { font: 600 13px var(--font-mono); }
 .app-grp-n { font: 600 13px var(--font-mono); }
+.app-grp-acc { float: right; display: inline-flex; align-items: center; gap: var(--space-2); margin: -4px 0 !important; }
+.app-chk { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; cursor: pointer; }
+.app-chk input { accent-color: var(--brand); }
+.app-cell-in { height: 30px; width: 100%; min-width: 120px; padding: 0 var(--space-2); font-size: 13px; }
+.app-cell-acc { display: inline-flex; align-items: center; gap: var(--space-2); }
+.app-cell-dn { display: inline-flex; align-items: center; gap: var(--space-1); font-size: 12px; color: var(--ink-muted); }
+.app-cell-dn .app-cell-in { min-width: 130px; }
+.yc-table tr.is-edit td { background: var(--brand-tint); }
+
+/* Pallets · Tabla de Pallets (piso) */
+.app-tb-dn { max-width: 320px; }
+.app-tb { display: grid; gap: var(--space-4); }
+.app-tb-bar { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: var(--space-3); }
+.app-tb-n { color: var(--ink); font: 600 18px var(--font-mono); }
+.app-tb-block { display: grid; gap: var(--space-3); padding: var(--space-4); animation: app-in .3s cubic-bezier(.2, .7, .2, 1) both; }
+.app-tb-block > header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: end; gap: var(--space-3); }
+.app-tb-pallet { display: grid; gap: 4px; min-width: 220px; }
+.app-tb-pallet .yc-input { font: 600 16px var(--font-mono); }
+.app-tb-meta { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); }
+.app-tb-t td { padding-top: 4px; padding-bottom: 4px; }
+.app-tb-t td.app-tb-sis { color: var(--ink-muted); }
+.app-tb-t tr.is-cierre td { border-bottom: 2px solid var(--line-strong); }
+.app-tb-t .app-cell-in:focus { box-shadow: var(--focus-ring); border-color: var(--brand); }
+@media (prefers-reduced-motion: reduce) { .app-tb-block { animation: none; } }
+/* PISO vs SISTEMA */
+.app-cmp { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: end; gap: var(--space-4); padding: var(--space-4); }
+.app-cmp .app-item-k { margin: 0 0 var(--space-2); }
+.app-tb-t td:last-child { white-space: nowrap; }

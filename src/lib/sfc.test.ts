@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { conEtiqueta, escanear, etiquetas, faltan, grupos, plantilla, POR_PALLET, problema, readSfc, type Item } from './sfc.ts';
+import { bloques, comparar, conEtiqueta, editarPieza, escanear, etiquetas, faltan, grupos, pegar, plantilla, POR_PALLET, problema, readSfc, type Item } from './sfc.ts';
 
 // datos inventados con la forma del export de SFC
 const H = ['TO_NO', 'DN', 'CUST_PO', 'SERIAL_NUMBER', 'MODEL_NAME', 'SERIAL_NUMBER1', 'MODEL_NAME1', 'MCARTON_NO', 'IMEI', 'WIP_GROUP', 'Column1'];
@@ -60,4 +60,43 @@ test('etiquetas: una por Pallet ID, con sus piezas y cartons; QR solo ASCII y si
   assert.match(ls[0].qr, /\nSN:MT1,MT2$/);
   assert.ok(!ls[0].qr.includes('999'));
   assert.ok(/^[\x20-\x7e\n]*$/.test(ls[0].qr));
+});
+
+test('liberar pallet: uno con menos de 9 deja de estar pendiente; con carton repetido, no', () => {
+  const pz = (n: number, pallet: string) => Array.from({ length: n }, (_, i) => ({ serial: `MT${pallet}${i}`, sn: '', carton: `FX${pallet}${i}`, pallet, estado: '' }));
+  const piezas = [...pz(9, 'PAL1'), ...pz(1, 'PAL2')];
+  assert.ok(!conEtiqueta({ piezas }));
+  assert.ok(conEtiqueta({ piezas, liberados: ['PAL2'] }));
+  assert.equal(problema({ pallet: 'PAL2', piezas: [...pz(1, 'PAL2'), { ...pz(1, 'PAL2')[0], serial: 'MTX' }] }, ['PAL2']), 'carton repetido');
+});
+
+test('editarPieza: cambia SN, carton o Pallet ID en mayúsculas; «N/A» lo deja vacío', () => {
+  const p = [{ serial: 'MT1', sn: '', carton: 'FX1', pallet: 'PAL1', estado: '' }];
+  assert.deepEqual(editarPieza(p, 'MT1', { pallet: ' pal9 ', carton: 'n/a' })[0], { serial: 'MT1', sn: '', carton: '', pallet: 'PAL9', estado: '', manual: true });
+});
+
+test('bloques y pegar: 9 renglones por pallet; pegar llena hacia abajo, sigue al siguiente bloque y respeta el palet de cada renglón', () => {
+  const pz = (n: number, pallet: string) => Array.from({ length: n }, (_, i) => ({ serial: `MT${pallet}${i}`, sn: '', carton: '', pallet, estado: '' }));
+  const bs = bloques({ piezas: [...pz(9, 'P1'), ...pz(2, 'P2')] });
+  assert.deepEqual(bs.map((b) => [b.pallet, b.filas.length]), [['P1', 9], ['P2', 9]]);
+  assert.deepEqual(bloques({ piezas: [...pz(9, 'P1'), ...pz(2, 'P2')], piso: [{ pallet: 'P9', filas: [{ serial: 'X', carton: '' }] }] }).map((b) => b.pallet), ['P9', 'P1', 'P2']);
+  const once = Array.from({ length: 11 }, (_, i) => `S${i}\tC${i}`).join('\n');
+  const r = pegar(bs, 0, 0, once);
+  assert.deepEqual([r[0].filas[8], r[1].filas[1]], [{ serial: 'S8', carton: 'C8' }, { serial: 'S10', carton: 'C10' }]);
+  const conPalet = pegar(bs, 0, 0, 'A1\tP2\tX1\nA2\tP7\tX2');
+  assert.deepEqual([conPalet[1].filas[0], conPalet[2]], [{ serial: 'A1', carton: 'X1' }, { pallet: 'P7', filas: [{ serial: 'A2', carton: 'X2' }] }]);
+});
+
+test('comparar (PISO vs SISTEMA): cuadra, movido, sobra, carton distinto, repetido y faltan en piso', () => {
+  const pz = (serial: string, carton: string, pallet: string, sn = '') => ({ serial, sn, carton, pallet, estado: '' });
+  const a = { dn: 'A', piezas: [pz('MT1', 'FX1', 'P1', '111'), pz('MT2', 'FX2', 'P1'), pz('MT3', 'FX3', 'P2'), pz('MT4', 'FX4', 'P2')] };
+  const b = { dn: 'B', piezas: [pz('MT9', 'FX9', 'P9')] };
+  const piso = [{ pallet: 'P1', filas: [{ serial: '111', carton: 'FX1' }, { serial: 'MT3', carton: 'FX3' }, { serial: 'MT9', carton: '' }, { serial: 'MTX', carton: '' }] },
+    { pallet: 'P2', filas: [{ serial: 'MT4', carton: 'FX0' }, { serial: 'MT4', carton: 'FX4' }] }];
+  const r = comparar({ ...a, piso }, [a, b]);
+  assert.deepEqual(r.filas.map((f) => [f.serial, f.estado]), [['111', 'ok'], ['MT3', 'movido'], ['MT9', 'movido'], ['MTX', 'sobra'], ['MT4', 'repetido'], ['MT4', 'repetido']]);
+  assert.equal(r.filas[2].nota, 'en sistema: DN B · P9');
+  assert.deepEqual(r.faltan.map((p) => p.serial), ['MT2']);
+  const c = comparar({ ...a, piso: [{ pallet: 'P2', filas: [{ serial: 'MT4', carton: 'FX0' }] }] }, [a]);
+  assert.deepEqual([c.filas[0].estado, c.filas[0].nota], ['carton', 'en sistema: FX4']);
 });

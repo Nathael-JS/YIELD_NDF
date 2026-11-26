@@ -36,7 +36,7 @@ export default function Conexion() {
   // una fila por pieza sin carton o Pallet ID, y una por pallet que no llega a 9 (faltan seriales) o tiene un carton repetido
   const filas = items.flatMap((it) => [
     ...it.piezas.filter((p) => !lista(p)).map((p) => ({ dn: it.dn, p, falta: [!p.carton && 'Carton ID', !p.pallet && 'Pallet ID'].filter(Boolean).join(' y '), w: wip?.m.get((p.sn || p.serial).toUpperCase()) ?? wip?.m.get(p.serial.toUpperCase()) })),
-    ...pendientes(it).filter((g) => g.pallet && g.piezas.every(lista)).map((g) => ({ dn: it.dn, p: null, falta: `${g.pallet}: ${problema(g)}`, w: undefined })),
+    ...pendientes(it).filter((g) => g.pallet && g.piezas.every(lista)).map((g) => ({ dn: it.dn, p: null, falta: `${g.pallet}: ${problema(g, it.liberados)}`, w: undefined })),
   ]);
   const vis = filas.filter((f) => (!dn || f.dn === dn) && (!q || `${f.dn} ${f.p?.serial} ${f.p?.sn} ${f.w?.p.station}`.toLowerCase().includes(q.trim().toLowerCase())));
   const cuenta = (t?: EnWip['tipo']) => filas.filter((f) => f.p && (t ? f.w?.tipo === t : !f.w)).length;

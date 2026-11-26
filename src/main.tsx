@@ -21,6 +21,7 @@ const Pallets = lazy(() => import('./areas/pallets/Pallets.tsx'));
 const Etiquetas = lazy(() => import('./areas/pallets/Etiquetas.tsx'));
 const Conexion = lazy(() => import('./areas/pallets/Conexion.tsx'));
 const HistorialPallets = lazy(() => import('./areas/pallets/Historial.tsx'));
+const Tabla = lazy(() => import('./areas/pallets/Tabla.tsx'));
 const Validacion = lazy(() => import('./pages/Validacion.tsx'));
 const Seguridad = lazy(() => import('./pages/Seguridad.tsx'));
 const Ndf = lazy(() => import('./areas/yield/Ndf.tsx'));
@@ -56,6 +57,7 @@ const router = createBrowserRouter([
       { path: '/pallets', element: <Pallets /> },
       { path: '/pallets/etiquetas', element: <Etiquetas /> },
       { path: '/pallets/wip', element: <Conexion /> },
+      { path: '/pallets/tabla', element: <Tabla /> },
       { path: '/pallets/historial', element: <HistorialPallets /> },
       // compartidas: cada una muestra lo de su área
       ...['yield', 'wip', 'pallets'].flatMap((a) => [

@@ -171,9 +171,9 @@ Muestra analizada: 257 seriales, 10 DN, 20 tarimas; **93 seriales sin tarima** y
 | **G1** ✅ 0.39 | `grupos(it)`: un grupo por Pallet ID (máximo 9), con prueba. El item muestra sus piezas en bloques por pallet y Etiquetas da una etiqueta por pallet. |
 | **G2** | Mover un grupo a un DN nuevo (a mano), con vista previa. |
 | **G3** | Cargar los DN nuevos desde el shipping report (FINISH GOOD: una fila = DN + 9 seriales), validar contra el SFC y mostrar la vista previa antes de aplicar. |
-| **T1** | Tabla de Pallets: bloques, captura con escáner, pegar desde Excel y cargar/exportar xlsx. |
-| **T2** | PISO vs SISTEMA: estados por renglón, resumen y filtros. |
-| **T3** | Guardar la Tabla de Pallets en la base (`pallet_piso`), junto con los items. |
+| **T1** ✅ 0.40 | Tabla de Pallets: bloques por pallet, captura con escáner o teclado, pegar desde Excel, cargar xlsx/CSV y exportar CSV. Se guarda en el item (`piso`), así que va a la base sin tabla nueva. |
+| **T2** ✅ 0.41 | PISO vs SISTEMA en la Tabla de Pallets: estado de cada renglón mientras se escanea, resumen, vista de Diferencias (con «Ir» al renglón) y de Faltan en piso. `comparar()` en `src/lib/sfc.ts`, con prueba. |
+| **T3** ✅ 0.40 | La Tabla de Pallets se guarda en la base dentro de cada item (`datos.piso`). |
 
 ### Confirmado con la hoja de ejemplo (Sheet1)
 
@@ -181,6 +181,38 @@ Muestra analizada: 257 seriales, 10 DN, 20 tarimas; **93 seriales sin tarima** y
 - **File = sistema, escaneo (Physical) = piso.** Se comparan por conjunto: 113 de 153 seriales coinciden, 40 de File no están escaneados y 4 escaneados no están en File.
 - **Esa hoja no se carga en el sistema** por ahora; solo sirve de referencia.
 - **DN nuevos:** se detectan al volver a cargar el SFC (export `download`), que ya dice cuáles items son nuevos y cuáles se actualizaron. La congruencia se confirma con PISO vs SISTEMA.
+
+### PISO vs SISTEMA (0.41)
+
+- La compara `comparar()`: cada serial de piso se busca en las piezas de **todos** los DN, por el serial MT… o por el SN. Se compara **por conjunto**, no renglón con renglón.
+- **Estados** (ícono y texto, no solo color):
+  - ✓ **Cuadra:** mismo DN y mismo pallet.
+  - ⚠ **Movido:** está en el sistema en otro pallet o en otro DN; dice dónde.
+  - ⚠ **Carton:** el carton de piso no es el del SFC; dice cuál es.
+  - ✗ **Sobra:** no está en el sistema.
+  - ✗ **Repetido:** se escaneó más de una vez.
+  - **Faltan en piso:** son las piezas del DN que nadie escaneó.
+- En la **Tabla de Pallets**:
+  - El estado aparece en cada renglón mientras se escanea.
+  - Arriba va el resumen, con las vistas **Captura**, **Diferencias** («Ir» lleva al renglón) y **Faltan en piso**.
+
+### Liberar pallet y edición (0.40)
+
+- **Liberar pallet:** casilla en el encabezado de un pallet con menos de 9 piezas (por ejemplo, el último de la DN). Un pallet liberado no queda «por completar», pero sus cartons deben seguir sin repetirse. Se guarda en `liberados`.
+- **Editar una pieza:** SN, Carton ID, Pallet ID y DN.
+  - Cambiar el DN **mueve la pieza** a ese DN. Si no existe, se crea con los datos del SFC del original; los campos a mano quedan vacíos.
+  - Las dos DN se suben a la base.
+- **Renombrar un pallet:** cambia el Pallet ID de todas sus piezas y de la lista de liberados.
+
+### Tabla de Pallets (0.40)
+
+- **Página Tabla de Pallets:** se elige un DN y se ve **un bloque por pallet**, con 9 renglones (se pueden agregar más).
+- **Columnas:** File (sistema, solo lectura) · Physical (piso) · Carton ID (piso). El Pallet ID de piso va en el encabezado del bloque y se escanea o se escribe.
+- **Captura:**
+  - **Enter** pasa de serial a carton y al siguiente renglón (sirve con el escáner).
+  - **Pegar desde Excel:** Physical · palet · # carton, o Physical · # carton; llena hacia abajo y sigue en el bloque siguiente. Si un renglón trae otro palet, va a ese bloque, que se crea si no existe.
+- **Cargar archivo** (xlsx o CSV con las columnas Physical, palet y # carton) reemplaza la tabla de ese DN, con confirmación. **Exportar CSV** tiene las mismas columnas que la hoja de piso.
+- Un pallet de piso que no está en el sistema se marca «No está en el sistema» y se puede quitar. Un pallet nuevo del SFC aparece solo.
 
 ### Regla de piezas (0.39)
 

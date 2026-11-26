@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type RefObject } from 'react';
 import { Link } from 'react-router-dom';
 import { Badge, Button } from '../../components/ui.tsx';
-import { completas, conEtiqueta, escanear, faltan, grupos, lista, MANUAL, ocho, pendientes, PLANTILLA, POR_PALLET, problema, type Item } from '../../lib/sfc.ts';
+import { completas, conEtiqueta, editarPieza, escanear, faltan, grupos, lista, MANUAL, ocho, pendientes, PLANTILLA, POR_PALLET, problema, type Item, type Pieza } from '../../lib/sfc.ts';
 import { local } from '../../lib/wip.ts';
 import { usePallets } from './items.ts';
 
@@ -19,7 +19,8 @@ export function Estado({ it }: { it: Item }) {
 export default function ItemDetalle({ it, onClose }: { it: Item; onClose: () => void }) {
   const update = usePallets((s) => s.update), ref = useRef<HTMLDialogElement>(null), carton = useRef<HTMLInputElement>(null), pallet = useRef<HTMLInputElement>(null);
   const [sn, setSn] = useState(''), [ct, setCt] = useState(''), [pl, setPl] = useState('');
-  const push = usePallets((s) => s.push), cambio = useRef(false);
+  const push = usePallets((s) => s.push), mover = usePallets((s) => s.mover), cambio = useRef(false);
+  const [ed, setEd] = useState<{ serial: string; sn: string; carton: string; pallet: string; dn: string; err?: string }>(), [ren, setRen] = useState<{ de: string; a: string }>();
   // se sube a la base al cerrar (no en cada tecla); si falla, queda en el equipo y se reintenta al abrir Pallets
   useEffect(() => { ref.current?.showModal(); return () => { if (cambio.current) push([it.dn]); }; }, [it.dn, push]);
   const set = (patch: Partial<Item>) => { cambio.current = true; update(it.dn, { ...patch, editado: local() }); };
@@ -28,7 +29,25 @@ export default function ItemDetalle({ it, onClose }: { it: Item; onClose: () => 
   const agregar = () => { if (!sn.trim()) return; set({ piezas: escanear(it.piezas, sn, ct, pl) }); setSn(''); setCt(''); setPl(''); };
   // escáner con sufijo Enter: serial → carton → Pallet ID → agrega
   const sigue = (next: RefObject<HTMLInputElement | null>) => (e: KeyboardEvent) => { if (e.key === 'Enter') { e.preventDefault(); next.current?.focus(); } };
-  const gs = grupos(it);
+  const gs = grupos(it), libres = it.liberados ?? [];
+  const liberar = (pallet: string, si: boolean) => set({ liberados: si ? [...libres, pallet] : libres.filter((x) => x !== pallet) });
+  const editar = (p: Pieza) => setEd({ serial: p.serial, sn: p.sn, carton: p.carton, pallet: p.pallet, dn: it.dn });
+  const guardar = () => {
+    if (!ed) return;
+    const dn = ed.dn.trim();
+    if (!/^[A-Za-z0-9-]{1,40}$/.test(dn)) return setEd({ ...ed, err: 'DN inválido: solo letras, números y guiones' });
+    set({ piezas: editarPieza(it.piezas, ed.serial, { sn: ed.sn, carton: ed.carton, pallet: ed.pallet }) });
+    if (dn !== it.dn) { mover(it.dn, ed.serial, dn); push([dn]); } // el DN de destino se sube ya; este, al cerrar
+    setEd(undefined);
+  };
+  const renombrar = () => {
+    if (!ren) return;
+    const a = ren.a.trim().toUpperCase();
+    if (a && a !== ren.de) set({ piezas: it.piezas.map((p) => (p.pallet === ren.de ? { ...p, pallet: a, manual: true } : p)), liberados: libres.map((x) => (x === ren.de ? a : x)) });
+    setRen(undefined);
+  };
+  const tecla = (ok: () => void, no: () => void) => (e: KeyboardEvent) => { if (e.key === 'Enter') { e.preventDefault(); ok(); } if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); no(); } };
+  const celda = (k: 'sn' | 'carton' | 'pallet' | 'dn', label: string) => ed && <input className="yc-input code app-cell-in" aria-label={`${label} de ${ed.serial}`} value={ed[k]} onChange={(e) => setEd({ ...ed, [k]: e.target.value, err: undefined })} onKeyDown={tecla(guardar, () => setEd(undefined))} />;
   const campo = (k: (typeof MANUAL)[number][0] | (typeof PLANTILLA)[number][0], label: string) => {
     const v = it[k], mal = (k === 'custPo' || k === 'custDn') && v.trim() !== '' && !ocho.test(v.trim());
     return (
@@ -76,17 +95,30 @@ export default function ItemDetalle({ it, onClose }: { it: Item; onClose: () => 
               {gs.map((g, gi) => (
                 <tbody key={g.pallet || 'sin'} className="app-grp">
                   <tr className="app-grp-head"><th colSpan={6} scope="rowgroup">
-                    <span className="code">{g.pallet || 'Sin Pallet ID'}</span>
+                    {ren?.de === g.pallet && g.pallet
+                      ? <input className="yc-input code app-cell-in" aria-label={`Nuevo Pallet ID para ${g.pallet}`} autoFocus value={ren.a} onChange={(e) => setRen({ ...ren, a: e.target.value })} onKeyDown={tecla(renombrar, () => setRen(undefined))} onBlur={renombrar} />
+                      : <span className="code">{g.pallet || 'Sin Pallet ID'}</span>}
                     {g.pallet && <span className="app-muted">Pallet {gi + 1}</span>}
                     <span className="app-grp-n">{g.piezas.filter(lista).length} / {g.pallet ? POR_PALLET : g.piezas.length}</span>
-                    {!g.pallet ? <Badge tone="warn">Escanea su Pallet ID</Badge> : problema(g) ? <Badge tone={g.piezas.length > POR_PALLET || problema(g) === 'carton repetido' ? 'bad' : 'warn'}>{problema(g)}</Badge> : <Badge tone="ok">Completo</Badge>}
+                    {!g.pallet ? <Badge tone="warn">Escanea su Pallet ID</Badge> : problema(g, libres) ? <Badge tone={g.piezas.length > POR_PALLET || problema(g, libres) === 'carton repetido' ? 'bad' : 'warn'}>{problema(g, libres)}</Badge> : libres.includes(g.pallet) && g.piezas.length < POR_PALLET ? <Badge tone="info">Liberado con {g.piezas.length}</Badge> : <Badge tone="ok">Completo</Badge>}
+                    {g.pallet && <span className="app-grp-acc">
+                      {(g.piezas.length < POR_PALLET || libres.includes(g.pallet)) && <label className="app-chk"><input type="checkbox" checked={libres.includes(g.pallet)} onChange={(e) => liberar(g.pallet, e.target.checked)} />Liberar pallet</label>}
+                      <Button variant="quiet" onClick={() => setRen({ de: g.pallet, a: g.pallet })}>Renombrar</Button>
+                    </span>}
                   </th></tr>
-                  {g.piezas.map((p) => (
+                  {g.piezas.map((p) => ed?.serial === p.serial ? (
+                    <tr key={p.serial} className="is-edit">
+                      <td className="num">{it.piezas.indexOf(p) + 1}</td>
+                      <td className="code">{p.serial}</td><td>{celda('sn', 'SN')}</td><td>{celda('carton', 'Carton ID')}</td><td>{celda('pallet', 'Pallet ID')}</td>
+                      <td><span className="app-cell-acc"><label className="app-cell-dn">DN{celda('dn', 'DN')}</label><Button onClick={guardar}>Guardar</Button><Button variant="quiet" onClick={() => setEd(undefined)}>Cancelar</Button></span>
+                        {ed.err && <span className="app-dato-err" role="alert">{ed.err}</span>}</td>
+                    </tr>
+                  ) : (
                     <tr key={p.serial}>
                       <td className="num">{it.piezas.indexOf(p) + 1}</td>
                       <td className="code">{p.serial}</td><td className="code">{p.sn || '—'}</td>
                       <td className="code">{p.carton || <Badge tone="warn">Sin carton</Badge>}</td><td className="code">{p.pallet || <Badge tone="warn">Sin pallet</Badge>}</td>
-                      <td>{p.manual ? <Badge tone="info">Escaneada</Badge> : null}</td>
+                      <td><span className="app-cell-acc">{p.manual ? <Badge tone="info">Editada</Badge> : null}<Button variant="quiet" onClick={() => editar(p)} aria-label={`Editar ${p.serial}`}>Editar</Button></span></td>
                     </tr>
                   ))}
                 </tbody>

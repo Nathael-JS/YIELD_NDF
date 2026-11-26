@@ -8,6 +8,30 @@ Un cambio de componente se publica primero en el artefacto y después se copia a
 
 Los errores encontrados y cómo se corrigieron están en [ERRORES.md](ERRORES.md); las mejoras y cómo se hicieron, en [MEJORAS.md](MEJORAS.md).
 
+## [0.41.0] — 2026-11-26
+
+### Agregado
+- **PISO vs SISTEMA (T2)** en la Tabla de Pallets:
+  - Cada renglón escaneado dice al instante si **cuadra**, si la pieza está **movida** (en otro pallet o DN, y cuál), si el **carton** es otro, si **sobra** o si está **repetida**.
+  - Hay un resumen con los conteos y las vistas **Diferencias** (con «Ir» al renglón) y **Faltan en piso**.
+  - Busca por el serial MT… o por el SN, entre todos los DN.
+
+### Corregido
+- La 0.40 (Tabla de Pallets, liberar pallet y edición de piezas) no había entrado a `main`: el PR 31 se fusionó antes de que llegara ese commit. Se recuperó aquí.
+
+## [0.40.0] — 2026-11-26
+
+### Agregado
+- **Tabla de Pallets (T1)** (botón en el riel de Pallets):
+  - Muestra la tabla de piso por DN: un bloque por pallet con 9 renglones, File (sistema) junto a Physical y Carton ID (piso), y el Pallet ID de piso en el encabezado.
+  - **Captura:** escáner o teclado (Enter avanza), pegar columnas desde Excel, cargar xlsx o CSV, y exportar CSV.
+  - Se guarda en la base dentro de cada item, y otro equipo ve la misma tabla.
+- **Liberar pallet:** permite que un pallet (por ejemplo, el último de la DN) vaya con menos de 9 piezas.
+- **Edición de piezas:**
+  - Cada pieza se puede editar: SN, Carton ID, Pallet ID y **DN**. Cambiar el DN mueve la pieza, y si el DN no existe, se crea.
+  - Cada pallet se puede **renombrar**.
+- El servidor valida `liberados` y `piso`, con prueba.
+
 ## [0.39.0] — 2026-11-26
 
 ### Cambiado

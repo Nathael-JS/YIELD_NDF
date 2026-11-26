@@ -15,11 +15,18 @@ export const MANUAL = [['so', 'Sales Order'], ['pnNvidia', 'Part number NVIDIA']
 export const PLANTILLA = [['project', 'Project'], ['model', 'Model'], ['hazmat', 'Hazmat'], ['coo', 'COO'], ['price', 'Unit price USD']] as const;
 type Manual = Record<(typeof MANUAL)[number][0] | (typeof PLANTILLA)[number][0], string>;
 
+/** Un bloque de la Tabla de Pallets: un pallet en piso con sus renglones (serial + carton escaneados). */
+export interface Bloque { pallet: string; filas: { serial: string; carton: string }[] }
+
 export interface Item extends Manual {
   dn: string; po: string; to: string; pnSfc: string; piezas: Pieza[];
   archivo: string; usuario: string; creado: string; editado?: string;
   /** Quién lo editó al último, según la base (solo lectura). */
   edito?: string;
+  /** Pallets liberados: pueden ir con menos de 9 (p. ej. el último de la DN). */
+  liberados?: string[];
+  /** Tabla de Pallets (piso): lo escaneado en cada pallet; se compara con las piezas (sistema). */
+  piso?: Bloque[];
 }
 
 const text = (v: Cell) => (v instanceof Date ? v.toISOString().slice(0, 10) : v == null ? '' : String(v).trim());
@@ -56,24 +63,24 @@ export function grupos(it: Pick<Item, 'piezas'>) {
   return [...gs.filter((g) => g.pallet), ...gs.filter((g) => !g.pallet)];
 }
 /** Qué le falta a un pallet para estar completo: 9 seriales con 9 cartons distintos ('' = completo). */
-export function problema(g: { pallet: string; piezas: Pieza[] }) {
+export function problema(g: { pallet: string; piezas: Pieza[] }, liberados: string[] = []) {
   const n = g.piezas.length, cartons = new Set(g.piezas.map((p) => p.carton).filter(Boolean)).size;
   if (!g.pallet) return 'sin Pallet ID';
   if (n > POR_PALLET) return `${n - POR_PALLET} de más`;
-  if (n < POR_PALLET) return `faltan ${POR_PALLET - n}`;
+  if (n < POR_PALLET && !liberados.includes(g.pallet)) return `faltan ${POR_PALLET - n}`;
   if (cartons < n) return g.piezas.some((p) => !p.carton) ? 'sin carton' : 'carton repetido';
   return '';
 }
 /** Pallets por completar. */
-export const pendientes = (it: Pick<Item, 'piezas'>) => grupos(it).filter((g) => problema(g));
+export const pendientes = (it: Pick<Item, 'piezas' | 'liberados'>) => grupos(it).filter((g) => problema(g, it.liberados));
 /** Todos sus pallets tienen 9 seriales y 9 cartons: se puede ver su etiqueta. */
-export const conEtiqueta = (it: Pick<Item, 'piezas'>) => it.piezas.length > 0 && !pendientes(it).length;
+export const conEtiqueta = (it: Pick<Item, 'piezas' | 'liberados'>) => it.piezas.length > 0 && !pendientes(it).length;
 export const ocho = /^\d{8}$/;
 /** Lo que le falta a un item para estar listo (vacío = listo). */
 export function faltan(it: Item) {
   const out: string[] = [];
   if (!it.piezas.length) out.push('Sin piezas');
-  for (const g of pendientes(it)) out.push(g.pallet ? `${g.pallet}: ${problema(g)}` : `${g.piezas.length} ${g.piezas.length === 1 ? 'pieza' : 'piezas'} sin Pallet ID`);
+  for (const g of pendientes(it)) out.push(g.pallet ? `${g.pallet}: ${problema(g, it.liberados)}` : `${g.piezas.length} ${g.piezas.length === 1 ? 'pieza' : 'piezas'} sin Pallet ID`);
   for (const [k, label] of MANUAL) if (!it[k].trim()) out.push(label);
   for (const k of ['custPo', 'custDn'] as const) if (it[k].trim() && !ocho.test(it[k].trim())) out.push(`${k === 'custPo' ? 'Customer PO' : 'Customer DN'}: 8 dígitos`);
   return out;
@@ -108,4 +115,64 @@ export function etiquetas(it: Item): { d: PalletLabelData; qr: string }[] {
       `DATE:${it.shipped}`, `COO:${it.coo}`, `CTN:${cartons.join(',')}`, `SN:${ps.map((p) => p.serial).join(',')}`].map(ascii).join('\n');
     return { d, qr };
   });
+}
+
+/** Edita una pieza (SN, carton o Pallet ID); «N/A» o vacío deja el campo vacío. */
+export function editarPieza(piezas: Pieza[], serial: string, patch: Partial<Pick<Pieza, 'sn' | 'carton' | 'pallet'>>): Pieza[] {
+  const limpio = Object.fromEntries(Object.entries(patch).map(([k, v]) => [k, vacio((v ?? '').trim().toUpperCase())]));
+  return piezas.map((p) => (p.serial === serial ? { ...p, ...limpio, manual: true } : p));
+}
+
+/** Bloques de piso de un item: los guardados o, la primera vez, uno por pallet del sistema; siempre con 9 renglones como mínimo. */
+export function bloques(it: Pick<Item, 'piezas' | 'piso'>): Bloque[] {
+  const sis = grupos(it).filter((g) => g.pallet).map((g) => ({ pallet: g.pallet, filas: [] as Bloque['filas'] }));
+  const base = [...(it.piso ?? []), ...sis.filter((g) => !it.piso?.some((b) => b.pallet === g.pallet))]; // un pallet nuevo del SFC también aparece
+  return base.map((b) => ({ ...b, filas: [...b.filas, ...Array.from({ length: Math.max(0, POR_PALLET - b.filas.length) }, () => ({ serial: '', carton: '' }))] }));
+}
+
+/** Pega renglones copiados de Excel desde el renglón `i` del bloque `b`. Cada renglón: «Physical · palet · # carton», «serial · carton» o solo serial.
+ * Con palet: va al primer renglón libre del bloque de ese pallet (si no existe, se crea). Sin palet: llena hacia abajo y sigue en el bloque siguiente. */
+export function pegar(bs: Bloque[], b: number, i: number, texto: string): Bloque[] {
+  const out = bs.map((x) => ({ ...x, filas: x.filas.map((f) => ({ ...f })) }));
+  const lineas = texto.replace(/\r/g, '').split('\n').map((l) => l.split('\t').map((c) => c.trim().toUpperCase())).filter((c) => c.some(Boolean));
+  for (const c of lineas) {
+    const [serial, carton, pallet] = c.length >= 3 ? [c[0], c[2], c[1]] : [c[0], c[1] ?? '', ''];
+    if (pallet) {
+      b = out.findIndex((x) => x.pallet === pallet);
+      if (b < 0) { out.push({ pallet, filas: [] }); b = out.length - 1; }
+      i = out[b].filas.findIndex((f) => !f.serial);
+      if (i < 0) i = out[b].filas.length;
+    } else if (i >= POR_PALLET && out[b + 1]) { b++; i = 0; }
+    if (!out[b]) out[b] = { pallet: '', filas: [] };
+    out[b].filas[i] = { serial, carton };
+    i++;
+  }
+  return out;
+}
+
+/** PISO vs SISTEMA: cómo cuadra cada renglón escaneado con las piezas del SFC (de todos los DN). */
+export type Cuadre = 'ok' | 'movido' | 'sobra' | 'carton' | 'repetido';
+export interface Renglon { b: number; i: number; pallet: string; serial: string; carton: string; estado: Cuadre; nota: string }
+
+/** Compara la tabla de piso del item con el sistema. Un serial se busca por el de MT… o por el SN. Por conjunto, no por renglón. */
+export function comparar(it: Pick<Item, 'dn' | 'piezas' | 'piso'>, todos: Pick<Item, 'dn' | 'piezas'>[]) {
+  const sis = new Map<string, { dn: string; p: Pieza }>();
+  for (const x of todos) for (const p of x.piezas) { sis.set(p.serial.toUpperCase(), { dn: x.dn, p }); if (p.sn) sis.set(p.sn.toUpperCase(), { dn: x.dn, p }); }
+  const bs = bloques(it), veces = new Map<string, number>();
+  for (const b of bs) for (const f of b.filas) if (f.serial) veces.set(f.serial, (veces.get(f.serial) ?? 0) + 1);
+  const filas: Renglon[] = [], vistos = new Set<string>();
+  bs.forEach((b, bi) => b.filas.forEach((f, i) => {
+    if (!f.serial) return;
+    const s = sis.get(f.serial), base = { b: bi, i, pallet: b.pallet, serial: f.serial, carton: f.carton };
+    if (s) vistos.add(s.p.serial);
+    const r = (veces.get(f.serial)! > 1) ? { estado: 'repetido' as const, nota: `escaneado ${veces.get(f.serial)} veces` }
+      : !s ? { estado: 'sobra' as const, nota: 'no está en el sistema' }
+      : s.dn !== it.dn || s.p.pallet !== b.pallet ? { estado: 'movido' as const, nota: `en sistema: ${s.dn !== it.dn ? `DN ${s.dn} · ` : ''}${s.p.pallet || 'sin Pallet ID'}` }
+      : f.carton && s.p.carton && f.carton !== s.p.carton ? { estado: 'carton' as const, nota: `en sistema: ${s.p.carton}` }
+      : { estado: 'ok' as const, nota: '' };
+    filas.push({ ...base, ...r });
+  }));
+  const faltan = it.piezas.filter((p) => !vistos.has(p.serial));
+  const cuenta = (e: Cuadre) => filas.filter((f) => f.estado === e).length;
+  return { filas, faltan, ok: cuenta('ok'), movido: cuenta('movido'), sobra: cuenta('sobra'), carton: cuenta('carton'), repetido: cuenta('repetido') };
 }
