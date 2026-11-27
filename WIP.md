@@ -56,6 +56,7 @@ Sin aprobación hay un camino interino sin componentes nuevos: `FlowMap` se arma
 
 ## Datos
 
+- **W2 (0.45):** el corte guarda sus **piezas en proceso** (`detalle`: serial, modelo, orden, estación, estación anterior, llegada, horas y bloqueada). Con el WIP real de 2,065 piezas ocupa 51 KB en la base. Los cortes de antes de 0.45 vienen con la lista vacía. `turno()` da T1 de 07:00 a 15:00, T2 de 15:00 a 22:30 y «pendiente» de 22:30 a 07:00; `semana()` da la semana ISO.
 - **W1 (0.44):** `readFlujo()` y `ubicar()` en `src/lib/wip.ts`, tabla `wip_flujo` (vale la más reciente), `GET/POST /api/wip/flujo` (solo un administrador la cambia) y una sección en **Base de datos** con la vista previa por etapa y board. Con el reporte de W48 salen 81 estaciones en 6 etapas.
 
 - **Estructura de flujo (archivo de yield):** solo se usan sus columnas **Process Stage, Board Name, Model y Station**. Las celdas vacías heredan la de arriba, como en el Excel. Se carga una vez y se guarda como configuración, igual que los modelos de Juliet en Base de datos. Cada estación del WIP se ubica por **modelo + estación**; si no está en la estructura, va a un bloque «Sin etapa».
@@ -67,7 +68,7 @@ Sin aprobación hay un camino interino sin componentes nuevos: `FlowMap` se arma
 | Fase | Qué | Archivos |
 | --- | --- | --- |
 | **W1** ✅ 0.44 | Estructura de flujo: leer el archivo de yield (Process Stage, Board, Model, Station, con herencia de celdas), guardarla en la base y ubicar cada estación del WIP. Con prueba | `src/lib/wip.ts`, `server/` (tabla `wip_flujo`), Base de datos |
-| **W2** | Guardar las piezas en el corte (si se aprueba) y `turno()` y `semana()` del corte, con prueba | `server/`, `src/lib/wip.ts` |
+| **W2** ✅ 0.45 | Guardar las piezas en el corte y `turno()` y `semana()` del corte, con prueba | `server/`, `src/lib/wip.ts` |
 | **W3** | **Dashboard** (primera vista del área): encabezado del último corte, KPIs, semáforo (`SplitBar`) con ventana de seriales y **`FlowMap`** | `src/areas/wip/Dashboard.tsx`, `areas.ts` |
 | **W4** | **Gráficos** del Dashboard: Pareto (estaciones → por estación), barras por modelo y por orden, histograma de tiempo en la estación, y barras por última estación registrada. Cada barra abre los seriales | `Dashboard.tsx` |
 | **W5** | **Histórico:** tendencia por turno o semana (`TrendChart`), lista de cortes y **comparativa** de dos cortes (qué estación subió o bajó) | `src/areas/wip/Historico.tsx` (junta el Historial actual) |

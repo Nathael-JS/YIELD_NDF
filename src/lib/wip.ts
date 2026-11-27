@@ -2,7 +2,7 @@
 // No se estima con el TCQS (no registra la entrada a almacén): se cuenta del archivo y se cruza con el TCQS
 // por orden y estación (FPY de la estación junto a las piezas que esperan en ella).
 import type { Cell, ParsedFile } from './files.ts';
-import { by, META_FPY, text, type Rec } from './tcqs.ts';
+import { by, META_FPY, periodOf, text, type Rec } from './tcqs.ts';
 
 export const WIP_REQUIRED = ['SERIAL_NUMBER', 'MODEL_NAME', 'MO_NUMBER', 'SECTION_NAME', 'WIP_GROUP', 'IN_STATION_TIME', 'ERROR_FLAG'] as const;
 /** Opcionales. HOUR: horas en la estación (reporte general); sin ella (reporte por orden) se cuentan hasta la hora de carga.
@@ -221,3 +221,15 @@ export function readFlujo(f: ParsedFile) {
 /** Ubica una estación del WIP en la estructura: por modelo + estación; si el modelo no está, por la estación sola (la primera). */
 export const ubicar = (pasos: Paso[], model: string, station: string) =>
   pasos.find((p) => p.model === model && p.station === station) ?? pasos.find((p) => p.station === station);
+
+/** Turno de un corte («2026-11-27 10:15»): T1 07:00–15:00 · T2 15:00–22:30 · pendiente de 22:30 a 07:00 (aún sin definir). */
+export type Turno = 'T1' | 'T2' | 'pendiente';
+export function turno(corte: string): Turno {
+  const m = +corte.slice(11, 13) * 60 + +corte.slice(14, 16);
+  return m >= 7 * 60 && m < 15 * 60 ? 'T1' : m >= 15 * 60 && m < 22 * 60 + 30 ? 'T2' : 'pendiente';
+}
+/** Semana ISO del corte: [«2026-W48», «Sem 48»]. */
+export const semana = (corte: string) => periodOf(corte.slice(0, 10), 'semana');
+
+/** Pieza en proceso tal como se guarda en el corte (para la ventana de seriales y los gráficos sin el archivo). */
+export const detalleWip = (ps: Pieza[]) => ps.map((p) => ({ serial: p.serial, model: p.model, mo: p.mo, station: p.station, prev: p.prev, at: p.at, hours: Math.round(p.hours * 10) / 10, blocked: p.blocked }));

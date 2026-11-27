@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { cruce, desde, estadoOf, nivel, ordenes, readWip, stations, urgente, readFlujo, resumenWip, ubicar } from './wip.ts';
+import { cruce, desde, estadoOf, nivel, ordenes, readWip, stations, urgente, detalleWip, readFlujo, resumenWip, semana, turno, ubicar } from './wip.ts';
 import type { Rec } from './tcqs.ts';
 
 const H = ['SERIAL_NUMBER', 'MODEL_NAME', 'MO_NUMBER', 'TARGET_QTY', 'SECTION_NAME', 'WIP_GROUP', 'IN_STATION_TIME', 'HOUR', 'ERROR_FLAG'];
@@ -90,4 +90,15 @@ test('readFlujo: encabezado en otro renglón, celdas vacías heredan stage/board
   assert.equal(ubicar(pasos, 'OTRO', 'VI')?.board, 'MGMT');
   assert.equal(ubicar(pasos, 'OTRO', 'NADA'), undefined);
   assert.ok(readFlujo({ headers: ['a'], rows: [['b']] }).error);
+});
+
+test('turno y semana del corte: T1 07:00–15:00, T2 15:00–22:30, pendiente de 22:30 a 07:00; semana ISO', () => {
+  assert.deepEqual(['2026-11-27 06:59', '2026-11-27 07:00', '2026-11-27 14:59', '2026-11-27 15:00', '2026-11-27 22:29', '2026-11-27 22:30', '2026-11-28 02:00'].map(turno),
+    ['pendiente', 'T1', 'T1', 'T2', 'T2', 'pendiente', 'pendiente']);
+  assert.deepEqual(semana('2026-11-27 10:15'), ['2026-W48', 'Sem 48']);
+});
+
+test('detalleWip: solo los campos que se guardan, horas a un decimal', () => {
+  const p = { serial: 'S1', model: 'M', mo: 'O', section: 'X', station: 'TEST', prev: 'ASSY', line: 'L1', at: '2026-11-27 10:00:00', hours: 2.345, blocked: false, estado: 'Línea' } as const;
+  assert.deepEqual(detalleWip([p]), [{ serial: 'S1', model: 'M', mo: 'O', station: 'TEST', prev: 'ASSY', at: '2026-11-27 10:00:00', hours: 2.3, blocked: false }]);
 });

@@ -15,7 +15,7 @@ export default function HistorialWip() {
   useEffect(() => { loadWipCortes().then(setCortes, (e) => { setErr(e.message); setCortes([]); }); }, []);
   const ver = (id: number) => {
     setAbierto(abierto === id ? undefined : id);
-    if (!det[id]) loadWipCorte(id).then((r) => setDet((d) => ({ ...d, [id]: r })), (e) => setDet((d) => ({ ...d, [id]: e.message })));
+    if (!det[id]) loadWipCorte(id).then((r) => setDet((d) => ({ ...d, [id]: r.resumen })), (e) => setDet((d) => ({ ...d, [id]: e.message })));
   };
   // del más nuevo al más viejo: el «anterior» de cada corte es el siguiente de la lista
   const dias = [...new Set((cortes ?? []).map((c) => c.corte.slice(0, 10)))];

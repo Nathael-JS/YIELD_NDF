@@ -8,6 +8,20 @@ Un cambio de componente se publica primero en el artefacto y después se copia a
 
 Los errores encontrados y cómo se corrigieron están en [ERRORES.md](ERRORES.md); las mejoras y cómo se hicieron, en [MEJORAS.md](MEJORAS.md).
 
+## [0.45.0] — 2026-11-27
+
+### Agregado
+- **El corte del WIP guarda sus piezas en proceso (W2):**
+  - Guarda serial, modelo, orden, estación, estación anterior, llegada, horas y si está bloqueada.
+  - Así el Dashboard, la ventana de seriales y los gráficos funcionan con el último corte guardado, sin el archivo.
+  - Con el WIP real de 2,065 piezas ocupa 51 KB.
+  - Los cortes anteriores quedan con la lista vacía.
+- `turno()` (T1 07:00–15:00, T2 15:00–22:30, pendiente de 22:30 a 07:00) y `semana()` (ISO) de cada corte, con prueba.
+- El servidor valida las piezas del corte (hasta 30,000), con prueba. `npm run check` revisa la columna `detalle`.
+
+### Cambiado
+- `ML.md` (carga inteligente) queda como **pendiente**. No había entrado a `main` porque el PR 35 se fusionó antes de ese commit; se recuperó aquí.
+
 ## [0.44.0] — 2026-11-27
 
 ### Agregado

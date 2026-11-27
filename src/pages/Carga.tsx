@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Badge, Button, FileChip, type Tone } from '../components/ui.tsx';
 import { saveWipCorte } from '../lib/db.ts';
 import { mergeParsed, parseFile } from '../lib/files.ts';
-import { local, readWip, resumenWip } from '../lib/wip.ts';
+import { detalleWip, local, readWip, resumenWip } from '../lib/wip.ts';
 import { shortDate, useApp, type FileType } from '../store.ts';
 import { PageHead } from './Layout.tsx';
 import { useArea } from '../areas.ts';
@@ -36,7 +36,7 @@ function Slot({ type, label, accept, hint, multiple }: (typeof SLOTS)[number]) {
         setDb(undefined);
         if (!r.missing.length && corte) {
           setDb(['info', 'Guardando en el historial…']);
-          saveWipCorte({ archivo: name.slice(0, 300), corte, piezas: r.piezas.length, terminadas: r.terminadas.length, resumen: resumenWip(r) })
+          saveWipCorte({ archivo: name.slice(0, 300), corte, piezas: r.piezas.length, terminadas: r.terminadas.length, resumen: resumenWip(r), detalle: detalleWip(r.piezas) })
             .then((x) => setDb(x.repetido ? ['neutral', `Este corte (${corte}) ya estaba en el historial.`] : ['ok', `Guardado en el historial: corte ${corte}, ${r.piezas.length} piezas en proceso.`]),
               (e) => setDb(['warn', `No se guardó en el historial: ${e.message}`]));
         }
