@@ -16,7 +16,8 @@ const MAX_UNITS = 100; // piezas por estación a la vista (las más antiguas pri
 const FUENTE = { archivo: 'según el reporte', carga: 'hora de carga del archivo', movimiento: 'último movimiento (archivo cargado antes de 0.27)' };
 
 /** Con estructura de flujo, las estaciones se agrupan por etapa · board (como el Dashboard) en lugar de la sección del MES;
- * dentro de cada grupo siguen en el orden de la ruta. El grupo sale del modelo de su primera pieza. */
+ * dentro de cada grupo siguen en el orden de la ruta. El grupo sale del modelo de su primera pieza.
+ * shortcut: una estación de dos boards (dos modelos) queda en el de su primera pieza con todas sus piezas; si estorba, partir `stations()` por etapa · board. */
 function porEtapa<S extends { name: string; section: string; piezas: Pieza[] }>(st: S[], pasos: Paso[]) {
   if (!pasos.length) return st;
   const orden = (l: { stage: string; board: string }) => { const i = pasos.findIndex((x) => x.stage === l.stage && x.board === l.board); return i < 0 ? Infinity : i; };

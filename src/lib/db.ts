@@ -79,6 +79,8 @@ export type WipResumen = { estacion: string; modelo: string; piezas: number; blo
 /** Piezas en proceso del corte (desde 0.45; los cortes anteriores vienen vacíos). */
 export type WipDetalle = { serial: string; model: string; mo: string; station: string; prev: string; at: string; hours: number; blocked: boolean }[];
 /** Guarda un corte; `repetido` = ese archivo con ese corte ya estaba. */
+/** Tope de piezas por corte entre en proceso y terminadas (server/validate.js, por los 5 MB del cuerpo). */
+export const MAX_PIEZAS_CORTE = 25000;
 export const saveWipCorte = (c: { archivo: string; corte: string; piezas: number; terminadas: number; resumen: WipResumen; detalle: WipDetalle; fin: WipDetalle }) => post<{ id: number | null; repetido: boolean }>('/api/wip/cortes', c);
 export const loadWipCortes = () => call<{ cortes: WipCorte[] }>('/api/wip/cortes').then((b) => b.cortes);
 /** `detalle`: también las piezas con sus seriales (solo el Dashboard las usa). */

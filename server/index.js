@@ -279,6 +279,7 @@ async function wip(req, res, me, url) {
     const b = await body(req);
     // sin estaciones = borrar la guardada (vuelve a valer la base o lo que enseña el WIP)
     if (typeof b?.model === 'string' && Array.isArray(b.estaciones) && !b.estaciones.length) {
+      if (!b.model.trim() || b.model.length > 80) return json(res, 400, { error: 'Modelo inválido' });
       await db.query('delete from wip_rutas where modelo = $1', [b.model]);
       return json(res, 200, { borrada: true });
     }

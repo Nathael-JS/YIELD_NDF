@@ -1,6 +1,6 @@
 // Hora por hora del WIP: por estación (en el orden del flujo: etapa → board → ruta), cuántas piezas llegaron en cada una de las
 // últimas horas y siguen ahí, sacado de la hora de llegada (IN_STATION_TIME) del último corte. Arriba, el total en proceso de los
-// cortes de esas horas, para ver cómo cambia. Un clic en una celda abre sus seriales.
+// cortes guardados en esas horas. Un clic en una celda abre sus seriales.
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Badge, Segmented } from '../../components/ui.tsx';
@@ -26,14 +26,19 @@ export default function Horas() {
     </>
   );
 
-  const { cols, filas } = porHora(filtrado.ps, d.corte, horas);
-  // estaciones en el orden del flujo, solo las que tienen piezas; agrupadas por etapa · board
-  const grupos = flujoDe(pasos, filtrado.ps).stages.flatMap((s) => s.boards.map((b) => ({
-    titulo: b.board ? `${s.stage} · ${b.board}` : s.stage, estaciones: b.stations.filter((x) => x.n).map((x) => x.station),
-  }))).filter((g) => g.estaciones.length);
-  const total = cols.map((_, i) => [...filas.values()].reduce((t, x) => t + x.horas[i].length, 0));
-  const tope = Math.max(1, ...[...filas.values()].flatMap((x) => x.horas.map((h) => h.length)));
-  // total en proceso de los cortes guardados en cada hora (el último de la hora), sin filtros: es el número del corte
+  const { cols } = porHora([], d.corte, horas);
+  // estaciones en el orden del flujo, solo las que tienen piezas; agrupadas por etapa · board. Cada fila cuenta solo sus piezas:
+  // una estación que está en dos boards (dos modelos) sale en los dos con las suyas, sin contarlas dos veces
+  const flujo = flujoDe(pasos, filtrado.ps);
+  const grupos = flujo.stages.flatMap((s) => s.boards.map((b) => ({
+    titulo: b.board ? `${s.stage} · ${b.board}` : s.stage,
+    filas: b.stations.filter((x) => x.n).map((x) => ({ station: x.station, ...porHora(flujo.piezasDe(s.stage, b.board, x.station), d.corte, horas).filas.get(x.station)! })),
+  }))).filter((g) => g.filas.length);
+  const todas = grupos.flatMap((g) => g.filas);
+  const total = cols.map((_, i) => todas.reduce((t, x) => t + x.horas[i].length, 0));
+  const tope = Math.max(1, ...todas.flatMap((x) => x.horas.map((h) => h.length)));
+  // total en proceso de los cortes guardados en cada hora (el último de la hora), sin filtros: es el número del corte.
+  // Sin cambio entre cortes: uno puede ser de una sola orden y otro el general, y no se comparan
   const porCorte = cols.map((c) => cortes.filter((x) => x.corte.slice(0, 13) === c).sort((a, b) => b.corte.localeCompare(a.corte))[0]);
   const hora = (c: string) => `${c.slice(11, 13)}:00`;
 
@@ -61,17 +66,14 @@ export default function Horas() {
               <tr><th>Estación</th><th className="num" title="Llegaron antes de estas horas y siguen ahí">Antes</th>
                 {cols.map((c) => <th key={c} className="num" title={`${c}:00 a ${hora(c).slice(0, 2)}:59`}>{hora(c)}</th>)}<th className="num">Total</th></tr>
               <tr className="app-hh-corte"><th scope="row">En proceso (corte)</th><td />
-                {porCorte.map((c, i) => {
-                  const prev = porCorte.slice(0, i).reverse().find(Boolean);
-                  return <td key={cols[i]} className="num" title={c ? `${c.corte} · ${c.archivo}` : 'Sin corte en esta hora'}>{c ? <>{n(c.piezas)}{prev && <small className={c.piezas > prev.piezas ? 'is-up' : 'is-down'}> {c.piezas >= prev.piezas ? '+' : ''}{n(c.piezas - prev.piezas)}</small>}</> : <span className="app-muted">·</span>}</td>;
-                })}<td /></tr>
+                {porCorte.map((c, i) => <td key={cols[i]} className="num" title={c ? `${c.corte} · ${c.archivo}` : 'Sin corte en esta hora'}>{c ? n(c.piezas) : <span className="app-muted">·</span>}</td>)}<td /></tr>
             </thead>
             <tbody>
               {grupos.map((g) => (
                 <Fragment key={g.titulo}>
                   <tr className="app-wip-sec"><th colSpan={cols.length + 3} scope="colgroup">{g.titulo}</th></tr>
-                  {g.estaciones.map((s) => {
-                    const x = filas.get(s)!;
+                  {g.filas.map((x) => {
+                    const s = x.station;
                     return (
                       <tr key={s}><td className="code">{s}</td><td className="num app-muted">{n(x.antes)}</td>
                         {x.horas.map((h, i) => (
@@ -88,7 +90,7 @@ export default function Horas() {
             <tfoot><tr><th>Llegaron en total</th><td /> {total.map((t, i) => <td key={cols[i]} className="num">{n(t)}</td>)}<td className="num">{n(total.reduce((a, b) => a + b, 0))}</td></tr></tfoot>
           </table>
         </div>
-        <p className="app-muted">Cuenta las piezas que <b>siguen</b> en la estación: las que llegaron y ya avanzaron aparecen en su estación actual. «Antes»: llegaron antes de estas horas. La fila «En proceso (corte)» es el total de cada corte guardado en esa hora, sin filtros.</p>
+        <p className="app-muted">Cuenta las piezas que <b>siguen</b> en la estación: las que llegaron y ya avanzaron aparecen en su estación actual. «Antes»: llegaron antes de estas horas. La fila «En proceso (corte)» es el total de cada corte guardado en esa hora, sin filtros (cada archivo con su alcance: uno de una sola orden no se compara con el general).</p>
       </section>
       {ver && <Seriales titulo={ver.titulo} ps={ver.ps} onClose={() => setVer(undefined)} />}
     </>

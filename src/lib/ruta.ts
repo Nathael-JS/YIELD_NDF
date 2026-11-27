@@ -41,13 +41,18 @@ export function armarRuta(model: string, guardada: Ruta | undefined, yieldEstaci
     meter(r, s, prev && r.estaciones.some((e) => e.station === prev) ? prev : undefined);
   }
   const at = (s: string) => r.estaciones.findIndex((e) => e.station === s);
+  // un hold (HOLD-FT) cuenta como su estación; una reparación se queda como R_
+  const norm = (s: string) => (esRep(s) ? s : base(s));
   for (const p of mias) {
-    if (esRep(p.station)) r.estaciones[at(base(p.station))].rep = true;
-    if (!p.prev || p.prev === p.station) continue;
-    if (esRep(p.prev) && !esRep(p.station)) {
-      if (base(p.prev) !== p.station) sumar(r.retornos, [p.prev, p.station]); // de la reparación a otra estación
-      r.estaciones[at(base(p.prev))].rep = true;
-    } else if (!esRep(p.prev) && !esRep(p.station) && at(p.station) > at(p.prev) + 1) sumar(r.saltos, [p.prev, p.station]);
+    const st = norm(p.station), pv = p.prev && norm(p.prev);
+    if (esRep(st)) r.estaciones[at(base(st))].rep = true; // base(st) ya se metió arriba
+    if (!pv || pv === st) continue;
+    // la estación anterior puede no estar en la ruta (solo se meten las actuales): sin ella no hay línea que dibujar
+    if (at(base(pv)) < 0) continue;
+    if (esRep(pv) && !esRep(st)) {
+      if (base(pv) !== st) sumar(r.retornos, [pv, st]); // de la reparación a otra estación
+      r.estaciones[at(base(pv))].rep = true;
+    } else if (!esRep(pv) && !esRep(st) && at(st) > at(pv) + 1) sumar(r.saltos, [pv, st]);
   }
   return r;
 }

@@ -1,6 +1,6 @@
 # WIP · fase 2: ruta, filtros, unidades y hora por hora (plan, 27 nov)
 
-> **Avance:** R0 (0.51), R1 (0.52), R2 (0.53) y R3 (0.54), R4 (0.55), R5 (0.56) y R6 (sistema de diseño, versión 44) terminados. Sigue R7 (revisión de código).
+> **Avance:** R0 (0.51), R1 (0.52), R2 (0.53) y R3 (0.54), R4 (0.55), R5 (0.56), R6 (sistema de diseño, versiones 44 y 45) y R7 (revisión de código: 8 hallazgos, 7 corregidos) terminados.
 
 Sigue a [WIP.md](WIP.md) (W1–W7 terminados). Todo va a **un solo PR**, que se fusiona al final.
 
@@ -87,6 +87,11 @@ Sigue a [WIP.md](WIP.md) (W1–W7 terminados). Todo va a **un solo PR**, que se 
 **Lo que no se hace:**
 - **`/map-design`:** el sistema de diseño ya existe (L2) y está documentado en el artifact; un `DESIGN.md` aparte lo duplicaría.
 - **`/figma-setup`:** el conector de Figma no conecta desde esta sesión. El diseño se trabaja con el sistema de diseño y capturas.
+
+## Pendientes de la fase 2
+
+- **Estación en dos boards en WIP · piezas:** queda en el grupo del modelo de su primera pieza, con todas sus piezas (los filtros sí las separan). Se arregla partiendo `stations()` por etapa · board si estorba.
+- **Rutas de otros modelos:** solo SA029400 tiene base (el diagrama del MES); las demás se aprenden del WIP y la estructura de yield y un administrador las puede corregir en Base de datos.
 
 ## Pendientes que siguen de WIP.md
 

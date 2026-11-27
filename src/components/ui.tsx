@@ -103,7 +103,8 @@ export function KpiTile({ label, value, unit, delta, deltaUnit = '', deltaLabel 
     </>
   );
   return onClick
-    ? <button type="button" className="yc-kpi is-action" onClick={onClick} aria-label={`${label}: ${typeof value === 'string' || typeof value === 'number' ? value : ''}. Ver unidades`}>{body}</button>
+    // el nombre accesible es lo que se ve (valor y cambio incluidos) más la acción
+    ? <button type="button" className="yc-kpi is-action" onClick={onClick}>{body}<span className="yc-sr-only">. Ver unidades</span></button>
     : <div className="yc-kpi">{body}</div>;
 }
 

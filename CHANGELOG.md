@@ -22,6 +22,14 @@ Los errores encontrados y cómo se corrigieron están en [ERRORES.md](ERRORES.md
   - Arriba, el total en proceso de los cortes guardados en cada hora y su cambio. Al pie, el total de llegadas por hora.
   - Tiene los mismos filtros que el Dashboard.
 
+### Corregido (revisión de código de la fase 2)
+- **La ruta ya no rompe el Dashboard** cuando una pieza regresa de la reparación de una estación que la ruta no tiene. Los holds (`HOLD-X`) cuentan como su estación; un anterior desconocido no dibuja líneas fuera del mapa.
+- **Un WIP con muchas terminadas se sigue guardando:** si en proceso más terminadas pasan de 25,000, el corte se guarda sin la lista de terminadas.
+- **Hora por hora** ya no repite las piezas de una estación que está en dos boards: cada fila cuenta solo las suyas. La fila de cortes muestra el total de cada uno sin compararlos, porque uno puede ser de una sola orden.
+- **Paneles con unidades:** el lector de pantalla lee el valor y el cambio, más «Ver unidades».
+- **Borrar una ruta** valida el modelo como al guardarla.
+- **Sistema de diseño, versión 45:** `KpiTile` accesible.
+
 ## [0.55.0] — 2026-11-27
 
 ### Cambiado

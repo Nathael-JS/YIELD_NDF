@@ -48,3 +48,15 @@ test('mapaDe: piezas por estación (holds con su estación), reparación debajo,
   assert.deepEqual([m.retornos, m.saltos], [[[2, 0]], [[0, 2]]]);
   assert.equal(m.piezasDe('A').length, 2); assert.equal(m.fuera, 1);
 });
+
+test('armarRuta: anterior fuera de la ruta u hold no rompe ni dibuja fuera (revisión de código)', () => {
+  const p = (station: string, prev: string) => ({ model: 'M', station, prev });
+  const r = armarRuta('M', undefined, ['A', 'B', 'C', 'D'], [
+    p('C', 'R_ZZ'), // la reparación de una estación que la ruta no tiene: antes tronaba
+    p('D', 'HOLD-A'), // salió de hold de A: salto A > D, no «HOLD-A > D»
+    p('D', 'OTRA'), // anterior desconocida: sin línea
+  ]);
+  assert.deepEqual(r.retornos, []);
+  assert.deepEqual(r.saltos, [['A', 'D']]);
+  assert.ok(!r.estaciones.some((e) => e.station === 'ZZ' || e.station === 'OTRA'));
+});
