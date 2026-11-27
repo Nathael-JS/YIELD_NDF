@@ -56,6 +56,16 @@ Sin aprobación hay un camino interino sin componentes nuevos: `FlowMap` se arma
 
 ## Datos
 
+- **W3 (0.46):**
+  - **Entrar a WIP abre el Dashboard** (`/wip`), con el último corte de la base (o el WIP del equipo si no hay base). La página pieza por pieza pasa a `/wip/piezas`.
+  - **Encabezado:** corte, turno, semana, hace cuánto y archivo.
+  - **KPIs:** en proceso (con el cambio contra el corte anterior), bloqueadas, urgentes, tiempo promedio y terminadas.
+  - **Semáforo:** barra e íconos en los colores del semáforo; cada ícono abre sus seriales.
+  - **`FlowMap`:** Process Stage → Board → estación; cada estación abre sus seriales.
+  - **Dónde se ubica cada pieza:**
+    - Las **reparaciones y holds** (`R_…`, `HOLD-…`) van junto a su estación.
+    - Las **estaciones que el reporte de yield no trae** (`LINK_CARRIER_B`, `KANBAN_IN`…) van al board de su modelo.
+    - Con el WIP real, «Sin etapa» bajó de 1,118 a 61 piezas.
 - **W2 (0.45):** el corte guarda sus **piezas en proceso** (`detalle`: serial, modelo, orden, estación, estación anterior, llegada, horas y bloqueada). Con el WIP real de 2,065 piezas ocupa 51 KB en la base. Los cortes de antes de 0.45 vienen con la lista vacía. `turno()` da T1 de 07:00 a 15:00, T2 de 15:00 a 22:30 y «pendiente» de 22:30 a 07:00; `semana()` da la semana ISO.
 - **W1 (0.44):** `readFlujo()` y `ubicar()` en `src/lib/wip.ts`, tabla `wip_flujo` (vale la más reciente), `GET/POST /api/wip/flujo` (solo un administrador la cambia) y una sección en **Base de datos** con la vista previa por etapa y board. Con el reporte de W48 salen 81 estaciones en 6 etapas.
 
@@ -69,11 +79,11 @@ Sin aprobación hay un camino interino sin componentes nuevos: `FlowMap` se arma
 | --- | --- | --- |
 | **W1** ✅ 0.44 | Estructura de flujo: leer el archivo de yield (Process Stage, Board, Model, Station, con herencia de celdas), guardarla en la base y ubicar cada estación del WIP. Con prueba | `src/lib/wip.ts`, `server/` (tabla `wip_flujo`), Base de datos |
 | **W2** ✅ 0.45 | Guardar las piezas en el corte y `turno()` y `semana()` del corte, con prueba | `server/`, `src/lib/wip.ts` |
-| **W3** | **Dashboard** (primera vista del área): encabezado del último corte, KPIs, semáforo (`SplitBar`) con ventana de seriales y **`FlowMap`** | `src/areas/wip/Dashboard.tsx`, `areas.ts` |
+| **W3** ✅ 0.46 | **Dashboard** (primera vista del área): encabezado del último corte, KPIs, semáforo (`SplitBar`) con ventana de seriales y **`FlowMap`** | `src/areas/wip/Dashboard.tsx`, `areas.ts` |
 | **W4** | **Gráficos** del Dashboard: Pareto (estaciones → por estación), barras por modelo y por orden, histograma de tiempo en la estación, y barras por última estación registrada. Cada barra abre los seriales | `Dashboard.tsx` |
 | **W5** | **Histórico:** tendencia por turno o semana (`TrendChart`), lista de cortes y **comparativa** de dos cortes (qué estación subió o bajó) | `src/areas/wip/Historico.tsx` (junta el Historial actual) |
 | **W6** | **Vista WIP:** `UnitIcon` en lugar del semáforo, con la ventana de seriales | `wipParts.tsx` |
-| **W7** | Sistema de diseño: `FlowMap` y `UnitIcon` (con `/ds-make`), README y vista previa, y publicar | artefacto |
+| **W7** ✅ 0.46 (parte) | Sistema de diseño: `FlowMap` y `UnitIcon` publicados en la versión 42; falta la ventana de seriales como patrón | artefacto |
 
 ## Por confirmar
 

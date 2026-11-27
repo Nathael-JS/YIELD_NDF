@@ -133,7 +133,7 @@ function WipCheck({ empty }: { empty?: boolean }) {
         <KpiTile label="Órdenes" value={n(new Set(ps.map((p) => p.mo)).size)} />
       </div>
       <ul>{checks.map(([tone, title, text]) => <li key={title}><Badge tone={tone}>{CHECK[tone]}</Badge><div><strong>{title}</strong><p className="app-muted">{text}</p></div></li>)}</ul>
-      <div className="yc-row"><Button variant="primary" onClick={() => go('/wip')}>Ver WIP</Button></div>
+      <div className="yc-row"><Button variant="primary" onClick={() => go('/wip/piezas')}>Ver WIP</Button></div>
     </section>
   );
 }

@@ -8,6 +8,26 @@ Un cambio de componente se publica primero en el artefacto y después se copia a
 
 Los errores encontrados y cómo se corrigieron están en [ERRORES.md](ERRORES.md); las mejoras y cómo se hicieron, en [MEJORAS.md](MEJORAS.md).
 
+## [0.46.0] — 2026-11-27
+
+### Agregado
+- **Dashboard de WIP (W3).** Es la vista de entrada del área: al elegir WIP abre aquí.
+  - Usa el **último corte guardado** en la base; sin base, el WIP cargado en el equipo.
+  - **Encabezado:** fecha y hora del corte, turno (T1, T2 o pendiente), semana, hace cuánto y archivo.
+  - **KPIs:** en proceso (con el cambio contra el corte anterior), bloqueadas, urgentes, tiempo promedio y terminadas.
+  - **Semáforo de tiempo en la estación:** barra e íconos de producto (< 2 h, 2–20 h, 20–100 h y > 100 h urgente, que late). **Al tocar uno se abre la lista de sus seriales**, con el tiempo, la estación, el estado, el modelo y la orden.
+  - **Flujo por etapa** (`FlowMap`): Process Stage → Board → estaciones en el orden de la ruta, cada una con su ícono y su conteo. Tocar una estación abre sus seriales.
+  - **Filtro por modelo.**
+- **Sistema de diseño (versión 42):** componentes nuevos `UnitIcon` y `FlowMap`, con README, tipos y vista previa.
+
+### Cambiado
+- **La página WIP pieza por pieza** pasa a `/wip/piezas` («WIP · piezas» en el riel).
+- **Ubicación en el flujo:**
+  - Las reparaciones y holds (`R_…`, `HOLD-…`) van junto a su estación.
+  - Las estaciones que el reporte de yield no trae van al board de su modelo.
+- **Los colores del tiempo en la estación** ya se ven también fuera de la página WIP (en el Dashboard y sus ventanas).
+- **`MEJORAS.md`** tiene las mejoras de 0.43 a 0.46.
+
 ## [0.45.0] — 2026-11-27
 
 ### Agregado

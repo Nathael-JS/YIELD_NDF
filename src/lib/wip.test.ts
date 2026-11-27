@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { cruce, desde, estadoOf, nivel, ordenes, readWip, stations, urgente, detalleWip, readFlujo, resumenWip, semana, turno, ubicar } from './wip.ts';
+import { cruce, desde, estadoOf, nivel, ordenes, readWip, stations, urgente, detalleWip, flujoDe, readFlujo, resumenWip, semana, turno, ubicar } from './wip.ts';
 import type { Rec } from './tcqs.ts';
 
 const H = ['SERIAL_NUMBER', 'MODEL_NAME', 'MO_NUMBER', 'TARGET_QTY', 'SECTION_NAME', 'WIP_GROUP', 'IN_STATION_TIME', 'HOUR', 'ERROR_FLAG'];
@@ -101,4 +101,15 @@ test('turno y semana del corte: T1 07:00–15:00, T2 15:00–22:30, pendiente de
 test('detalleWip: solo los campos que se guardan, horas a un decimal', () => {
   const p = { serial: 'S1', model: 'M', mo: 'O', section: 'X', station: 'TEST', prev: 'ASSY', line: 'L1', at: '2026-11-27 10:00:00', hours: 2.345, blocked: false, estado: 'Línea' } as const;
   assert.deepEqual(detalleWip([p]), [{ serial: 'S1', model: 'M', mo: 'O', station: 'TEST', prev: 'ASSY', at: '2026-11-27 10:00:00', hours: 2.3, blocked: false }]);
+});
+
+test('flujoDe: piezas en su etapa/board/estación en el orden de la ruta, tono por la más vieja, urgentes y «Sin etapa»', () => {
+  const pasos = [{ stage: 'SMT', board: 'SWB', model: 'M1', station: 'SPI' }, { stage: 'SMT', board: 'SWB', model: 'M1', station: 'AOI' }, { stage: 'SYS', board: 'FA', model: 'M2', station: 'FT' }];
+  const ps = [{ model: 'M1', station: 'AOI', hours: 1 }, { model: 'M1', station: 'AOI', hours: 30 }, { model: 'M2', station: 'FT', hours: 150 }, { model: 'X', station: 'RARA', hours: 5 },
+    { model: 'M2', station: 'R_FT', hours: 3 }, { model: 'M1', station: 'LINK_CARRIER_B', hours: 0.5 }];
+  const { stages, piezasDe } = flujoDe(pasos, ps);
+  assert.deepEqual(stages.map((s) => [s.stage, s.boards.map((b) => [b.board, b.stations.map((x) => `${x.station}:${x.n}:${x.tone}:${x.urgent}`)])]), [
+    ['SMT', [['SWB', ['SPI:0:idle:0', 'AOI:2:bad:0', 'LINK_CARRIER_B:1:ok:0']]]], ['SYS', [['FA', ['FT:1:bad:1', 'R_FT:1:warn:0']]]], ['Sin etapa', [['', ['RARA:1:warn:0']]]]]);
+  assert.equal(piezasDe('SMT', 'SWB', 'AOI').length, 2);
+  assert.equal(flujoDe([], ps).stages[0].stage, 'Sin etapa');
 });

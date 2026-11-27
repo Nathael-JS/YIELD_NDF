@@ -2,6 +2,7 @@
 // No se estima con el TCQS (no registra la entrada a almacén): se cuenta del archivo y se cruza con el TCQS
 // por orden y estación (FPY de la estación junto a las piezas que esperan en ella).
 import type { Cell, ParsedFile } from './files.ts';
+import type { FlowStage } from '../components/flow.tsx';
 import { by, META_FPY, periodOf, text, type Rec } from './tcqs.ts';
 
 export const WIP_REQUIRED = ['SERIAL_NUMBER', 'MODEL_NAME', 'MO_NUMBER', 'SECTION_NAME', 'WIP_GROUP', 'IN_STATION_TIME', 'ERROR_FLAG'] as const;
@@ -233,3 +234,30 @@ export const semana = (corte: string) => periodOf(corte.slice(0, 10), 'semana');
 
 /** Pieza en proceso tal como se guarda en el corte (para la ventana de seriales y los gráficos sin el archivo). */
 export const detalleWip = (ps: Pieza[]) => ps.map((p) => ({ serial: p.serial, model: p.model, mo: p.mo, station: p.station, prev: p.prev, at: p.at, hours: Math.round(p.hours * 10) / 10, blocked: p.blocked }));
+
+/** Flujo del Dashboard: las piezas en su etapa → board → estación (con la estructura de flujo), en el orden de la ruta.
+ * Tono de cada estación = el de su pieza más vieja. Ver dentro cómo se ubican reparaciones, holds y estaciones fuera del reporte. */
+export function flujoDe<P extends { model: string; station: string; hours: number }>(pasos: Paso[], ps: P[]) {
+  const porClave = new Map<string, P[]>(), clave = (a: string, b: string, c: string) => `${a}\u0000${b}\u0000${c}`;
+  const extra: Paso[] = [];
+  for (const p of ps) {
+    // reparación y hold (R_ICT, HOLD-FT) van junto a su estación; una estación que el reporte de yield no trae (LINK_CARRIER_B, KANBAN_IN…)
+    // va a la etapa y board de su modelo, después de la ruta; si tampoco está el modelo, a «Sin etapa»
+    const u = ubicar(pasos, p.model, p.station.replace(/^(R_|HOLD-)/, '')) ?? pasos.find((x) => x.model === p.model);
+    const lugar = u ? { stage: u.stage, board: u.board, model: '', station: p.station } : { stage: 'Sin etapa', board: '', model: '', station: p.station };
+    if (!pasos.some((x) => x.stage === lugar.stage && x.board === lugar.board && x.station === lugar.station)
+      && !extra.some((x) => x.stage === lugar.stage && x.board === lugar.board && x.station === lugar.station)) extra.push(lugar);
+    const k = clave(lugar.stage, lugar.board, lugar.station);
+    (porClave.get(k) ?? porClave.set(k, []).get(k)!).push(p);
+  }
+  const sin = extra.filter((x) => x.stage === 'Sin etapa'), dentro = extra.filter((x) => x.stage !== 'Sin etapa');
+  const stages: FlowStage[] = [];
+  for (const x of [...pasos, ...dentro, ...sin]) {
+    const s = stages.find((y) => y.stage === x.stage) ?? (stages.push({ stage: x.stage, boards: [] }), stages[stages.length - 1]);
+    const b = s.boards.find((y) => y.board === x.board) ?? (s.boards.push({ board: x.board, stations: [] }), s.boards[s.boards.length - 1]);
+    if (b.stations.some((y) => y.station === x.station)) continue;
+    const mias = porClave.get(clave(x.stage, x.board, x.station)) ?? [], max = Math.max(0, ...mias.map((p) => p.hours));
+    b.stations.push({ station: x.station, n: mias.length, tone: mias.length ? nivel(max) : 'idle', urgent: mias.filter((p) => urgente(p.hours)).length });
+  }
+  return { stages, piezasDe: (stage: string, board: string, station: string) => porClave.get(clave(stage, board, station)) ?? [] };
+}

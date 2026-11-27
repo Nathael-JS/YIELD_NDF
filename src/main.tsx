@@ -23,6 +23,7 @@ const Conexion = lazy(() => import('./areas/pallets/Conexion.tsx'));
 const HistorialPallets = lazy(() => import('./areas/pallets/Historial.tsx'));
 const Tabla = lazy(() => import('./areas/pallets/Tabla.tsx'));
 const HistorialWip = lazy(() => import('./areas/wip/Historial.tsx'));
+const DashboardWip = lazy(() => import('./areas/wip/Dashboard.tsx'));
 const Validacion = lazy(() => import('./pages/Validacion.tsx'));
 const Seguridad = lazy(() => import('./pages/Seguridad.tsx'));
 const Ndf = lazy(() => import('./areas/yield/Ndf.tsx'));
@@ -50,7 +51,8 @@ const router = createBrowserRouter([
       { path: '/yield/ndf', element: <Ndf /> },
       { path: '/yield/historial', element: <Historial /> },
       // WIP
-      { path: '/wip', element: <Wip /> },
+      { path: '/wip', element: <DashboardWip /> },
+      { path: '/wip/piezas', element: <Wip /> },
       { path: '/wip/historial', element: <HistorialWip /> },
       // PALLETS
       { path: '/pallets', element: <Pallets /> },
