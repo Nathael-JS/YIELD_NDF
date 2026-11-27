@@ -7,6 +7,7 @@ import { dropAll } from '../lib/saved.ts';
 import { modelsFrom, shortDay } from '../lib/tcqs.ts';
 import { shortDate, useApp } from '../store.ts';
 import { PageHead } from './Layout.tsx';
+import FlujoWip from '../areas/wip/Flujo.tsx';
 
 const size = (b: number) => (b < 1024 ** 2 ? `${(b / 1024).toFixed(0)} KB` : `${(b / 1024 ** 2).toFixed(1)} MB`);
 const NEON_FREE = 512 * 1024 ** 2; // espacio del plan gratis de Neon
@@ -69,7 +70,7 @@ export default function Base() {
           <table className="yc-table">
             <thead><tr><th>Tabla</th><th>Qué guarda</th><th className="num">Filas</th><th className="num">Espacio</th></tr></thead>
             <tbody>
-              {[['yield_resumen', `Conteos por día × modelo × estación${st.resumen.desde ? ` · ${shortDay(st.resumen.desde)} – ${shortDay(st.resumen.hasta!)}` : ''}`], ['yield_cargas', 'Una fila por carga (historial)'], ['yield_modelos', 'Modelos de Juliet (del BOM)'], ['yield_comentarios', 'Comentarios de las gráficas'], ['usuarios', 'Cuentas']].map(([n, what]) => (
+              {[['yield_resumen', `Conteos por día × modelo × estación${st.resumen.desde ? ` · ${shortDay(st.resumen.desde)} – ${shortDay(st.resumen.hasta!)}` : ''}`], ['yield_cargas', 'Una fila por carga (historial)'], ['yield_modelos', 'Modelos de Juliet (del BOM)'], ['yield_comentarios', 'Comentarios de las gráficas'], ['usuarios', 'Cuentas'], ['pallet_items', 'Pallets: un item por DN'], ['wip_cortes', 'WIP: un corte por carga (historial)'], ['wip_flujo', 'WIP: estructura de flujo']].map(([n, what]) => (
                 <tr key={n}><td className="code">{n}</td><td>{what}</td><td className="num">{(t(n)?.filas ?? 0).toLocaleString('es-MX')}</td><td className="num">{size(t(n)?.bytes ?? 0)}</td></tr>
               ))}
             </tbody>
@@ -82,6 +83,7 @@ export default function Base() {
         <FileChip type="MODELOS · JULIET" accept=".xlsx" onFile={uploadBom} status={busy ? 'comparing' : modelos ? 'loaded' : 'empty'}
           meta={busy ? 'Leyendo…' : modelos ? `${modelos.modelos.length.toLocaleString('es-MX')} modelos · ${modelos.archivo} · ${modelos.usuario} · ${shortDate(new Date(modelos.guardado_en!))}` : 'Sin lista: se usan todos los modelos del TCQS'} />
       </section>
+      <FlujoWip />
       {principal && (
         <section className="yc-card yc-pad app-sec">
           <h2 className="app-h3">Limpieza <Badge tone="warn">Super administrador</Badge></h2>

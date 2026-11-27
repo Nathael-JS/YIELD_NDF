@@ -66,3 +66,12 @@ test('validateCorte: corte AAAA-MM-DD HH:MM, enteros, resumen acotado y sin camp
   assert.ok(validateCorte({ ...ok, resumen: [{ estacion: 'T', piezas: 1, bloqueadas: 0, horas: NaN, max: 0 }] }).error);
   assert.ok(validateCorte({ ...ok, archivo: '' }).error);
 });
+
+test('validateFlujo: 4 columnas en texto, estación y etapa obligatorias, sin campos extra', async () => {
+  const { validateFlujo } = await import('./validate.js');
+  const v = validateFlujo({ archivo: 'yield.csv', pasos: [{ stage: 'SMT', board: 'SWB', model: 'M', station: 'SPI_B', input: 3 }] });
+  assert.deepEqual(v.pasos, [{ stage: 'SMT', board: 'SWB', model: 'M', station: 'SPI_B' }]);
+  assert.ok(validateFlujo({ archivo: 'y', pasos: [] }).error);
+  assert.ok(validateFlujo({ archivo: 'y', pasos: [{ stage: 'SMT', board: '', model: '', station: '' }] }).error);
+  assert.ok(validateFlujo({ archivo: 'y', pasos: [{ stage: 'SMT', board: 1, model: '', station: 'X' }] }).error);
+});
