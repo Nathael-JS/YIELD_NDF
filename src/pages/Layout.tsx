@@ -6,6 +6,7 @@ import { congruence, daily, modelKey } from '../lib/tcqs.ts';
 import { Button } from '../components/ui.tsx';
 import { useApp, useData } from '../store.ts';
 import Seguridad from './Seguridad.tsx';
+import { mayor } from '../lib/novedades.ts';
 
 const Novedades = lazy(() => import('./Novedades.tsx'));
 const VISTO = 'yc-novedades'; // última versión que este navegador ya vio
@@ -14,7 +15,7 @@ const leerVisto = () => { try { return localStorage.getItem(VISTO) ?? ''; } catc
 /** Campana de Novedades: punto si hay una versión que no se ha visto; al abrirla se marca como vista. */
 function NovedadesBtn() {
   const [visto, setVisto] = useState(leerVisto), [abierto, setAbierto] = useState<string>();
-  const nuevo = visto !== __VERSION__;
+  const nuevo = !visto || mayor(__VERSION__, visto); // volver a una versión anterior no es «nuevo»
   const abrir = () => { setAbierto(visto); setVisto(__VERSION__); try { localStorage.setItem(VISTO, __VERSION__); } catch { /* sin almacenamiento: se vuelve a avisar */ } };
   return (
     <>

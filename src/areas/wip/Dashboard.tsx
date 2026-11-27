@@ -60,7 +60,7 @@ function Graficos({ ps, onVer }: { ps: P[]; onVer: (titulo: string, xs: P[]) => 
 
 /** El último corte de la base; sin base o sin cortes, el WIP cargado en este equipo. */
 function useDatos() {
-  const file = useApp((s) => s.files.WIP), [d, setD] = useState<Datos | null>(), [pasos, setPasos] = useState<Paso[]>([]);
+  const file = useApp((s) => s.files.WIP), [d, setD] = useState<Datos | null>(), [pasos, setPasos] = useState<Paso[]>([]), [fallo, setFallo] = useState<string>();
   useEffect(() => {
     const delArchivo = (aviso?: string): Datos | null => {
       if (!file) return null;
@@ -68,23 +68,25 @@ function useDatos() {
       return r.missing.length ? null : { fuente: 'archivo', corte: (r.corte || r.ultimo).slice(0, 16), archivo: file.name, piezas: detalleWip(r.piezas), terminadas: r.terminadas.length, aviso };
     };
     loadWipFlujo().then((f) => setPasos(f.pasos), () => {});
+    const sinBase = (e: Error) => { setFallo(e.message); setD(delArchivo(`Sin conexión con la base (${e.message}): se muestra el WIP cargado en este equipo.`)); };
     loadWipCortes().then(async (cs) => {
       if (!cs.length) return setD(delArchivo());
-      const c = await loadWipCorte(cs[0].id);
-      setD(c.detalle.length ? { fuente: 'base', corte: cs[0].corte, archivo: cs[0].archivo, piezas: c.detalle, terminadas: cs[0].terminadas, antes: cs[1]?.piezas }
+      const c = await loadWipCorte(cs[0].id, true);
+      setD(c.detalle?.length ? { fuente: 'base', corte: cs[0].corte, archivo: cs[0].archivo, piezas: c.detalle!, terminadas: cs[0].terminadas, antes: cs[1]?.piezas }
         : delArchivo('El último corte de la base es de antes de 0.45 y no trae sus piezas.') ?? { fuente: 'base', corte: cs[0].corte, archivo: cs[0].archivo, piezas: [], terminadas: cs[0].terminadas, aviso: 'El último corte de la base no trae sus piezas: vuelve a cargar el WIP.' });
-    }, (e) => setD(delArchivo(`Sin conexión con la base (${e.message}): se muestra el WIP cargado en este equipo.`)));
+    }).catch(sinBase); // también si falla leer el corte (dentro del then)
   }, [file]);
-  return { d, pasos };
+  return { d, pasos, fallo };
 }
 
 export default function Dashboard() {
-  const { d, pasos } = useDatos(), [modelo, setModelo] = useState(''), [ver, setVer] = useState<{ titulo: string; ps: P[] }>();
+  const { d, pasos, fallo } = useDatos(), [modelo, setModelo] = useState(''), [ver, setVer] = useState<{ titulo: string; ps: P[] }>();
   if (d === undefined) return <><PageHead title="Dashboard · WIP" /><p className="app-muted">Cargando el último corte…</p></>;
   if (!d) return (
     <>
       <PageHead title="Dashboard · WIP" sub="Cuánto hay en proceso, desde hace cuánto y dónde está." />
-      <p className="yc-card app-empty">Aún no hay un WIP guardado. Carga el reporte en <Link to="/wip/carga">Carga de datos</Link>: se guarda solo y aparece aquí.</p>
+      <p className="yc-card app-empty">{fallo ? <>No se pudo leer el último corte de la base ({fallo}). Carga el WIP en <Link to="/wip/carga">Carga de datos</Link> para verlo desde este equipo.</>
+        : <>Aún no hay un WIP guardado. Carga el reporte en <Link to="/wip/carga">Carga de datos</Link>: se guarda solo y aparece aquí.</>}</p>
     </>
   );
   const ps = d.piezas.filter((p) => !modelo || p.model === modelo), t = turno(d.corte), edad = (ms(local()) - ms(d.corte)) / 36e5;

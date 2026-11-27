@@ -275,12 +275,13 @@ async function wip(req, res, me, url) {
   if (req.method === 'GET') {
     const id = Number(url.searchParams.get('id'));
     if (id) {
-      const { rows: [c] } = await db.query('select resumen, detalle from wip_cortes where id = $1', [id]);
+      // las piezas (seriales) solo cuando se piden (Dashboard); Historial e Histórico usan el resumen
+      const { rows: [c] } = await db.query(`select resumen${url.searchParams.get('detalle') ? ', detalle' : ''} from wip_cortes where id = $1`, [id]);
       return c ? json(res, 200, c) : json(res, 404, { error: 'Corte no encontrado' });
     }
     // bloqueadas = suma del resumen (para la tendencia del Histórico)
     const { rows } = await db.query(`select id, archivo, usuario, corte, piezas, terminadas, subida,
-      (select coalesce(sum((r->>'bloqueadas')::int), 0) from jsonb_array_elements(resumen) r)::int bloqueadas from wip_cortes order by subida desc limit 500`);
+      (select coalesce(sum((r->>'bloqueadas')::int), 0) from jsonb_array_elements(resumen) r)::int bloqueadas from wip_cortes order by corte desc, id desc limit 500`); // el más reciente por hora del corte, no de subida
     return json(res, 200, { cortes: rows });
   }
   if (req.method === 'POST') {

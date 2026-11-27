@@ -1,6 +1,6 @@
 // Histórico de WIP: cómo cambia el WIP entre cortes. Tendencia por turno (T1 07:00–15:00, T2 15:00–22:30; 22:30–07:00 pendiente)
 // o por semana, con el último corte de cada uno; y la comparativa de dos cortes por estación. (El Historial lista los archivos cargados.)
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { TrendChart } from '../../components/charts.tsx';
 import { Badge, Button, Segmented, Select } from '../../components/ui.tsx';
@@ -16,7 +16,13 @@ export default function Historico() {
   const [por, setPor] = useState<'turno' | 'semana'>('turno'), [solo, setSolo] = useState<'ambos' | 'T1' | 'T2'>('ambos');
   const [a, setA] = useState<number>(), [b, setB] = useState<number>(), [res, setRes] = useState<Record<number, WipResumen>>({});
   useEffect(() => { loadWipCortes().then((cs) => { setCortes(cs); setB(cs[0]?.id); setA(cs[1]?.id); }, (e) => { setErr(e.message); setCortes([]); }); }, []);
-  useEffect(() => { for (const id of [a, b]) if (id && !res[id]) loadWipCorte(id).then((c) => setRes((r) => ({ ...r, [id]: c.resumen })), () => {}); }, [a, b, res]);
+  const pedidos = useRef(new Set<number>()), [errCmp, setErrCmp] = useState<string>();
+  useEffect(() => {
+    for (const id of [a, b]) if (id && !pedidos.current.has(id)) {
+      pedidos.current.add(id); // una sola vez por corte (antes se volvía a pedir al llegar el otro)
+      loadWipCorte(id).then((c) => setRes((r) => ({ ...r, [id]: c.resumen })), (e) => { pedidos.current.delete(id); setErrCmp(e.message); });
+    }
+  }, [a, b]);
 
   if (!cortes) return <><PageHead title="Histórico · WIP" /><p className="app-muted">Cargando…</p></>;
   const puntos = tendencia(cortes, por, por === 'turno' && solo !== 'ambos' ? solo : undefined);
@@ -62,7 +68,7 @@ export default function Historico() {
                     <li className="app-muted">{semana(ca.corte)[1]} → {semana(cb.corte)[1]}</li>
                   </ul>
                 )}
-                {!filas ? <p className="app-muted">Cargando los cortes…</p> : (
+                {!filas ? <p className="app-muted" role="status">{errCmp ? <><Badge tone="warn">Base</Badge> No se pudo leer un corte: {errCmp}. Elige otro o recarga la página.</> : 'Cargando los cortes…'}</p> : (
                   <div className="yc-table-wrap app-hc-t">
                     <table className="yc-table">
                       <thead><tr><th>Estación</th><th className="num">Antes</th><th className="num">Después</th><th className="num">Cambio</th><th className="num">Bloqueadas</th></tr></thead>
