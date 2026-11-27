@@ -8,6 +8,17 @@ Un cambio de componente se publica primero en el artefacto y después se copia a
 
 Los errores encontrados y cómo se corrigieron están en [ERRORES.md](ERRORES.md); las mejoras y cómo se hicieron, en [MEJORAS.md](MEJORAS.md).
 
+## [0.47.0] — 2026-11-27
+
+### Agregado
+- **Gráficos en el Dashboard de WIP (W4)**, con un selector «Por»:
+  - **Pareto** por estación, modelo, orden y última estación registrada.
+  - **Barras** por rango de tiempo en la estación (de «< 2 h» a «> 2 sem»).
+  - **Los 20 seriales** con más tiempo en su estación.
+  - Al lado va una tabla con piezas, % y «Ver». Un clic en una barra o en «Ver» abre los seriales de ese grupo.
+  - «Última estación» usa la columna `GROUP_NAME`, que solo trae el reporte WIP por orden; con el reporte general se muestra un aviso.
+- `agrupar()`, con prueba.
+
 ## [0.46.0] — 2026-11-27
 
 ### Agregado

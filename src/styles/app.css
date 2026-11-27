@@ -469,3 +469,12 @@ a.yc-btn { text-decoration: none; display: inline-flex; align-items: center; }
 .app-ser-sn { word-break: break-all; }
 .app-ser-t { margin: var(--space-4) var(--space-6) var(--space-6); max-height: 60vh; overflow: auto; }
 @media (max-width: 760px) { .app-ser-t { margin: var(--space-3); } }
+.app-db-charts { display: grid; gap: var(--space-4); }
+.app-db-charts-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: end; gap: var(--space-3); }
+.app-db-charts-head .app-h3 { margin: 0; }
+.app-db-charts-body { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(280px, 1fr); gap: var(--space-4); align-items: start; }
+.app-db-chart { min-width: 0; }
+.app-db-chart-t { max-height: 460px; overflow: auto; }
+@media (max-width: 1100px) { .app-db-charts-body { grid-template-columns: 1fr; } }
+.app-db-charts-head > * { min-width: 0; max-width: 100%; }
+.app-db-charts-head .yc-seg { overflow-x: auto; grid-template-columns: repeat(6, max-content) !important; }

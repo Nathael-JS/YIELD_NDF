@@ -56,6 +56,13 @@ Sin aprobación hay un camino interino sin componentes nuevos: `FlowMap` se arma
 
 ## Datos
 
+- **W4 (0.47):** sección **Gráficos** en el Dashboard, con un selector «Por».
+  - Pareto por estación, modelo, orden y última estación.
+  - Barras por rango de tiempo en la estación, de «< 2 h» a «> 2 sem».
+  - Los 20 seriales con más tiempo.
+  - Junto a cada gráfico, una tabla con «Ver» (sirve también con teclado). Clic en una barra o en «Ver» abre los seriales.
+  - `agrupar()` en `src/lib/wip.ts`, con prueba.
+  - **«Última estación» necesita `GROUP_NAME`,** que solo trae el reporte WIP por orden; con el WIP general se muestra un aviso.
 - **W3 (0.46):**
   - **Entrar a WIP abre el Dashboard** (`/wip`), con el último corte de la base (o el WIP del equipo si no hay base). La página pieza por pieza pasa a `/wip/piezas`.
   - **Encabezado:** corte, turno, semana, hace cuánto y archivo.
@@ -80,7 +87,7 @@ Sin aprobación hay un camino interino sin componentes nuevos: `FlowMap` se arma
 | **W1** ✅ 0.44 | Estructura de flujo: leer el archivo de yield (Process Stage, Board, Model, Station, con herencia de celdas), guardarla en la base y ubicar cada estación del WIP. Con prueba | `src/lib/wip.ts`, `server/` (tabla `wip_flujo`), Base de datos |
 | **W2** ✅ 0.45 | Guardar las piezas en el corte y `turno()` y `semana()` del corte, con prueba | `server/`, `src/lib/wip.ts` |
 | **W3** ✅ 0.46 | **Dashboard** (primera vista del área): encabezado del último corte, KPIs, semáforo (`SplitBar`) con ventana de seriales y **`FlowMap`** | `src/areas/wip/Dashboard.tsx`, `areas.ts` |
-| **W4** | **Gráficos** del Dashboard: Pareto (estaciones → por estación), barras por modelo y por orden, histograma de tiempo en la estación, y barras por última estación registrada. Cada barra abre los seriales | `Dashboard.tsx` |
+| **W4** ✅ 0.47 | **Gráficos** del Dashboard: Pareto (estaciones → por estación), barras por modelo y por orden, histograma de tiempo en la estación, y barras por última estación registrada. Cada barra abre los seriales | `Dashboard.tsx` |
 | **W5** | **Histórico:** tendencia por turno o semana (`TrendChart`), lista de cortes y **comparativa** de dos cortes (qué estación subió o bajó) | `src/areas/wip/Historico.tsx` (junta el Historial actual) |
 | **W6** | **Vista WIP:** `UnitIcon` en lugar del semáforo, con la ventana de seriales | `wipParts.tsx` |
 | **W7** ✅ 0.46 (parte) | Sistema de diseño: `FlowMap` y `UnitIcon` publicados en la versión 42; falta la ventana de seriales como patrón | artefacto |

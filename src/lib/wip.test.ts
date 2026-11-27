@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { cruce, desde, estadoOf, nivel, ordenes, readWip, stations, urgente, detalleWip, flujoDe, readFlujo, resumenWip, semana, turno, ubicar } from './wip.ts';
+import { agrupar, cruce, desde, estadoOf, nivel, ordenes, readWip, stations, urgente, detalleWip, flujoDe, readFlujo, resumenWip, semana, turno, ubicar } from './wip.ts';
 import type { Rec } from './tcqs.ts';
 
 const H = ['SERIAL_NUMBER', 'MODEL_NAME', 'MO_NUMBER', 'TARGET_QTY', 'SECTION_NAME', 'WIP_GROUP', 'IN_STATION_TIME', 'HOUR', 'ERROR_FLAG'];
@@ -112,4 +112,14 @@ test('flujoDe: piezas en su etapa/board/estación en el orden de la ruta, tono p
     ['SMT', [['SWB', ['SPI:0:idle:0', 'AOI:2:bad:0', 'LINK_CARRIER_B:1:ok:0']]]], ['SYS', [['FA', ['FT:1:bad:1', 'R_FT:1:warn:0']]]], ['Sin etapa', [['', ['RARA:1:warn:0']]]]]);
   assert.equal(piezasDe('SMT', 'SWB', 'AOI').length, 2);
   assert.equal(flujoDe([], ps).stages[0].stage, 'Sin etapa');
+});
+
+test('agrupar: por campo de mayor a menor, por rango de tiempo en orden, y serial por horas', () => {
+  const p = (serial: string, station: string, prev: string, hours: number) => ({ serial, model: 'M', mo: 'O1', station, prev, hours });
+  const ps = [p('A', 'FT', 'ICT', 1), p('B', 'FT', '', 30), p('C', 'ICT', 'AOI', 400)];
+  assert.deepEqual(agrupar(ps, 'station').map((g) => [g.label, g.value]), [['FT', 2], ['ICT', 1]]);
+  assert.deepEqual(agrupar(ps, 'prev').map((g) => [g.label, g.value]), [['(sin dato)', 1], ['AOI', 1], ['ICT', 1]]);
+  assert.deepEqual(agrupar(ps, 'tiempo').filter((g) => g.value).map((g) => g.label), ['< 2 h', '20–48 h', '> 2 sem']);
+  assert.equal(agrupar(ps, 'tiempo').length, 8);
+  assert.deepEqual(agrupar(ps, 'serial').map((g) => [g.label, g.value]), [['C', 400], ['B', 30], ['A', 1]]);
 });

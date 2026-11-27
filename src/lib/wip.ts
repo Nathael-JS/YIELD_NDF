@@ -261,3 +261,19 @@ export function flujoDe<P extends { model: string; station: string; hours: numbe
   }
   return { stages, piezasDe: (stage: string, board: string, station: string) => porClave.get(clave(stage, board, station)) ?? [] };
 }
+
+/** Dimensiones de los gráficos del Dashboard. */
+export type Dim = 'station' | 'model' | 'mo' | 'prev' | 'tiempo' | 'serial';
+export const RANGOS: [string, number][] = [['< 2 h', 2], ['2–8 h', 8], ['8–20 h', 20], ['20–48 h', 48], ['2–4 d', 96], ['4–7 d', 168], ['1–2 sem', 336], ['> 2 sem', Infinity]];
+/** Grupos para un gráfico: por estación, modelo, orden o última estación (de mayor a menor), por rango de tiempo (en orden)
+ * o una pieza por grupo, de la más vieja a la más nueva (serial). `value` = piezas, salvo en serial (horas). */
+export function agrupar<P extends { serial: string; model: string; mo: string; station: string; prev: string; hours: number }>(ps: P[], dim: Dim) {
+  if (dim === 'serial') return [...ps].sort((a, b) => b.hours - a.hours).map((p) => ({ label: p.serial, value: Math.round(p.hours * 10) / 10, ps: [p] }));
+  if (dim === 'tiempo') return RANGOS.map(([label, max], i) => {
+    const xs = ps.filter((p) => p.hours < max && p.hours >= (i ? RANGOS[i - 1][1] : 0));
+    return { label, value: xs.length, ps: xs };
+  });
+  const m = new Map<string, P[]>();
+  for (const p of ps) { const k = p[dim] || '(sin dato)'; (m.get(k) ?? m.set(k, []).get(k)!).push(p); }
+  return [...m].map(([label, xs]) => ({ label, value: xs.length, ps: xs })).sort((a, b) => b.value - a.value || a.label.localeCompare(b.label));
+}

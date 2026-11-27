@@ -2,10 +2,11 @@
 // cuánto hay, desde hace cuánto (semáforo) y dónde está, en el flujo Process Stage → Board → Station. Tocar un ícono abre sus seriales.
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Badge, KpiTile, Select } from '../../components/ui.tsx';
+import { Badge, Button, KpiTile, Segmented, Select } from '../../components/ui.tsx';
+import { BarChart, ParetoChart } from '../../components/charts.tsx';
 import { FlowMap, UnitIcon } from '../../components/flow.tsx';
 import { loadWipCorte, loadWipCortes, loadWipFlujo, type WipDetalle } from '../../lib/db.ts';
-import { detalleWip, estadoOf, flujoDe, local, nivel, readWip, semana, turno, urgente, type Paso } from '../../lib/wip.ts';
+import { agrupar, detalleWip, estadoOf, flujoDe, local, nivel, readWip, semana, turno, urgente, type Dim, type Paso } from '../../lib/wip.ts';
 import { PageHead } from '../../pages/Layout.tsx';
 import { useApp } from '../../store.ts';
 import { dur, Hours, n } from './wipParts.tsx';
@@ -16,6 +17,46 @@ const ms = (s: string) => Date.parse(`${s.replace(' ', 'T')}Z`); // horas de pla
 const TURNO = { T1: 'Turno 1 · 07:00–15:00', T2: 'Turno 2 · 15:00–22:30', pendiente: 'Turno pendiente · 22:30–07:00' };
 const SEM = [['ok', 'Menos de 2 h'], ['warn', '2 a 20 h'], ['bad', '20 a 100 h'], ['urg', 'Más de 100 h · urgente']] as const;
 const grupo = (h: number) => (urgente(h) ? 'urg' : nivel(h));
+const DIMS: { value: Dim; label: string }[] = [{ value: 'station', label: 'Estación' }, { value: 'model', label: 'Modelo' }, { value: 'mo', label: 'Orden' },
+  { value: 'prev', label: 'Última estación' }, { value: 'tiempo', label: 'Tiempo en estación' }, { value: 'serial', label: 'Serial' }];
+
+/** Gráficos: Pareto por estación, modelo, orden o última estación; barras por rango de tiempo; los seriales más viejos.
+ * La tabla de al lado hace lo mismo que el clic en una barra (también con teclado): abre los seriales. */
+function Graficos({ ps, onVer }: { ps: P[]; onVer: (titulo: string, xs: P[]) => void }) {
+  const [dim, setDim] = useState<Dim>('station'), nombre = DIMS.find((d) => d.value === dim)!.label;
+  const gs = agrupar(ps, dim), top = dim === 'tiempo' ? gs : gs.slice(0, 20);
+  const pick = (label: string) => { const g = gs.find((x) => x.label === label); if (g?.ps.length) onVer(`${nombre}: ${label}`, g.ps); };
+  return (
+    <section className="yc-card yc-pad app-db-charts" aria-labelledby="gr-t">
+      <div className="app-db-charts-head">
+        <h2 id="gr-t" className="app-h3">Gráficos</h2>
+        <Segmented label="Por" value={dim} onChange={setDim} options={DIMS} />
+      </div>
+      {dim === 'prev' && ps.length > 0 && ps.every((p) => !p.prev) ? (
+        <p className="app-empty">Este WIP no trae la estación anterior (columna GROUP_NAME): la trae el reporte WIP por orden. Carga uno para ver este gráfico.</p>
+      ) : (
+      <div className="app-db-charts-body">
+        <div className="app-db-chart">
+          {dim === 'tiempo' ? <BarChart title="Piezas por tiempo en la estación" categories={gs.map((g) => g.label)} series={[{ name: 'Piezas', values: gs.map((g) => g.value), tone: 'fail' }]} yLabel="Piezas" />
+            : dim === 'serial' ? <BarChart horizontal title="Los 20 seriales con más tiempo en su estación" categories={top.map((g) => g.label)} series={[{ name: 'Horas', values: top.map((g) => g.value), tone: 'fail' }]} xLabel="Horas" />
+            : <ParetoChart title={`Piezas en proceso por ${nombre.toLowerCase()}`} subtitle={gs.length > 20 ? `Las 20 con más piezas de ${gs.length}` : undefined} data={gs.map((g) => ({ label: g.label, value: g.value }))} limit={20} onPick={pick} />}
+        </div>
+        <div className="yc-table-wrap app-db-chart-t">
+          <table className="yc-table">
+            <thead><tr><th>{nombre}</th><th className="num">{dim === 'serial' ? 'Tiempo' : 'Piezas'}</th>{dim !== 'serial' && <th className="num">%</th>}<th /></tr></thead>
+            <tbody>{top.map((g) => (
+              <tr key={g.label}><td className="code">{g.label}</td>
+                <td className="num">{dim === 'serial' ? <Hours h={g.value} /> : n(g.value)}</td>
+                {dim !== 'serial' && <td className="num">{ps.length ? Math.round((g.value / ps.length) * 100) : 0}</td>}
+                <td>{g.ps.length > 0 && <Button variant="quiet" onClick={() => onVer(`${nombre}: ${g.label}`, g.ps)} aria-label={`Ver seriales de ${g.label}`}>Ver</Button>}</td></tr>
+            ))}</tbody>
+          </table>
+        </div>
+      </div>
+      )}
+    </section>
+  );
+}
 
 /** El último corte de la base; sin base o sin cortes, el WIP cargado en este equipo. */
 function useDatos() {
@@ -120,6 +161,7 @@ export default function Dashboard() {
         <h2 id="flow-t" className="app-h3">Dónde están · por etapa {!pasos.length && <span className="app-muted">(sin estructura de flujo: cárgala en <Link to="/base">Base de datos</Link>)</span>}</h2>
         <FlowMap stages={stages} onPick={(stage, board, station) => setVer({ titulo: `${station} · ${board || stage}`, ps: piezasDe(stage, board, station) })} />
       </section>
+      <Graficos ps={ps} onVer={(titulo, xs) => setVer({ titulo, ps: xs })} />
       {ver && <Seriales titulo={ver.titulo} ps={ver.ps} onClose={() => setVer(undefined)} />}
     </>
   );
