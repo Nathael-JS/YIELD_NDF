@@ -8,6 +8,30 @@ Un cambio de componente se publica primero en el artefacto y después se copia a
 
 Los errores encontrados y cómo se corrigieron están en [ERRORES.md](ERRORES.md); las mejoras y cómo se hicieron, en [MEJORAS.md](MEJORAS.md).
 
+## [0.51.0] — 2026-11-27
+
+### Cambiado
+- **Versiones al día:**
+  - React 19 (`react`, `react-dom` y sus tipos);
+  - Vite 8 con `@vitejs/plugin-react` 6;
+  - TypeScript 7;
+  - three 0.187;
+  - motion 14.14;
+  - parches de `@react-pdf/renderer`, `react-router-dom`, `read-excel-file`, `papaparse` y `html-to-image`.
+  El build pasa más rápido (de ~6 s a ~0.7 s).
+- **La app carga más rápido:**
+  - El servidor manda los archivos de la app comprimidos con Brotli: el paquete principal pasa de 360 kB a 100 kB por la red.
+  - Los archivos de `assets/` (llevan su hash en el nombre) se guardan en el navegador un año; `index.html` se revisa siempre.
+  - Las respuestas grandes de la API (el detalle de un corte, el resumen de Yield) van con gzip.
+
+### Documentación
+- **`BASE_DE_DATOS.md`:** cómo crear la base en PostgreSQL desde cero. Cubre:
+  - las variables de entorno y la cuenta principal con su MFA;
+  - las 11 tablas;
+  - Render con Neon o un PostgreSQL propio;
+  - respaldos, el entorno limpio, las comprobaciones y los problemas comunes.
+- **`WIP2.md`:** el plan de la fase 2 de WIP (ruta por modelo, filtros por etapa y board, paneles con unidades, flujo por estación nuevo y hora por hora).
+
 ## [0.50.0] — 2026-11-27
 
 ### Agregado

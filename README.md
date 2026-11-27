@@ -88,6 +88,8 @@ Restaurar: `pg_restore --clean --no-owner -d "$DATABASE_URL" yield-AAAA-MM-DD.du
 - Versiones: [CHANGELOG.md](CHANGELOG.md)
 - Errores encontrados y cómo se corrigieron: [ERRORES.md](ERRORES.md)
 - Mejoras hechas, cómo y con qué; pendientes: [MEJORAS.md](MEJORAS.md)
+- Base de datos en PostgreSQL (crear, desplegar, respaldar y limpiar): [BASE_DE_DATOS.md](BASE_DE_DATOS.md)
+- WIP: [WIP.md](WIP.md) y la fase 2, [WIP2.md](WIP2.md)
 - Pallets (etiqueta 4×6, validación, exportar, impresión y riesgos): [PALLETS.md](PALLETS.md)
 
 ## Verificar la base y la API

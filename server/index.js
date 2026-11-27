@@ -2,6 +2,7 @@
 // La conexión vive solo aquí (DATABASE_URL en Render), nunca en el navegador. Toda la API de datos exige sesión.
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
+import { brotliCompressSync, gzipSync } from 'node:zlib';
 import { extname, join, normalize, resolve } from 'node:path';
 import pg from 'pg';
 import { randomBytes, randomUUID } from 'node:crypto';
@@ -89,7 +90,12 @@ const cookie = (value, maxAge) => `yc_sesion=${value}; Path=/; HttpOnly; SameSit
 const PRINCIPAL = process.env.ADMIN_USER?.trim().toLowerCase() || null;
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 
-const json = (res, code, body) => { res.writeHead(code, { 'content-type': 'application/json' }); res.end(JSON.stringify(body)); };
+// respuestas grandes (el detalle de un corte, el resumen de Yield) van comprimidas si el navegador lo acepta
+const json = (res, code, body) => {
+  const s = JSON.stringify(body), gz = res.gzip && s.length > 2048;
+  res.writeHead(code, { 'content-type': 'application/json', vary: 'accept-encoding', ...(gz ? { 'content-encoding': 'gzip' } : {}) });
+  res.end(gz ? gzipSync(s) : s);
+};
 
 async function body(req) {
   let size = 0; const parts = [];
@@ -538,21 +544,37 @@ const HEADERS = {
   ...(SECURE ? { 'strict-transport-security': 'max-age=31536000' } : {}),
 };
 
+/** dist/ no cambia mientras corre el servidor: cada archivo se lee y comprime (Brotli, si es texto) una vez. */
+const cache = new Map();
+async function servido(target) {
+  if (cache.has(target)) return cache.get(target);
+  const data = await readFile(target), texto = /\.(html|js|css|svg|json)$/.test(target) && data.length > 1024;
+  const f = { data, br: texto ? brotliCompressSync(data) : null };
+  cache.set(target, f);
+  return f;
+}
+
 async function file(req, res) {
   const path = normalize(decodeURIComponent(new URL(req.url, 'http://x').pathname));
   const full = join(DIST, path);
   // nada fuera de dist/; rutas de la app (/yield, /carga…) devuelven index.html
   const target = full.startsWith(DIST + '/') && extname(full) ? full : join(DIST, 'index.html');
   try {
-    const data = await readFile(target);
-    res.writeHead(200, { ...HEADERS, 'content-type': TYPES[extname(target)] ?? 'application/octet-stream' });
-    res.end(data);
+    const f = await servido(target), br = /\bbr\b/.test(req.headers['accept-encoding'] ?? '') && f.br;
+    res.writeHead(200, {
+      ...HEADERS, 'content-type': TYPES[extname(target)] ?? 'application/octet-stream', vary: 'accept-encoding',
+      // los archivos de assets/ llevan su hash en el nombre: no cambian nunca; index.html se revisa siempre
+      'cache-control': target.startsWith(join(DIST, 'assets') + '/') ? 'public, max-age=31536000, immutable' : 'no-cache',
+      ...(br ? { 'content-encoding': 'br' } : {}),
+    });
+    res.end(br || f.data);
   } catch {
     res.writeHead(404).end('No encontrado');
   }
 }
 
 createServer(async (req, res) => {
+  res.gzip = /\bgzip\b/.test(req.headers['accept-encoding'] ?? '');
   try {
     if (req.url.startsWith('/api/')) await api(req, res);
     else await file(req, res);
