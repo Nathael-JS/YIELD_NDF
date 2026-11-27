@@ -1,6 +1,6 @@
 # WIP · fase 2: ruta, filtros, unidades y hora por hora (plan, 27 nov)
 
-> **Avance:** R0 (0.51), R1 (0.52), R2 (0.53) y R3 (0.54) y R4 (0.55) terminados. Sigue R5 (hora por hora).
+> **Avance:** R0 (0.51), R1 (0.52), R2 (0.53) y R3 (0.54), R4 (0.55) y R5 (0.56) terminados. Sigue R6 (sistema de diseño).
 
 Sigue a [WIP.md](WIP.md) (W1–W7 terminados). Todo va a **un solo PR**, que se fusiona al final.
 

@@ -328,3 +328,18 @@ export function cambioPorEstacion(antes: { estacion: string; piezas: number; blo
   antes.forEach((r) => add(r, 'antes')); despues.forEach((r) => add(r, 'despues'));
   return [...m.values()].map((x) => ({ ...x, cambio: x.despues - x.antes })).sort((a, b) => Math.abs(b.cambio) - Math.abs(a.cambio) || a.estacion.localeCompare(b.estacion));
 }
+
+/** Hora por hora: las últimas `horas` horas completas hasta el corte; por estación, las piezas que llegaron en cada hora y siguen ahí
+ * (sale de la hora de llegada, IN_STATION_TIME). `antes`: las que llegaron antes de la ventana. */
+export function porHora<P extends { station: string; at: string }>(ps: P[], corte: string, horas = 12) {
+  const fin = Math.ceil(ms(corte) / 36e5) * 36e5, ini = fin - horas * 36e5;
+  const cols = Array.from({ length: horas }, (_, i) => stamp(new Date(ini + i * 36e5)).slice(0, 13)); // «2026-11-27 09»
+  const filas = new Map<string, { horas: P[][]; antes: number }>();
+  for (const p of ps) {
+    const f = filas.get(p.station) ?? filas.set(p.station, { horas: cols.map(() => []), antes: 0 }).get(p.station)!;
+    const t = ms(p.at.length === 16 ? `${p.at}:00` : p.at);
+    if (!(t >= ini)) f.antes++; // incluye llegadas sin hora
+    else if (t < fin) f.horas[Math.floor((t - ini) / 36e5)].push(p);
+  }
+  return { cols, filas };
+}

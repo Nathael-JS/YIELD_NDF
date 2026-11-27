@@ -60,7 +60,7 @@ function Graficos({ ps, onVer }: { ps: P[]; onVer: (titulo: string, xs: P[]) => 
 }
 
 /** El último corte de la base; sin base o sin cortes, el WIP cargado en este equipo. */
-function useDatos() {
+export function useDatos() {
   const file = useApp((s) => s.files.WIP), [d, setD] = useState<Datos | null>(), [pasos, setPasos] = useState<Paso[]>([]), [fallo, setFallo] = useState<string>(), [rutas, setRutas] = useState<WipRuta[]>([]);
   useEffect(() => {
     const delArchivo = (aviso?: string): Datos | null => {

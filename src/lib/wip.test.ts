@@ -160,3 +160,15 @@ test('filtrar: en cascada etapa → board → modelo → orden → estación, co
   assert.deepEqual(uno.ps.map((p) => p.mo), ['B']); assert.equal(uno.activos, 2);
   assert.deepEqual(filtrar(ps, [], FILTRO0).opciones.stage, ['Sin etapa']); // sin estructura todo es «Sin etapa»
 });
+
+test('porHora: llegadas por estación en las últimas horas hasta el corte', async () => {
+  const { porHora } = await import('./wip.ts');
+  const ps = [
+    { station: 'FT', at: '2026-11-27 09:59:59' }, { station: 'FT', at: '2026-11-27 10:00:00' }, { station: 'FT', at: '2026-11-27 10:20' },
+    { station: 'ICT', at: '2026-11-27 07:59:00' }, { station: 'ICT', at: '' }, { station: 'ICT', at: '2026-11-27 11:00:00' },
+  ];
+  const r = porHora(ps, '2026-11-27 10:30', 3); // ventana 08:00–11:00
+  assert.deepEqual(r.cols, ['2026-11-27 08', '2026-11-27 09', '2026-11-27 10']);
+  assert.deepEqual(r.filas.get('FT')!.horas.map((h) => h.length), [0, 1, 2]);
+  assert.deepEqual([r.filas.get('ICT')!.antes, r.filas.get('ICT')!.horas.flat().length], [2, 0]); // 07:59 y sin hora: antes; 11:00 queda fuera
+});

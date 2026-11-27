@@ -8,6 +8,16 @@ Un cambio de componente se publica primero en el artefacto y después se copia a
 
 Los errores encontrados y cómo se corrigieron están en [ERRORES.md](ERRORES.md); las mejoras y cómo se hicieron, en [MEJORAS.md](MEJORAS.md).
 
+## [0.56.0] — 2026-11-27
+
+### Agregado
+- **WIP · Hora por hora** (`/wip/horas`, en el riel de consulta):
+  - Por estación, en el orden del flujo (etapa → board → ruta), cuántas piezas llegaron en cada una de las últimas 8, 12 o 24 horas y **siguen ahí**, con «Antes» y el total.
+  - La intensidad de la celda es neutra: es cuántas llegaron, no cuánto esperan.
+  - Un clic abre sus seriales.
+  - Arriba, el total en proceso de los cortes guardados en cada hora y su cambio. Al pie, el total de llegadas por hora.
+  - Tiene los mismos filtros que el Dashboard.
+
 ## [0.55.0] — 2026-11-27
 
 ### Cambiado
