@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { cruce, desde, estadoOf, nivel, ordenes, readWip, stations, urgente, resumenWip } from './wip.ts';
+import { cruce, desde, estadoOf, nivel, ordenes, readWip, stations, urgente, readFlujo, resumenWip, ubicar } from './wip.ts';
 import type { Rec } from './tcqs.ts';
 
 const H = ['SERIAL_NUMBER', 'MODEL_NAME', 'MO_NUMBER', 'TARGET_QTY', 'SECTION_NAME', 'WIP_GROUP', 'IN_STATION_TIME', 'HOUR', 'ERROR_FLAG'];
@@ -76,4 +76,18 @@ test('resumenWip: por estación × modelo, bloqueadas y horas promedio/máxima, 
     { estacion: 'ASSY', modelo: 'A', piezas: 1, bloqueadas: 0, horas: 1, max: 1 },
     { estacion: 'TEST', modelo: 'B', piezas: 1, bloqueadas: 0, horas: 3, max: 3 },
   ]);
+});
+
+test('readFlujo: encabezado en otro renglón, celdas vacías heredan stage/board/model; ubicar por modelo + estación', () => {
+  const H = ['', '', '', '']; // el primer renglón del CSV viene vacío
+  const rows = [['Proces Stage', 'Board Name', 'Model', 'Station', 'Input'], ['SMT/PCBA', 'SWB', 'M-1', 'SPI_B', 1], ['', '', '', 'AOI1_B', 1],
+    ['', 'MGMT', 'M-2', 'SPI_B', 0], ['', '', '', 'VI', 0], ['SWB SA', 'SWB SA', 'SA1', 'ASSY_VI', 3], ['', '', 'SA2', 'ASSY_VI', 1], ['', '', '', '', '']];
+  const { pasos, error } = readFlujo({ headers: H, rows });
+  assert.equal(error, '');
+  assert.deepEqual(pasos.map((p) => `${p.stage}|${p.board}|${p.model}|${p.station}`), [
+    'SMT/PCBA|SWB|M-1|SPI_B', 'SMT/PCBA|SWB|M-1|AOI1_B', 'SMT/PCBA|MGMT|M-2|SPI_B', 'SMT/PCBA|MGMT|M-2|VI', 'SWB SA|SWB SA|SA1|ASSY_VI', 'SWB SA|SWB SA|SA2|ASSY_VI']);
+  assert.equal(ubicar(pasos, 'SA2', 'ASSY_VI')?.model, 'SA2');
+  assert.equal(ubicar(pasos, 'OTRO', 'VI')?.board, 'MGMT');
+  assert.equal(ubicar(pasos, 'OTRO', 'NADA'), undefined);
+  assert.ok(readFlujo({ headers: ['a'], rows: [['b']] }).error);
 });

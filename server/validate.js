@@ -91,3 +91,15 @@ export function validateCorte(b) {
   }
   return { archivo: b.archivo.trim(), corte: b.corte, piezas: b.piezas, terminadas: b.terminadas, resumen };
 }
+
+// WIP: estructura de flujo; solo esas cuatro columnas, en orden.
+export function validateFlujo(b) {
+  if (!b || !corto(b.archivo, 300) || !b.archivo.trim()) return { error: 'Nombre de archivo inválido' };
+  if (!Array.isArray(b.pasos) || !b.pasos.length || b.pasos.length > 2000) return { error: 'Entre 1 y 2000 estaciones' };
+  const pasos = [];
+  for (const p of b.pasos) {
+    if (!p || !['stage', 'board', 'model', 'station'].every((k) => corto(p[k], 80)) || !p.station.trim() || !p.stage.trim()) return { error: 'Estación inválida en la estructura' };
+    pasos.push({ stage: p.stage, board: p.board, model: p.model, station: p.station });
+  }
+  return { archivo: b.archivo.trim(), pasos };
+}

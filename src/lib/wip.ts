@@ -194,3 +194,30 @@ export function resumenWip(r: Pick<ReturnType<typeof readWip>, 'piezas'>) {
   return [...m.values()].map((x) => ({ ...x, horas: Math.round((x.horas / x.piezas) * 10) / 10, max: Math.round(x.max * 10) / 10 }))
     .sort((a, b) => b.piezas - a.piezas || a.estacion.localeCompare(b.estacion));
 }
+
+/** Estructura de flujo (del reporte de yield de producción): Process Stage → Board → Model → Station, en el orden de la ruta. */
+export interface Paso { stage: string; board: string; model: string; station: string }
+
+/** Lee solo esas cuatro columnas. El encabezado puede no estar en el primer renglón; una celda vacía hereda la de arriba (celdas combinadas del Excel). */
+export function readFlujo(f: ParsedFile) {
+  const tabla = [f.headers, ...f.rows.map((r) => r.map((c) => text(c)))], norm = (s: string) => s.toLowerCase().replace(/\s+/g, ' ').trim();
+  const h = tabla.findIndex((r) => r.some((c) => /^proces+ stage$/.test(norm(String(c)))));
+  if (h < 0) return { pasos: [] as Paso[], error: 'No se encontró el encabezado «Process Stage» (con Board Name, Model y Station).' };
+  const at = (re: RegExp) => tabla[h].findIndex((c) => re.test(norm(String(c))));
+  const col = { stage: at(/^proces+ stage$/), board: at(/^board( name)?$/), model: at(/^model$/), station: at(/^station$/) };
+  const falta = Object.entries(col).filter(([, i]) => i < 0).map(([k]) => k);
+  if (falta.length) return { pasos: [] as Paso[], error: `Faltan las columnas: ${falta.join(', ')}.` };
+  const pasos: Paso[] = [], ult = { stage: '', board: '', model: '' };
+  for (const r of tabla.slice(h + 1)) {
+    const v = (i: number) => String(r[i] ?? '').trim();
+    if (v(col.stage)) { ult.stage = v(col.stage); ult.board = ''; ult.model = ''; }
+    if (v(col.board)) { ult.board = v(col.board); ult.model = ''; }
+    if (v(col.model)) ult.model = v(col.model);
+    if (v(col.station) && ult.stage) pasos.push({ ...ult, station: v(col.station) });
+  }
+  return { pasos, error: pasos.length ? '' : 'El archivo no trae estaciones.' };
+}
+
+/** Ubica una estación del WIP en la estructura: por modelo + estación; si el modelo no está, por la estación sola (la primera). */
+export const ubicar = (pasos: Paso[], model: string, station: string) =>
+  pasos.find((p) => p.model === model && p.station === station) ?? pasos.find((p) => p.station === station);

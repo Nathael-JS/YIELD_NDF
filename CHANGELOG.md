@@ -8,6 +8,18 @@ Un cambio de componente se publica primero en el artefacto y después se copia a
 
 Los errores encontrados y cómo se corrigieron están en [ERRORES.md](ERRORES.md); las mejoras y cómo se hicieron, en [MEJORAS.md](MEJORAS.md).
 
+## [0.44.0] — 2026-11-27
+
+### Agregado
+- **Estructura de flujo del WIP (W1):** se carga el reporte de yield de producción en **Base de datos → Estructura de flujo · WIP**.
+  - Solo se usan las columnas Process Stage, Board Name, Model y Station.
+  - El encabezado no tiene que estar en el primer renglón, y una celda vacía hereda la de arriba, como en el Excel.
+  - Queda en la base para todos y se ve agrupada por etapa y board.
+  - Solo un administrador la cambia.
+- `readFlujo()` y `ubicar()` (dónde va cada estación del WIP: por modelo + estación, o solo por estación), con prueba.
+- Tabla `wip_flujo`, `GET/POST /api/wip/flujo` con validación y prueba, y `npm run check` la revisa.
+- Base de datos también lista las tablas `pallet_items`, `wip_cortes` y `wip_flujo`, con sus filas y su espacio.
+
 ## [0.43.0] — 2026-11-26
 
 ### Agregado

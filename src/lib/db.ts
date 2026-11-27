@@ -2,6 +2,7 @@
 // cookie que JavaScript no puede leer, y ninguna clave vive en el navegador.
 import type { Congruencia, DbRow } from './tcqs.ts';
 import type { Item } from './sfc.ts';
+import type { Paso } from './wip.ts';
 
 /** Lo llama la app cuando el servidor dice que la sesión ya no vale (vencida o cerrada). */
 export let onExpired = () => {};
@@ -79,3 +80,6 @@ export type WipResumen = { estacion: string; modelo: string; piezas: number; blo
 export const saveWipCorte = (c: { archivo: string; corte: string; piezas: number; terminadas: number; resumen: WipResumen }) => post<{ id: number | null; repetido: boolean }>('/api/wip/cortes', c);
 export const loadWipCortes = () => call<{ cortes: WipCorte[] }>('/api/wip/cortes').then((b) => b.cortes);
 export const loadWipCorte = (id: number) => call<{ resumen: WipResumen }>(`/api/wip/cortes?id=${id}`).then((b) => b.resumen);
+export interface WipFlujo { pasos: Paso[]; archivo?: string; usuario?: string; guardado_en?: string }
+export const loadWipFlujo = () => call<WipFlujo>('/api/wip/flujo');
+export const saveWipFlujo = (archivo: string, pasos: Paso[]) => post<{ guardados: number }>('/api/wip/flujo', { archivo, pasos });
