@@ -223,6 +223,35 @@ export function readFlujo(f: ParsedFile) {
 export const ubicar = (pasos: Paso[], model: string, station: string) =>
   pasos.find((p) => p.model === model && p.station === station) ?? pasos.find((p) => p.station === station);
 
+/** Etapa y board de una pieza: reparación y hold (R_ICT, HOLD-FT) van con su estación; una estación que el reporte de yield no trae
+ * va a la etapa y board de su modelo; si tampoco está el modelo, a «Sin etapa». La usan el Dashboard, los filtros y la vista WIP. */
+export function lugarDe(pasos: Paso[], model: string, station: string) {
+  const u = ubicar(pasos, model, station.replace(/^(R_|HOLD-)/, '')) ?? pasos.find((x) => x.model === model);
+  return u ? { stage: u.stage, board: u.board } : { stage: 'Sin etapa', board: '' };
+}
+
+/** Filtros del Dashboard y de la vista WIP, en cascada: etapa → board → modelo → orden → estación. */
+export interface Filtro { stage: string; board: string; model: string; mo: string; station: string }
+export const CAMPOS = ['stage', 'board', 'model', 'mo', 'station'] as const;
+export const FILTRO0: Filtro = { stage: '', board: '', model: '', mo: '', station: '' };
+/** Las piezas que pasan el filtro y las opciones de cada campo (salen de las piezas que pasan los campos anteriores),
+ * con etapas y boards en el orden de la estructura de flujo. */
+export function filtrar<P extends { model: string; mo: string; station: string }>(ps: P[], pasos: Paso[], f: Filtro) {
+  const lugares = new Map<string, { stage: string; board: string }>(), lugar = (p: P) => {
+    const k = `${p.model}\u0000${p.station}`;
+    return lugares.get(k) ?? lugares.set(k, lugarDe(pasos, p.model, p.station)).get(k)!;
+  };
+  const orden = (k: 'stage' | 'board') => (v: string) => { const i = pasos.findIndex((x) => x[k] === v); return i < 0 ? Infinity : i; };
+  let resto = ps.map((p) => ({ p, v: { ...lugar(p), model: p.model, mo: p.mo, station: p.station } }));
+  const opciones = {} as Record<keyof Filtro, string[]>;
+  for (const k of CAMPOS) {
+    const vs = [...new Set(resto.map((x) => x.v[k]))];
+    opciones[k] = k === 'stage' || k === 'board' ? vs.filter(Boolean).sort((a, b) => orden(k)(a) - orden(k)(b) || a.localeCompare(b)) : vs.sort();
+    if (f[k]) resto = resto.filter((x) => x.v[k] === f[k]);
+  }
+  return { ps: resto.map((x) => x.p), opciones, activos: CAMPOS.filter((k) => f[k]).length };
+}
+
 /** Turno de un corte («2026-11-27 10:15»): T1 07:00–15:00 · T2 15:00–22:30 · pendiente de 22:30 a 07:00 (aún sin definir). */
 export type Turno = 'T1' | 'T2' | 'pendiente';
 export function turno(corte: string): Turno {
@@ -243,8 +272,7 @@ export function flujoDe<P extends { model: string; station: string; hours: numbe
   for (const p of ps) {
     // reparación y hold (R_ICT, HOLD-FT) van junto a su estación; una estación que el reporte de yield no trae (LINK_CARRIER_B, KANBAN_IN…)
     // va a la etapa y board de su modelo, después de la ruta; si tampoco está el modelo, a «Sin etapa»
-    const u = ubicar(pasos, p.model, p.station.replace(/^(R_|HOLD-)/, '')) ?? pasos.find((x) => x.model === p.model);
-    const lugar = u ? { stage: u.stage, board: u.board, model: '', station: p.station } : { stage: 'Sin etapa', board: '', model: '', station: p.station };
+    const lugar = { ...lugarDe(pasos, p.model, p.station), model: '', station: p.station };
     if (!pasos.some((x) => x.stage === lugar.stage && x.board === lugar.board && x.station === lugar.station)
       && !extra.some((x) => x.stage === lugar.stage && x.board === lugar.board && x.station === lugar.station)) extra.push(lugar);
     const k = clave(lugar.stage, lugar.board, lugar.station);

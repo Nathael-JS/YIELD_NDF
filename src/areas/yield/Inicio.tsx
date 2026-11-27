@@ -4,6 +4,7 @@ import { Badge, Button, ChartCarousel, KpiTile, Select } from '../../components/
 import { ACTION, by, countOrders, pctText, rty, shortDay, toWatch, totals } from '../../lib/tcqs.ts';
 import { useData } from '../../store.ts';
 import { PageHead } from '../../pages/Layout.tsx';
+import { useUnidades } from './Ndf.tsx';
 import { slides } from './slides.tsx';
 
 import { num as n } from '../../lib/chart.ts';
@@ -12,7 +13,7 @@ export default function Inicio() {
   const { records: all, models, from, to } = useData();
   const [model, setModel] = useState(''); // '' = todos los modelos
   const records = model ? all.filter((r) => r.model === model) : all;
-  const go = useNavigate();
+  const go = useNavigate(), u = useUnidades(model);
   if (!all.length) return (
     <>
       <PageHead title="Yield" sub="Carga el TCQS y el Excel de modelos del proyecto para ver yield, fallas y tendencias." />
@@ -48,10 +49,11 @@ export default function Inicio() {
 
       <div className="yc-grid-kpi">
         <KpiTile label={orders ? 'Entradas / órdenes' : 'Entradas'} value={n(t.input)} unit={orders ? ` / ${n(orders)} órdenes` : undefined} />
-        <KpiTile label="FPY" value={pctText(t.fpy)} unit="%" />
+        <KpiTile label="FPY" value={pctText(t.fpy)} unit="%" onClick={u.abrir('FPY')} />
         <KpiTile label="Final Yield" value={pctText(t.final)} unit="%" />
         <KpiTile label="RTY" value={pctText(rty(st))} unit="%" />
       </div>
+      {u.aviso}{u.ventana}
 
       {watch.length > 0 && (
         <section aria-labelledby="watch">

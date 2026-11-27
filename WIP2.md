@@ -1,5 +1,7 @@
 # WIP · fase 2: ruta, filtros, unidades y hora por hora (plan, 27 nov)
 
+> **Avance:** R0 (0.51), R1 (0.52) y R2 (0.53) terminados. Sigue R3 (ruta por modelo).
+
 Sigue a [WIP.md](WIP.md) (W1–W7 terminados). Todo va a **un solo PR**, que se fusiona al final.
 
 ## Pedido

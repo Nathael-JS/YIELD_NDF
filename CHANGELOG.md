@@ -8,6 +8,32 @@ Un cambio de componente se publica primero en el artefacto y después se copia a
 
 Los errores encontrados y cómo se corrigieron están en [ERRORES.md](ERRORES.md); las mejoras y cómo se hicieron, en [MEJORAS.md](MEJORAS.md).
 
+## [0.53.0] — 2026-11-27
+
+### Agregado
+- **Paneles con sus unidades:** al tocar un panel se abre la lista de sus piezas.
+  - **Dashboard:** En proceso, Bloqueadas, Urgentes y Terminadas en el corte.
+  - **WIP:** En proceso, En línea, Hold, Reparación y bonpile, Bloqueadas, Urgentes y **Terminadas** (panel nuevo).
+  - **Yield** (Inicio y Estaciones): FPY abre las primeras fallas con serial del FirstFail y NDF abre las NDF. Se respeta el modelo y el periodo elegidos. Sin FirstFail cargado, los paneles siguen siendo números y un aviso dice qué cargar.
+- **El corte del WIP guarda también las terminadas (STOCKIN),** para abrirlas desde el Dashboard sin el archivo. Los cortes anteriores muestran solo el número.
+
+### Cambiado
+- Una ventana de unidades dibuja hasta 2,000 filas (las de más tiempo). Si hay más, un aviso pide usar los filtros.
+
+## [0.52.0] — 2026-11-27
+
+### Agregado
+- **Filtros por etapa (Process Stage), board, modelo, orden y estación** en el Dashboard y en WIP · piezas.
+  - Etapa y board salen de la estructura de flujo (yield W48), con la misma regla que el Dashboard: reparaciones y holds van con su estación, y una estación fuera del reporte va al board de su modelo.
+  - Los filtros van en cascada: cada lista solo ofrece lo que queda con los anteriores.
+
+### Corregido
+- **El cambio de «En proceso» compara lo comparable:**
+  - Usa el corte anterior con los mismos filtros y solo los modelos del corte actual. Antes, un WIP de una sola orden se comparaba con el general (por ejemplo, «▼ 1,968»).
+  - Dice contra qué corte compara.
+  - Con un filtro de orden no se muestra, porque el resumen guardado es por estación × modelo.
+- **Verificado:** el Dashboard abre un WIP de una sola orden (`wip_unico.xlsx`: 97 piezas, SA029400). El filtro Estación = KANBAN_IN da 30.
+
 ## [0.51.0] — 2026-11-27
 
 ### Cambiado

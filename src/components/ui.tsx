@@ -87,20 +87,24 @@ export function FileChip({ type, status = 'empty', meta, onFile, accept, multipl
   );
 }
 
-export function KpiTile({ label, value, unit, delta, deltaUnit = '', good = true }: {
-  label: string; value: ReactNode; unit?: string; delta?: number; deltaUnit?: string; good?: boolean;
+/** Indicador grande. Con `onClick` es un botón (abre las unidades que cuenta); `deltaLabel` dice contra qué se compara. */
+export function KpiTile({ label, value, unit, delta, deltaUnit = '', deltaLabel = 'vs. periodo anterior', good = true, onClick }: {
+  label: string; value: ReactNode; unit?: string; delta?: number; deltaUnit?: string; deltaLabel?: string; good?: boolean; onClick?: () => void;
 }) {
-  return (
-    <div className="yc-kpi">
+  const body = (
+    <>
       <span className="yc-kpi-label">{label}</span>
       <span className="yc-kpi-value">{value}{unit && <span className="yc-kpi-unit">{unit}</span>}</span>
       {delta != null && (
         <span className={cx('yc-kpi-delta', good ? 'is-good' : 'is-bad')}>
-          {(delta > 0 ? '▲ ' : delta < 0 ? '▼ ' : '') + Math.abs(delta) + deltaUnit} vs. periodo anterior
+          {(delta > 0 ? '▲ ' : delta < 0 ? '▼ ' : '') + Math.abs(delta).toLocaleString('es-MX') + deltaUnit} {deltaLabel}
         </span>
       )}
-    </div>
+    </>
   );
+  return onClick
+    ? <button type="button" className="yc-kpi is-action" onClick={onClick} aria-label={`${label}: ${typeof value === 'string' || typeof value === 'number' ? value : ''}. Ver unidades`}>{body}</button>
+    : <div className="yc-kpi">{body}</div>;
 }
 
 export interface CarouselSlide { kind: string; title: string; content: ReactNode }

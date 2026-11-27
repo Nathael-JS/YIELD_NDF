@@ -227,7 +227,8 @@
 /* WIP: filtros en una fila, flujo por estación agrupado por sección; color por tiempo en la estación */
 .app-wip-filters > * { min-width: 0; }
 .app-wip-filters select, .app-wip-filters input { width: 100%; min-width: 0; }
-.app-wip-filters { display: grid; grid-template-columns: repeat(3, minmax(140px, 1fr)) minmax(280px, 1.4fr); gap: var(--space-4); align-items: end; }
+.app-wip-filters { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: var(--space-4); align-items: end; }
+.app-wip-filters .app-wip-win { grid-column: span 2; }
 @media (max-width: 900px) { .app-wip-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); } .app-wip-filters > :last-child { grid-column: 1 / -1; } }
 .app-wip { display: grid; gap: var(--space-3); min-width: 0; }
 .app-wip, .app-wip-filters { padding: var(--space-4); }

@@ -1,11 +1,11 @@
-import { lazy, Suspense, useState } from 'react';
+import { lazy, Suspense, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { Link } from 'react-router-dom';
-import { Badge, Button, Segmented, Select } from '../../components/ui.tsx';
-import { cruce, desde, nivel, ordenes, stations, type Pieza, type Ventana } from '../../lib/wip.ts';
+import { Badge, Button, Segmented } from '../../components/ui.tsx';
+import { cruce, desde, filtrar, nivel, ordenes, stations, type Filtro, type Pieza, type Ventana } from '../../lib/wip.ts';
 import { useApp } from '../../store.ts';
 import { PageHead } from '../../pages/Layout.tsx';
-import { FlowTable, Kpis, Legend, n, OrderTable, Seriales, UnitTable, useWip } from './wipParts.tsx';
+import { FILTRO0, Filtros, FlowTable, Kpis, Legend, n, OrderTable, QuitarFiltros, Seriales, UnitTable, useFlujo, useWip } from './wipParts.tsx';
 
 const WipTimeline = lazy(() => import('./WipTimeline.tsx'));
 const VENTANAS: { value: Ventana; label: string }[] = [
@@ -23,10 +23,12 @@ export default function Wip() {
 
 function WipView() {
   const { file, read, records, mine } = useWip();
-  const [model, setModel] = useState(''), [mo, setMo] = useState(''), [q, setQ] = useState(''), [win, setWin] = useState<Ventana>('todo');
+  const pasos = useFlujo(), [f, setF] = useState<Filtro>(FILTRO0), [q, setQ] = useState(''), [win, setWin] = useState<Ventana>('todo');
   const [vista, setVista] = useState<'estacion' | 'orden'>('estacion'), [tl, setTl] = useState(true);
   const [open, setOpen] = useState<string>(), [ver, setVer] = useState<{ titulo: string; ps: Pieza[] }>();
 
+  const all = useMemo(() => (read && !read.missing.length ? mine(read.piezas) : []), [read, mine]);
+  const filtrado = useMemo(() => filtrar(all, pasos, f), [all, pasos, f]);
   if (!read) return (
     <>
       <PageHead title="WIP" sub="Dónde está cada pieza y desde hace cuánto." />
@@ -40,14 +42,14 @@ function WipView() {
     </>
   );
 
-  const all = mine(read.piezas);
   const from = desde(read.corte, win), term = q.trim().toUpperCase();
-  const keep = (p: Pieza) => (!model || p.model === model) && (!mo || p.mo === mo) && (!term || p.serial.toUpperCase().includes(term)) && p.at >= from;
-  const ps = all.filter(keep), st = stations(ps, records), x = cruce(all, records);
-  const term2 = mine(read.terminadas).filter(keep), ocultas = mine(read.ocultas).filter(keep);
-  const orders = [...new Set(all.filter((p) => !model || p.model === model).map((p) => p.mo))].sort();
+  const otros = (p: Pieza) => (!term || p.serial.toUpperCase().includes(term)) && p.at >= from;
+  const ps = filtrado.ps.filter(otros), st = stations(ps, records), x = cruce(all, records);
+  // terminadas y empaque: con los mismos filtros (su estación no se filtra: STOCKIN, PACK_CTN…)
+  const fin = (xs: Pieza[]) => filtrar(xs, pasos, { ...f, station: '' }).ps.filter(otros);
+  const term2 = fin(mine(read.terminadas)), ocultas = fin(mine(read.ocultas));
   const pick = (s: string) => { setVista('estacion'); setOpen(s); requestAnimationFrame(() => document.getElementById(`wip-${s}`)?.scrollIntoView({ block: 'center', behavior: 'smooth' })); };
-  const filtros = [model, mo, term, win !== 'todo'].filter(Boolean).length;
+  const filtros = filtrado.activos + [term, win !== 'todo'].filter(Boolean).length;
 
   return (
     <>
@@ -60,17 +62,16 @@ function WipView() {
       </p>
 
       <section className="yc-card app-wip-filters" aria-label="Filtros">
-        <Select label="Modelo" value={model} onChange={(v) => { setModel(v); setMo(''); }} options={[{ value: '', label: 'Todos' }, ...[...new Set(all.map((p) => p.model))].sort()]} />
-        <Select label="Orden" value={mo} onChange={setMo} options={[{ value: '', label: `Todas (${orders.length})` }, ...orders]} />
+        <Filtros f={f} set={setF} opciones={filtrado.opciones} conFlujo={pasos.length > 0} />
         <label className="yc-field">Serial<input className="yc-input" type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar…" /></label>
         <div className="app-wip-win">
           <Segmented label="Llegaron en la última" options={VENTANAS} value={win} onChange={setWin} />
           {from && <span className="app-muted">desde {from.slice(5, 16)}, contando hacia atrás desde {read.corte.slice(5, 16)}</span>}
         </div>
-        {filtros > 0 && <Button variant="quiet" className="app-wip-clear" onClick={() => { setModel(''); setMo(''); setQ(''); setWin('todo'); }}>Quitar filtros ({filtros})</Button>}
+        <QuitarFiltros n={filtros} onClick={() => { setF(FILTRO0); setQ(''); setWin('todo'); }} />
       </section>
 
-      <Kpis ps={ps} />
+      <Kpis ps={ps} terminadas={term2} onPick={(titulo, xs) => setVer({ titulo, ps: xs })} />
 
       <section className="yc-card app-wip" aria-labelledby="wip-flow">
         <header className="app-wip-head">
@@ -89,7 +90,7 @@ function WipView() {
           )}
         </AnimatePresence>
         {!ps.length ? <p className="app-muted">Ninguna pieza con estos filtros.</p>
-          : vista === 'orden' ? <OrderTable os={ordenes(ps, term2, ocultas)} onPick={(o) => { setMo(o); setVista('estacion'); }} />
+          : vista === 'orden' ? <OrderTable os={ordenes(ps, term2, ocultas)} onPick={(o) => { setF({ ...f, mo: o, station: '' }); setVista('estacion'); }} />
           : <FlowTable st={st} open={open} onOpen={setOpen} onPick={(station, k) => setVer({ titulo: `${station} · ${k === 'ok' ? 'menos de 2 h' : k === 'warn' ? 'menos de 20 h' : '20 h o más'}`, ps: ps.filter((p) => p.station === station && nivel(p.hours) === k) })} units={(s) => (
             <>
               <UnitTable ps={s.piezas.slice(0, MAX_UNITS)} />

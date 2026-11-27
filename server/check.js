@@ -14,7 +14,7 @@ const ESPERADO = {
   pallet_tarimas: ['pallet', 'datos', 'usuario', 'creada', 'actualizada', 'impresa'],
   pallet_items: ['dn', 'datos', 'usuario', 'creado', 'edito', 'editado'],
   wip_flujo: ['id', 'archivo', 'usuario', 'pasos', 'guardado_en'],
-  wip_cortes: ['id', 'archivo', 'usuario', 'corte', 'piezas', 'terminadas', 'resumen', 'subida', 'detalle'],
+  wip_cortes: ['id', 'archivo', 'usuario', 'corte', 'piezas', 'terminadas', 'resumen', 'subida', 'detalle', 'fin'],
 };
 const INDICES = ['yield_comentarios_grafica'];
 

@@ -61,6 +61,8 @@ body { margin: 0; background: var(--surface-100); color: var(--ink); font: 400 1
 
 /* KpiTile */
 .yc-kpi { display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-4); background: var(--surface-000); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow-card); }
+.yc-kpi.is-action { font: inherit; color: inherit; text-align: left; cursor: pointer; transition: border-color .15s, background-color .15s; }
+.yc-kpi.is-action:hover { border-color: var(--line-strong); }
 .yc-kpi-label { font-size: 11px; line-height: 16px; font-weight: 600; letter-spacing: .6px; text-transform: uppercase; color: var(--ink-muted); }
 .yc-kpi-value { font: 500 36px/40px var(--font-mono); letter-spacing: -.5px; font-variant-numeric: tabular-nums; }
 .yc-kpi-unit { font-size: 16px; margin-left: 2px; color: var(--ink-muted); }

@@ -66,7 +66,9 @@ create table if not exists wip_cortes (
 -- WIP: estructura de flujo (Process Stage → Board → Model → Station) del reporte de yield; vale la más reciente
 create table if not exists wip_flujo (id serial primary key, archivo text not null, usuario text not null, pasos jsonb not null, guardado_en timestamptz not null default now());
 -- 0.45: las piezas en proceso del corte (serial, modelo, orden, estación, horas…) para el Dashboard sin el archivo
-alter table wip_cortes add column if not exists detalle jsonb not null default '[]'::jsonb`)
+alter table wip_cortes add column if not exists detalle jsonb not null default '[]'::jsonb;
+-- 0.53: las terminadas del corte (STOCKIN), con la misma forma que el detalle, para abrirlas desde el Dashboard
+alter table wip_cortes add column if not exists fin jsonb not null default '[]'::jsonb`)
   // cuenta principal (super administrador) desde el entorno: ADMIN_USER (y ADMIN_PASSWORD si hay que crearla)
   .then(async () => {
     // si la cuenta ya existe (creada desde «Crear cuenta») se activa como administradora y conserva su contraseña
@@ -282,7 +284,7 @@ async function wip(req, res, me, url) {
     const id = Number(url.searchParams.get('id'));
     if (id) {
       // las piezas (seriales) solo cuando se piden (Dashboard); Historial e Histórico usan el resumen
-      const { rows: [c] } = await db.query(`select resumen${url.searchParams.get('detalle') ? ', detalle' : ''} from wip_cortes where id = $1`, [id]);
+      const { rows: [c] } = await db.query(`select resumen${url.searchParams.get('detalle') ? ', detalle, fin' : ''} from wip_cortes where id = $1`, [id]);
       return c ? json(res, 200, c) : json(res, 404, { error: 'Corte no encontrado' });
     }
     // bloqueadas = suma del resumen (para la tendencia del Histórico)
@@ -293,8 +295,8 @@ async function wip(req, res, me, url) {
   if (req.method === 'POST') {
     const v = validateCorte(await body(req));
     if (v.error) return json(res, 400, { error: v.error });
-    const { rows: [c] } = await db.query(`insert into wip_cortes (archivo, usuario, corte, piezas, terminadas, resumen, detalle) values ($1, $2, $3, $4, $5, $6, $7)
-      on conflict (archivo, corte) do nothing returning id`, [v.archivo, me.nombre, v.corte, v.piezas, v.terminadas, JSON.stringify(v.resumen), JSON.stringify(v.detalle)]);
+    const { rows: [c] } = await db.query(`insert into wip_cortes (archivo, usuario, corte, piezas, terminadas, resumen, detalle, fin) values ($1, $2, $3, $4, $5, $6, $7, $8)
+      on conflict (archivo, corte) do nothing returning id`, [v.archivo, me.nombre, v.corte, v.piezas, v.terminadas, JSON.stringify(v.resumen), JSON.stringify(v.detalle), JSON.stringify(v.fin)]);
     return json(res, 200, { id: c?.id ?? null, repetido: !c });
   }
   return json(res, 405, { error: 'Método no permitido' });
