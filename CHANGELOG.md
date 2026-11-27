@@ -11,6 +11,10 @@ Los errores encontrados y cómo se corrigieron están en [ERRORES.md](ERRORES.md
 ## [0.56.0] — 2026-11-27
 
 ### Agregado
+- **Sistema de diseño, versión 44:**
+  - `RouteMap` nuevo, con README, tipos y vista previa en claro y oscuro.
+  - `KpiTile` acepta `onClick` (abre sus unidades) y `deltaLabel` (contra qué compara).
+  - El README del sistema describe la línea de tiempo nueva y la hora por hora.
 - **WIP · Hora por hora** (`/wip/horas`, en el riel de consulta):
   - Por estación, en el orden del flujo (etapa → board → ruta), cuántas piezas llegaron en cada una de las últimas 8, 12 o 24 horas y **siguen ahí**, con «Antes» y el total.
   - La intensidad de la celda es neutra: es cuántas llegaron, no cuánto esperan.
