@@ -478,3 +478,18 @@ a.yc-btn { text-decoration: none; display: inline-flex; align-items: center; }
 .app-hc-sel { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); }
 .app-hc-t { max-height: 480px; overflow: auto; }
 @media (max-width: 760px) { .app-hc-sel { grid-template-columns: 1fr; } }
+
+/* Novedades: campana en la barra superior (punto = versión nueva sin ver) y su panel */
+.app-nov-btn { position: relative; display: grid; place-items: center; width: 36px; height: 36px; margin-left: var(--space-2); border: 0; border-radius: var(--radius-md); background: none; color: var(--ink-muted); cursor: pointer; }
+.app-nov-btn:hover { background: var(--surface-100); color: var(--ink); }
+.app-nov-btn:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.app-nov-btn svg { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.app-nov-btn i { position: absolute; top: 7px; right: 8px; width: 8px; height: 8px; border-radius: 50%; background: var(--brand); box-shadow: 0 0 0 2px var(--surface-000); }
+.app-nov { width: min(640px, calc(100vw - 32px)); }
+.app-nov-list { display: grid; gap: var(--space-3); margin: 0; padding: var(--space-4) var(--space-6) var(--space-6); list-style: none; }
+.app-nov-list > li { padding: var(--space-3) var(--space-4); border: 1px solid var(--line); border-radius: var(--radius-md); }
+.app-nov-list > li.is-new { border-color: var(--brand); background: var(--brand-tint); }
+.app-nov-list header { display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-2); }
+.app-nov-list header b { font: 600 15px var(--font-mono); }
+.app-nov-list ul { display: grid; gap: 4px; margin: 0; padding-left: var(--space-4); font-size: 13px; }
+@media (max-width: 760px) { .app-nov-list { padding: var(--space-3); } }

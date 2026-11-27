@@ -8,6 +8,16 @@ Un cambio de componente se publica primero en el artefacto y después se copia a
 
 Los errores encontrados y cómo se corrigieron están en [ERRORES.md](ERRORES.md); las mejoras y cómo se hicieron, en [MEJORAS.md](MEJORAS.md).
 
+## [0.50.0] — 2026-11-27
+
+### Agregado
+- **Novedades:** una campana en la barra superior.
+  - Tiene un punto cuando hay una versión que todavía no has visto.
+  - Al abrirla, muestra las últimas 8 versiones con sus cambios y marca «Nuevo» lo que llegó desde tu última visita.
+  - Sale del mismo `CHANGELOG.md`: no hay otra lista que mantener.
+  - El panel se carga solo al abrirlo; la carga inicial casi no cambia (+0.9 kB).
+  - La versión que ya viste se guarda en este navegador.
+
 ## [0.49.0] — 2026-11-27
 
 ### Cambiado

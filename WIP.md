@@ -90,6 +90,12 @@ Sin aprobación hay un camino interino sin componentes nuevos: `FlowMap` se arma
 - **El Dashboard sin archivo** se arma con el último corte de la base. ⚠ Hoy el corte guarda **solo conteos**, sin seriales. La ventana de seriales y los gráficos por serial u orden necesitan las piezas. **Por confirmar:** guardar en el corte la lista de piezas (serial, modelo, orden, estación, última estación, horas y bloqueada), unas decenas de KB por corte, o que esa parte solo funcione con el archivo cargado.
 - **Turno de un corte:** por su hora; T1 07:00–15:00 y T2 15:00–22:30. Un corte fuera de esos horarios va a «Fuera de turno».
 
+## Novedades (0.50, pedido durante W6)
+
+- **La campana de la barra superior** tiene un punto cuando hay una versión que todavía no has visto. Al abrirla muestra las últimas 8 versiones del `CHANGELOG.md` con el título de cada cambio, y marca «Nuevo» lo que llegó desde tu última visita.
+- **Las notas técnicas no se muestran:** las viñetas con código y sin título en negritas.
+- **La versión que ya viste** se guarda en el navegador.
+
 ## Fases
 
 | Fase | Qué | Archivos |

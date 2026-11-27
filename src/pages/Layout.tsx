@@ -1,4 +1,4 @@
-import { Suspense, useEffect } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { Link, Navigate, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { areaOf, I, type Item } from '../areas.ts';
 import { saveSummary } from '../lib/db.ts';
@@ -6,6 +6,25 @@ import { congruence, daily, modelKey } from '../lib/tcqs.ts';
 import { Button } from '../components/ui.tsx';
 import { useApp, useData } from '../store.ts';
 import Seguridad from './Seguridad.tsx';
+
+const Novedades = lazy(() => import('./Novedades.tsx'));
+const VISTO = 'yc-novedades'; // última versión que este navegador ya vio
+const leerVisto = () => { try { return localStorage.getItem(VISTO) ?? ''; } catch { return ''; } };
+
+/** Campana de Novedades: punto si hay una versión que no se ha visto; al abrirla se marca como vista. */
+function NovedadesBtn() {
+  const [visto, setVisto] = useState(leerVisto), [abierto, setAbierto] = useState<string>();
+  const nuevo = visto !== __VERSION__;
+  const abrir = () => { setAbierto(visto); setVisto(__VERSION__); try { localStorage.setItem(VISTO, __VERSION__); } catch { /* sin almacenamiento: se vuelve a avisar */ } };
+  return (
+    <>
+      <button type="button" className="app-nov-btn" onClick={abrir} aria-label={nuevo ? `Novedades: hay una versión nueva (${__VERSION__})` : 'Novedades'} title="Novedades">
+        <Icon d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10 21h4" />{nuevo && <i aria-hidden />}
+      </button>
+      {abierto !== undefined && <Suspense fallback={null}><Novedades visto={abierto} onClose={() => setAbierto(undefined)} /></Suspense>}
+    </>
+  );
+}
 
 const ADMIN: Item[] = [{ label: 'Cuentas', to: '/cuentas', icon: I.cuentas }, { label: 'Base de datos', to: '/base', icon: I.base }];
 export const Icon = ({ d }: { d: string }) => <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden><path d={d} /></svg>;
@@ -42,6 +61,7 @@ export default function Layout() {
         {admin && <nav className="app-top-links" aria-label="Administración">
           {ADMIN.map((it) => <NavLink key={it.to} to={it.to} className="app-top-link"><Icon d={it.icon} />{it.label}</NavLink>)}
         </nav>}
+        <NovedadesBtn />
         <button type="button" className="app-user" title="Seguridad de tu cuenta" onClick={() => go('/seguridad')}>
           <span className="app-avatar" aria-hidden>{user.split(/[\s.@]+/).filter((w) => w.length > 2).map((w) => w[0]).slice(0, 2).join('').toUpperCase()}</span>
           <span className="app-user-name">{user}</span>
