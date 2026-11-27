@@ -55,3 +55,14 @@ test('validateItems: DN válido, sin precio, piezas acotadas, campos desconocido
   assert.ok(validateItems({ items: [{ dn: '3', piezas: [], piso: [{ pallet: 'P', filas: 'x' }] }] }).error);
   assert.ok(validateItems({ items: [{ dn: '4', piezas: [], liberados: [1] }] }).error);
 });
+
+test('validateCorte: corte AAAA-MM-DD HH:MM, enteros, resumen acotado y sin campos extra', async () => {
+  const { validateCorte } = await import('./validate.js');
+  const ok = { archivo: ' wip.xlsx ', corte: '2026-11-26 10:15:00', piezas: 3, terminadas: 1, resumen: [{ estacion: 'TEST', modelo: 'M1', piezas: 3, bloqueadas: 0, horas: 2.5, max: 4, serial: 'x' }] };
+  const v = validateCorte(ok);
+  assert.deepEqual([v.archivo, v.resumen[0].serial, v.resumen[0].horas], ['wip.xlsx', undefined, 2.5]);
+  assert.ok(validateCorte({ ...ok, corte: 'ayer' }).error);
+  assert.ok(validateCorte({ ...ok, piezas: -1 }).error);
+  assert.ok(validateCorte({ ...ok, resumen: [{ estacion: 'T', piezas: 1, bloqueadas: 0, horas: NaN, max: 0 }] }).error);
+  assert.ok(validateCorte({ ...ok, archivo: '' }).error);
+});

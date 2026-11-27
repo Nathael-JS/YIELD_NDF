@@ -8,6 +8,19 @@ Un cambio de componente se publica primero en el artefacto y después se copia a
 
 Los errores encontrados y cómo se corrigieron están en [ERRORES.md](ERRORES.md); las mejoras y cómo se hicieron, en [MEJORAS.md](MEJORAS.md).
 
+## [0.43.0] — 2026-11-26
+
+### Agregado
+- **Historial de WIP en la base:**
+  - Cada WIP que se carga guarda su **corte** con un resumen por estación × modelo: piezas en proceso, bloqueadas y horas promedio y máxima. **No guarda seriales.**
+  - El mismo archivo con el mismo corte no se duplica.
+  - Si no hay conexión, el WIP se sigue usando en el equipo, con aviso.
+- **Página Historial de WIP:**
+  - Muestra los cortes por día, con las piezas en proceso, el **cambio contra el corte anterior**, las terminadas, el archivo y quién lo subió.
+  - **Ver** abre el resumen por estación × modelo.
+  - Ya no dice «se activa al conectar la base de datos».
+- Tabla `wip_cortes` y `GET/POST /api/wip/cortes`, con validación y prueba. `npm run check` revisa la tabla.
+
 ## [0.42.0] — 2026-11-26
 
 ### Cambiado

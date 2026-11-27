@@ -438,3 +438,6 @@ a.yc-btn { text-decoration: none; display: inline-flex; align-items: center; }
 .app-tb-t td:last-child { white-space: nowrap; }
 .app-tags-sec { display: grid; gap: var(--space-2); }
 .app-tags-sec + .app-tags-sec { padding-top: var(--space-2); border-top: 1px solid var(--line); }
+/* WIP · Historial: detalle de un corte */
+.app-wh-det > td { padding: 0 !important; background: var(--surface-100); }
+.app-wh-det .yc-table { font-size: 12px; }
