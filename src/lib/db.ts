@@ -74,12 +74,14 @@ export const loadItems = () => call<{ items: Omit<Item, 'price'>[] }>('/api/pall
 export const saveItems = (items: Item[]) => post<{ guardados: number }>('/api/pallets/items', { items: items.map(({ price: _, ...x }) => x) });
 
 // ── WIP ──
-export interface WipCorte { id: number; archivo: string; usuario: string; corte: string; piezas: number; terminadas: number; subida: string }
+export interface WipCorte { id: number; archivo: string; usuario: string; corte: string; piezas: number; terminadas: number; subida: string; bloqueadas: number }
 export type WipResumen = { estacion: string; modelo: string; piezas: number; bloqueadas: number; horas: number; max: number }[];
+/** Piezas en proceso del corte (desde 0.45; los cortes anteriores vienen vacíos). */
+export type WipDetalle = { serial: string; model: string; mo: string; station: string; prev: string; at: string; hours: number; blocked: boolean }[];
 /** Guarda un corte; `repetido` = ese archivo con ese corte ya estaba. */
-export const saveWipCorte = (c: { archivo: string; corte: string; piezas: number; terminadas: number; resumen: WipResumen }) => post<{ id: number | null; repetido: boolean }>('/api/wip/cortes', c);
+export const saveWipCorte = (c: { archivo: string; corte: string; piezas: number; terminadas: number; resumen: WipResumen; detalle: WipDetalle }) => post<{ id: number | null; repetido: boolean }>('/api/wip/cortes', c);
 export const loadWipCortes = () => call<{ cortes: WipCorte[] }>('/api/wip/cortes').then((b) => b.cortes);
-export const loadWipCorte = (id: number) => call<{ resumen: WipResumen }>(`/api/wip/cortes?id=${id}`).then((b) => b.resumen);
+export const loadWipCorte = (id: number) => call<{ resumen: WipResumen; detalle: WipDetalle }>(`/api/wip/cortes?id=${id}`);
 export interface WipFlujo { pasos: Paso[]; archivo?: string; usuario?: string; guardado_en?: string }
 export const loadWipFlujo = () => call<WipFlujo>('/api/wip/flujo');
 export const saveWipFlujo = (archivo: string, pasos: Paso[]) => post<{ guardados: number }>('/api/wip/flujo', { archivo, pasos });

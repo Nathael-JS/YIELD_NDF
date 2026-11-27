@@ -8,6 +8,84 @@ Un cambio de componente se publica primero en el artefacto y después se copia a
 
 Los errores encontrados y cómo se corrigieron están en [ERRORES.md](ERRORES.md); las mejoras y cómo se hicieron, en [MEJORAS.md](MEJORAS.md).
 
+## [0.50.0] — 2026-11-27
+
+### Agregado
+- **Novedades:** una campana en la barra superior.
+  - Tiene un punto cuando hay una versión que todavía no has visto.
+  - Al abrirla, muestra las últimas 8 versiones con sus cambios y marca «Nuevo» lo que llegó desde tu última visita.
+  - Sale del mismo `CHANGELOG.md`: no hay otra lista que mantener.
+  - El panel se carga solo al abrirlo; la carga inicial casi no cambia (+0.9 kB).
+  - La versión que ya viste se guarda en este navegador.
+- **Cierre de WIP (W7):** el sistema de diseño (versión 43) documenta dónde se usa `UnitIcon`, el patrón «ventana de seriales» y cómo `FlowMap` ubica las piezas. `WIP.md` marca W1–W7 como terminados y deja los pendientes.
+
+## [0.49.0] — 2026-11-27
+
+### Cambiado
+- **WIP · piezas (W6):** la barra de colores del tiempo en la estación ahora son **íconos de producto** con su conteo: verde (< 2 h), ámbar (< 20 h) y rojo (≥ 20 h). El rojo late si hay urgentes.
+  - **Cada ícono abre la ventana con los seriales** de ese nivel en esa estación.
+  - El tiempo de cada pieza y la leyenda también usan el ícono, en lugar del punto de color.
+  - El reporte HTML de Descargas lleva los mismos íconos.
+- La ventana de seriales es una sola para el Dashboard y para la vista pieza por pieza.
+
+### Quitado
+- Los puntos de color, la barra de tiempo y sus animaciones de CSS.
+
+## [0.48.0] — 2026-11-27
+
+### Agregado
+- **Histórico de WIP (W5)**, una vista nueva en el riel derecho:
+  - **Tendencia por turno o por semana:** usa el último corte de cada uno y muestra las piezas en proceso (barras) y las bloqueadas (línea).
+  - **Filtro de turno:** Ambos, T1 (07:00–15:00) y T2 (15:00–22:30). El botón de **22:30–07:00** se ve pero está inactivo (pendiente), y esos cortes no entran en la tendencia por turno.
+  - **Comparativa de dos cortes:** eliges «Antes» y «Después» y ves el total, el cambio y una tabla por estación con el cambio y las bloqueadas.
+- `GET /api/wip/cortes` también trae las **bloqueadas** de cada corte.
+- `tendencia()` y `cambioPorEstacion()`, con prueba.
+
+## [0.47.0] — 2026-11-27
+
+### Agregado
+- **Gráficos en el Dashboard de WIP (W4)**, con un selector «Por»:
+  - **Pareto** por estación, modelo, orden y última estación registrada.
+  - **Barras** por rango de tiempo en la estación (de «< 2 h» a «> 2 sem»).
+  - **Los 20 seriales** con más tiempo en su estación.
+  - Al lado va una tabla con piezas, % y «Ver». Un clic en una barra o en «Ver» abre los seriales de ese grupo.
+  - «Última estación» usa la columna `GROUP_NAME`, que solo trae el reporte WIP por orden; con el reporte general se muestra un aviso.
+- `agrupar()`, con prueba.
+
+## [0.46.0] — 2026-11-27
+
+### Agregado
+- **Dashboard de WIP (W3).** Es la vista de entrada del área: al elegir WIP abre aquí.
+  - Usa el **último corte guardado** en la base; sin base, el WIP cargado en el equipo.
+  - **Encabezado:** fecha y hora del corte, turno (T1, T2 o pendiente), semana, hace cuánto y archivo.
+  - **KPIs:** en proceso (con el cambio contra el corte anterior), bloqueadas, urgentes, tiempo promedio y terminadas.
+  - **Semáforo de tiempo en la estación:** barra e íconos de producto (< 2 h, 2–20 h, 20–100 h y > 100 h urgente, que late). **Al tocar uno se abre la lista de sus seriales**, con el tiempo, la estación, el estado, el modelo y la orden.
+  - **Flujo por etapa** (`FlowMap`): Process Stage → Board → estaciones en el orden de la ruta, cada una con su ícono y su conteo. Tocar una estación abre sus seriales.
+  - **Filtro por modelo.**
+- **Sistema de diseño (versión 42):** componentes nuevos `UnitIcon` y `FlowMap`, con README, tipos y vista previa.
+
+### Cambiado
+- **La página WIP pieza por pieza** pasa a `/wip/piezas` («WIP · piezas» en el riel).
+- **Ubicación en el flujo:**
+  - Las reparaciones y holds (`R_…`, `HOLD-…`) van junto a su estación.
+  - Las estaciones que el reporte de yield no trae van al board de su modelo.
+- **Los colores del tiempo en la estación** ya se ven también fuera de la página WIP (en el Dashboard y sus ventanas).
+- **`MEJORAS.md`** tiene las mejoras de 0.43 a 0.46.
+
+## [0.45.0] — 2026-11-27
+
+### Agregado
+- **El corte del WIP guarda sus piezas en proceso (W2):**
+  - Guarda serial, modelo, orden, estación, estación anterior, llegada, horas y si está bloqueada.
+  - Así el Dashboard, la ventana de seriales y los gráficos funcionan con el último corte guardado, sin el archivo.
+  - Con el WIP real de 2,065 piezas ocupa 51 KB.
+  - Los cortes anteriores quedan con la lista vacía.
+- `turno()` (T1 07:00–15:00, T2 15:00–22:30, pendiente de 22:30 a 07:00) y `semana()` (ISO) de cada corte, con prueba.
+- El servidor valida las piezas del corte (hasta 30,000), con prueba. `npm run check` revisa la columna `detalle`.
+
+### Cambiado
+- `ML.md` (carga inteligente) queda como **pendiente**. No había entrado a `main` porque el PR 35 se fusionó antes de ese commit; se recuperó aquí.
+
 ## [0.44.0] — 2026-11-27
 
 ### Agregado

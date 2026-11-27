@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { cruce, desde, estadoOf, nivel, ordenes, readWip, stations, urgente, readFlujo, resumenWip, ubicar } from './wip.ts';
+import { agrupar, cambioPorEstacion, cruce, desde, estadoOf, nivel, ordenes, readWip, stations, urgente, detalleWip, flujoDe, readFlujo, resumenWip, semana, tendencia, turno, ubicar } from './wip.ts';
 import type { Rec } from './tcqs.ts';
 
 const H = ['SERIAL_NUMBER', 'MODEL_NAME', 'MO_NUMBER', 'TARGET_QTY', 'SECTION_NAME', 'WIP_GROUP', 'IN_STATION_TIME', 'HOUR', 'ERROR_FLAG'];
@@ -90,4 +90,51 @@ test('readFlujo: encabezado en otro renglón, celdas vacías heredan stage/board
   assert.equal(ubicar(pasos, 'OTRO', 'VI')?.board, 'MGMT');
   assert.equal(ubicar(pasos, 'OTRO', 'NADA'), undefined);
   assert.ok(readFlujo({ headers: ['a'], rows: [['b']] }).error);
+});
+
+test('turno y semana del corte: T1 07:00–15:00, T2 15:00–22:30, pendiente de 22:30 a 07:00; semana ISO', () => {
+  assert.deepEqual(['2026-11-27 06:59', '2026-11-27 07:00', '2026-11-27 14:59', '2026-11-27 15:00', '2026-11-27 22:29', '2026-11-27 22:30', '2026-11-28 02:00'].map(turno),
+    ['pendiente', 'T1', 'T1', 'T2', 'T2', 'pendiente', 'pendiente']);
+  assert.deepEqual(semana('2026-11-27 10:15'), ['2026-W48', 'Sem 48']);
+});
+
+test('detalleWip: solo los campos que se guardan, horas a un decimal', () => {
+  const p = { serial: 'S1', model: 'M', mo: 'O', section: 'X', station: 'TEST', prev: 'ASSY', line: 'L1', at: '2026-11-27 10:00:00', hours: 2.345, blocked: false, estado: 'Línea' } as const;
+  assert.deepEqual(detalleWip([p]), [{ serial: 'S1', model: 'M', mo: 'O', station: 'TEST', prev: 'ASSY', at: '2026-11-27 10:00:00', hours: 2.3, blocked: false }]);
+});
+
+test('flujoDe: piezas en su etapa/board/estación en el orden de la ruta, tono por la más vieja, urgentes y «Sin etapa»', () => {
+  const pasos = [{ stage: 'SMT', board: 'SWB', model: 'M1', station: 'SPI' }, { stage: 'SMT', board: 'SWB', model: 'M1', station: 'AOI' }, { stage: 'SYS', board: 'FA', model: 'M2', station: 'FT' }];
+  const ps = [{ model: 'M1', station: 'AOI', hours: 1 }, { model: 'M1', station: 'AOI', hours: 30 }, { model: 'M2', station: 'FT', hours: 150 }, { model: 'X', station: 'RARA', hours: 5 },
+    { model: 'M2', station: 'R_FT', hours: 3 }, { model: 'M1', station: 'LINK_CARRIER_B', hours: 0.5 }];
+  const { stages, piezasDe } = flujoDe(pasos, ps);
+  assert.deepEqual(stages.map((s) => [s.stage, s.boards.map((b) => [b.board, b.stations.map((x) => `${x.station}:${x.n}:${x.tone}:${x.urgent}`)])]), [
+    ['SMT', [['SWB', ['SPI:0:idle:0', 'AOI:2:bad:0', 'LINK_CARRIER_B:1:ok:0']]]], ['SYS', [['FA', ['FT:1:bad:1', 'R_FT:1:warn:0']]]], ['Sin etapa', [['', ['RARA:1:warn:0']]]]]);
+  assert.equal(piezasDe('SMT', 'SWB', 'AOI').length, 2);
+  assert.equal(flujoDe([], ps).stages[0].stage, 'Sin etapa');
+});
+
+test('agrupar: por campo de mayor a menor, por rango de tiempo en orden, y serial por horas', () => {
+  const p = (serial: string, station: string, prev: string, hours: number) => ({ serial, model: 'M', mo: 'O1', station, prev, hours });
+  const ps = [p('A', 'FT', 'ICT', 1), p('B', 'FT', '', 30), p('C', 'ICT', 'AOI', 400)];
+  assert.deepEqual(agrupar(ps, 'station').map((g) => [g.label, g.value]), [['FT', 2], ['ICT', 1]]);
+  assert.deepEqual(agrupar(ps, 'prev').map((g) => [g.label, g.value]), [['(sin dato)', 1], ['AOI', 1], ['ICT', 1]]);
+  assert.deepEqual(agrupar(ps, 'tiempo').filter((g) => g.value).map((g) => g.label), ['< 2 h', '20–48 h', '> 2 sem']);
+  assert.equal(agrupar(ps, 'tiempo').length, 8);
+  assert.deepEqual(agrupar(ps, 'serial').map((g) => [g.label, g.value]), [['C', 400], ['B', 30], ['A', 1]]);
+});
+
+test('tendencia: por turno (sin el pendiente) con el último corte de cada uno, filtro T1/T2, y por semana', () => {
+  const c = (corte: string, piezas: number) => ({ corte, piezas, bloqueadas: 0 });
+  const cs = [c('2026-11-27 16:00', 30), c('2026-11-27 08:00', 10), c('2026-11-27 14:00', 12), c('2026-11-27 23:00', 99), c('2026-11-20 09:00', 5)];
+  assert.deepEqual(tendencia(cs, 'turno').map((x) => [x.label, x.c.piezas]), [['20/11 T1', 5], ['27/11 T1', 12], ['27/11 T2', 30]]);
+  assert.deepEqual(tendencia(cs, 'turno', 'T2').map((x) => x.label), ['27/11 T2']);
+  assert.deepEqual(tendencia(cs, 'semana').map((x) => [x.label, x.c.piezas]), [['Sem 47', 5], ['Sem 48', 99]]);
+});
+
+test('cambioPorEstacion: suma modelos por estación y ordena por el cambio más grande', () => {
+  const r = (estacion: string, piezas: number, bloqueadas = 0) => ({ estacion, piezas, bloqueadas });
+  const x = cambioPorEstacion([r('FT', 10), r('FT', 5), r('ICT', 4, 1)], [r('FT', 3), r('ICT', 4), r('CTO', 2)]);
+  assert.deepEqual(x.map((y) => [y.estacion, y.antes, y.despues, y.cambio]), [['FT', 15, 3, -12], ['CTO', 0, 2, 2], ['ICT', 4, 4, 0]]);
+  assert.equal(x[2].bloqAntes, 1);
 });

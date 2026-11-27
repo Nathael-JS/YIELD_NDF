@@ -2,7 +2,8 @@
 // No se estima con el TCQS (no registra la entrada a almacén): se cuenta del archivo y se cruza con el TCQS
 // por orden y estación (FPY de la estación junto a las piezas que esperan en ella).
 import type { Cell, ParsedFile } from './files.ts';
-import { by, META_FPY, text, type Rec } from './tcqs.ts';
+import type { FlowStage } from '../components/flow.tsx';
+import { by, META_FPY, periodOf, text, type Rec } from './tcqs.ts';
 
 export const WIP_REQUIRED = ['SERIAL_NUMBER', 'MODEL_NAME', 'MO_NUMBER', 'SECTION_NAME', 'WIP_GROUP', 'IN_STATION_TIME', 'ERROR_FLAG'] as const;
 /** Opcionales. HOUR: horas en la estación (reporte general); sin ella (reporte por orden) se cuentan hasta la hora de carga.
@@ -221,3 +222,81 @@ export function readFlujo(f: ParsedFile) {
 /** Ubica una estación del WIP en la estructura: por modelo + estación; si el modelo no está, por la estación sola (la primera). */
 export const ubicar = (pasos: Paso[], model: string, station: string) =>
   pasos.find((p) => p.model === model && p.station === station) ?? pasos.find((p) => p.station === station);
+
+/** Turno de un corte («2026-11-27 10:15»): T1 07:00–15:00 · T2 15:00–22:30 · pendiente de 22:30 a 07:00 (aún sin definir). */
+export type Turno = 'T1' | 'T2' | 'pendiente';
+export function turno(corte: string): Turno {
+  const m = +corte.slice(11, 13) * 60 + +corte.slice(14, 16);
+  return m >= 7 * 60 && m < 15 * 60 ? 'T1' : m >= 15 * 60 && m < 22 * 60 + 30 ? 'T2' : 'pendiente';
+}
+/** Semana ISO del corte: [«2026-W48», «Sem 48»]. */
+export const semana = (corte: string) => periodOf(corte.slice(0, 10), 'semana');
+
+/** Pieza en proceso tal como se guarda en el corte (para la ventana de seriales y los gráficos sin el archivo). */
+export const detalleWip = (ps: Pieza[]) => ps.map((p) => ({ serial: p.serial, model: p.model, mo: p.mo, station: p.station, prev: p.prev, at: p.at, hours: Math.round(p.hours * 10) / 10, blocked: p.blocked }));
+
+/** Flujo del Dashboard: las piezas en su etapa → board → estación (con la estructura de flujo), en el orden de la ruta.
+ * Tono de cada estación = el de su pieza más vieja. Ver dentro cómo se ubican reparaciones, holds y estaciones fuera del reporte. */
+export function flujoDe<P extends { model: string; station: string; hours: number }>(pasos: Paso[], ps: P[]) {
+  const porClave = new Map<string, P[]>(), clave = (a: string, b: string, c: string) => `${a}\u0000${b}\u0000${c}`;
+  const extra: Paso[] = [];
+  for (const p of ps) {
+    // reparación y hold (R_ICT, HOLD-FT) van junto a su estación; una estación que el reporte de yield no trae (LINK_CARRIER_B, KANBAN_IN…)
+    // va a la etapa y board de su modelo, después de la ruta; si tampoco está el modelo, a «Sin etapa»
+    const u = ubicar(pasos, p.model, p.station.replace(/^(R_|HOLD-)/, '')) ?? pasos.find((x) => x.model === p.model);
+    const lugar = u ? { stage: u.stage, board: u.board, model: '', station: p.station } : { stage: 'Sin etapa', board: '', model: '', station: p.station };
+    if (!pasos.some((x) => x.stage === lugar.stage && x.board === lugar.board && x.station === lugar.station)
+      && !extra.some((x) => x.stage === lugar.stage && x.board === lugar.board && x.station === lugar.station)) extra.push(lugar);
+    const k = clave(lugar.stage, lugar.board, lugar.station);
+    (porClave.get(k) ?? porClave.set(k, []).get(k)!).push(p);
+  }
+  const sin = extra.filter((x) => x.stage === 'Sin etapa'), dentro = extra.filter((x) => x.stage !== 'Sin etapa');
+  const stages: FlowStage[] = [];
+  for (const x of [...pasos, ...dentro, ...sin]) {
+    const s = stages.find((y) => y.stage === x.stage) ?? (stages.push({ stage: x.stage, boards: [] }), stages[stages.length - 1]);
+    const b = s.boards.find((y) => y.board === x.board) ?? (s.boards.push({ board: x.board, stations: [] }), s.boards[s.boards.length - 1]);
+    if (b.stations.some((y) => y.station === x.station)) continue;
+    const mias = porClave.get(clave(x.stage, x.board, x.station)) ?? [], max = Math.max(0, ...mias.map((p) => p.hours));
+    b.stations.push({ station: x.station, n: mias.length, tone: mias.length ? nivel(max) : 'idle', urgent: mias.filter((p) => urgente(p.hours)).length });
+  }
+  return { stages, piezasDe: (stage: string, board: string, station: string) => porClave.get(clave(stage, board, station)) ?? [] };
+}
+
+/** Dimensiones de los gráficos del Dashboard. */
+export type Dim = 'station' | 'model' | 'mo' | 'prev' | 'tiempo' | 'serial';
+export const RANGOS: [string, number][] = [['< 2 h', 2], ['2–8 h', 8], ['8–20 h', 20], ['20–48 h', 48], ['2–4 d', 96], ['4–7 d', 168], ['1–2 sem', 336], ['> 2 sem', Infinity]];
+/** Grupos para un gráfico: por estación, modelo, orden o última estación (de mayor a menor), por rango de tiempo (en orden)
+ * o una pieza por grupo, de la más vieja a la más nueva (serial). `value` = piezas, salvo en serial (horas). */
+export function agrupar<P extends { serial: string; model: string; mo: string; station: string; prev: string; hours: number }>(ps: P[], dim: Dim) {
+  if (dim === 'serial') return [...ps].sort((a, b) => b.hours - a.hours).map((p) => ({ label: p.serial, value: Math.round(p.hours * 10) / 10, ps: [p] }));
+  if (dim === 'tiempo') return RANGOS.map(([label, max], i) => {
+    const xs = ps.filter((p) => p.hours < max && p.hours >= (i ? RANGOS[i - 1][1] : 0));
+    return { label, value: xs.length, ps: xs };
+  });
+  const m = new Map<string, P[]>();
+  for (const p of ps) { const k = p[dim] || '(sin dato)'; (m.get(k) ?? m.set(k, []).get(k)!).push(p); }
+  return [...m].map(([label, xs]) => ({ label, value: xs.length, ps: xs })).sort((a, b) => b.value - a.value || a.label.localeCompare(b.label));
+}
+
+/** Histórico: un punto por turno (día + T1/T2) o por semana, con el último corte de cada uno (cómo cerró). Los cortes vienen de más nuevo a más viejo. */
+export function tendencia<C extends { corte: string; piezas: number; bloqueadas: number }>(cortes: C[], por: 'turno' | 'semana', solo?: 'T1' | 'T2') {
+  const m = new Map<string, { label: string; c: C }>();
+  for (const c of [...cortes].sort((a, b) => a.corte.localeCompare(b.corte))) {
+    const t = turno(c.corte);
+    if (por === 'turno' && (t === 'pendiente' || (solo && t !== solo))) continue; // 22:30–07:00 aún sin definir
+    const [k, label] = por === 'semana' ? semana(c.corte) : [`${c.corte.slice(0, 10)} ${t}`, `${+c.corte.slice(8, 10)}/${+c.corte.slice(5, 7)} ${t}`];
+    m.set(k, { label, c }); // el último del grupo gana
+  }
+  return [...m.values()];
+}
+
+/** Comparativa de dos cortes: piezas y bloqueadas por estación (sumando modelos), y el cambio; de mayor a menor cambio. */
+export function cambioPorEstacion(antes: { estacion: string; piezas: number; bloqueadas: number }[], despues: typeof antes) {
+  const m = new Map<string, { estacion: string; antes: number; despues: number; bloqAntes: number; bloqDespues: number }>();
+  const add = (r: (typeof antes)[number], cual: 'antes' | 'despues') => {
+    const x = m.get(r.estacion) ?? m.set(r.estacion, { estacion: r.estacion, antes: 0, despues: 0, bloqAntes: 0, bloqDespues: 0 }).get(r.estacion)!;
+    x[cual] += r.piezas; if (cual === 'antes') x.bloqAntes += r.bloqueadas; else x.bloqDespues += r.bloqueadas;
+  };
+  antes.forEach((r) => add(r, 'antes')); despues.forEach((r) => add(r, 'despues'));
+  return [...m.values()].map((x) => ({ ...x, cambio: x.despues - x.antes })).sort((a, b) => Math.abs(b.cambio) - Math.abs(a.cambio) || a.estacion.localeCompare(b.estacion));
+}

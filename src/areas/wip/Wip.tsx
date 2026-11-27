@@ -2,10 +2,10 @@ import { lazy, Suspense, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { Link } from 'react-router-dom';
 import { Badge, Button, Segmented, Select } from '../../components/ui.tsx';
-import { cruce, desde, ordenes, stations, type Pieza, type Ventana } from '../../lib/wip.ts';
+import { cruce, desde, nivel, ordenes, stations, type Pieza, type Ventana } from '../../lib/wip.ts';
 import { useApp } from '../../store.ts';
 import { PageHead } from '../../pages/Layout.tsx';
-import { FlowTable, Kpis, Legend, n, OrderTable, UnitTable, useWip } from './wipParts.tsx';
+import { FlowTable, Kpis, Legend, n, OrderTable, Seriales, UnitTable, useWip } from './wipParts.tsx';
 
 const WipTimeline = lazy(() => import('./WipTimeline.tsx'));
 const VENTANAS: { value: Ventana; label: string }[] = [
@@ -25,7 +25,7 @@ function WipView() {
   const { file, read, records, mine } = useWip();
   const [model, setModel] = useState(''), [mo, setMo] = useState(''), [q, setQ] = useState(''), [win, setWin] = useState<Ventana>('todo');
   const [vista, setVista] = useState<'estacion' | 'orden'>('estacion'), [tl, setTl] = useState(true);
-  const [open, setOpen] = useState<string>();
+  const [open, setOpen] = useState<string>(), [ver, setVer] = useState<{ titulo: string; ps: Pieza[] }>();
 
   if (!read) return (
     <>
@@ -90,7 +90,7 @@ function WipView() {
         </AnimatePresence>
         {!ps.length ? <p className="app-muted">Ninguna pieza con estos filtros.</p>
           : vista === 'orden' ? <OrderTable os={ordenes(ps, term2, ocultas)} onPick={(o) => { setMo(o); setVista('estacion'); }} />
-          : <FlowTable st={st} open={open} onOpen={setOpen} units={(s) => (
+          : <FlowTable st={st} open={open} onOpen={setOpen} onPick={(station, k) => setVer({ titulo: `${station} · ${k === 'ok' ? 'menos de 2 h' : k === 'warn' ? 'menos de 20 h' : '20 h o más'}`, ps: ps.filter((p) => p.station === station && nivel(p.hours) === k) })} units={(s) => (
             <>
               <UnitTable ps={s.piezas.slice(0, MAX_UNITS)} />
               {s.n > MAX_UNITS && <p className="app-muted">Se muestran las {MAX_UNITS} más antiguas de {n(s.n)}; filtra por orden o serial para ver otras.</p>}
@@ -102,6 +102,7 @@ function WipView() {
           {read.bad.length > 0 && ` ${read.bad.length} filas sin serial, estación u hora se ignoraron.`}
         </p>
       </section>
+      {ver && <Seriales titulo={ver.titulo} ps={ver.ps} onClose={() => setVer(undefined)} />}
     </>
   );
 }

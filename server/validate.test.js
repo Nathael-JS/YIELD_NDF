@@ -65,6 +65,10 @@ test('validateCorte: corte AAAA-MM-DD HH:MM, enteros, resumen acotado y sin camp
   assert.ok(validateCorte({ ...ok, piezas: -1 }).error);
   assert.ok(validateCorte({ ...ok, resumen: [{ estacion: 'T', piezas: 1, bloqueadas: 0, horas: NaN, max: 0 }] }).error);
   assert.ok(validateCorte({ ...ok, archivo: '' }).error);
+  const d = validateCorte({ ...ok, detalle: [{ serial: 'S1', model: 'M', mo: 'O', station: 'TEST', prev: 'ASSY', at: '2026-11-27 10:00:00', hours: 2.3, blocked: true, x: 1 }] });
+  assert.deepEqual(d.detalle, [{ serial: 'S1', model: 'M', mo: 'O', station: 'TEST', prev: 'ASSY', at: '2026-11-27 10:00:00', hours: 2.3, blocked: true }]);
+  assert.deepEqual(validateCorte(ok).detalle, []);
+  assert.ok(validateCorte({ ...ok, detalle: [{ serial: '', hours: 1 }] }).error);
 });
 
 test('validateFlujo: 4 columnas en texto, estación y etapa obligatorias, sin campos extra', async () => {

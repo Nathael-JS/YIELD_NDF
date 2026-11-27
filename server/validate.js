@@ -89,7 +89,15 @@ export function validateCorte(b) {
     if (!r || !corto(r.estacion, 80) || !corto(r.modelo ?? '', 80) || !entero(r.piezas) || !entero(r.bloqueadas) || !num(r.horas) || !num(r.max)) return { error: 'Fila del resumen inválida' };
     resumen.push({ estacion: r.estacion, modelo: r.modelo ?? '', piezas: r.piezas, bloqueadas: r.bloqueadas, horas: r.horas, max: r.max });
   }
-  return { archivo: b.archivo.trim(), corte: b.corte, piezas: b.piezas, terminadas: b.terminadas, resumen };
+  // piezas en proceso con su serial (opcional: los cortes de antes de 0.45 no las traen)
+  const det = b.detalle ?? [];
+  if (!Array.isArray(det) || det.length > 30000) return { error: 'Detalle inválido (máximo 30,000 piezas)' };
+  const detalle = [];
+  for (const p of det) {
+    if (!p || !corto(p.serial, 60) || !p.serial || !['model', 'mo', 'station', 'prev'].every((k) => corto(p[k] ?? '', 80)) || !corto(p.at ?? '', 20) || !num(p.hours) || typeof (p.blocked ?? false) !== 'boolean') return { error: 'Pieza del detalle inválida' };
+    detalle.push({ serial: p.serial, model: p.model ?? '', mo: p.mo ?? '', station: p.station ?? '', prev: p.prev ?? '', at: p.at ?? '', hours: p.hours, blocked: !!p.blocked });
+  }
+  return { archivo: b.archivo.trim(), corte: b.corte, piezas: b.piezas, terminadas: b.terminadas, resumen, detalle };
 }
 
 // WIP: estructura de flujo; solo esas cuatro columnas, en orden.
