@@ -17,6 +17,7 @@ Los errores encontrados y cómo se corrigieron están en [ERRORES.md](ERRORES.md
   - Sale del mismo `CHANGELOG.md`: no hay otra lista que mantener.
   - El panel se carga solo al abrirlo; la carga inicial casi no cambia (+0.9 kB).
   - La versión que ya viste se guarda en este navegador.
+- **Cierre de WIP (W7):** el sistema de diseño (versión 43) documenta dónde se usa `UnitIcon`, el patrón «ventana de seriales» y cómo `FlowMap` ubica las piezas. `WIP.md` marca W1–W7 como terminados y deja los pendientes.
 
 ## [0.49.0] — 2026-11-27
 

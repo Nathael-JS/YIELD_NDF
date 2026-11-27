@@ -1,5 +1,7 @@
 # WIP · plan: Dashboard, Histórico y mejoras de la vista WIP
 
+> **Terminado (W1–W7, 27 nov):** versiones 0.44 a 0.50, en los PR 35 y 36. Lo que queda abierto está en «Pendientes» al final.
+
 El área WIP ya tiene: carga (general o por orden, uno o varios archivos), validación, la página **WIP** (flujo por estación, ruta, filtros, vista por orden, línea de tiempo), descargas en HTML y PDF, e **historial** en la base desde la 0.43 (`wip_cortes`: un corte por carga).
 
 ## Decisiones (27 nov)
@@ -106,7 +108,7 @@ Sin aprobación hay un camino interino sin componentes nuevos: `FlowMap` se arma
 | **W4** ✅ 0.47 | **Gráficos** del Dashboard: Pareto (estaciones → por estación), barras por modelo y por orden, histograma de tiempo en la estación, y barras por última estación registrada. Cada barra abre los seriales | `Dashboard.tsx` |
 | **W5** ✅ 0.48 | **Histórico:** tendencia por turno o semana (`TrendChart`), lista de cortes y **comparativa** de dos cortes (qué estación subió o bajó) | `src/areas/wip/Historico.tsx` (junta el Historial actual) |
 | **W6** ✅ 0.49 | **Vista WIP:** `UnitIcon` en lugar del semáforo, con la ventana de seriales | `wipParts.tsx` |
-| **W7** ✅ 0.46 (parte) | Sistema de diseño: `FlowMap` y `UnitIcon` publicados en la versión 42; falta la ventana de seriales como patrón | artefacto |
+| **W7** ✅ 0.50 | Sistema de diseño: `FlowMap` y `UnitIcon` (versión 42) y, en la 43, dónde se usa `UnitIcon`, el patrón «ventana de seriales» y cómo `FlowMap` ubica las piezas | artefacto |
 
 ## Por confirmar
 
@@ -114,3 +116,11 @@ Sin aprobación hay un camino interino sin componentes nuevos: `FlowMap` se arma
 2. **¿Apruebas crear `FlowMap` y `UnitIcon`** en el sistema de diseño, o empezamos con el camino interino?
 3. **¿«Histórico» reemplaza al «Historial» actual** de WIP (una sola vista), o conviven las dos?
 4. **¿Qué pasa con los cortes de 22:30 a 07:00?** ¿Hay un tercer turno o van como «Fuera de turno»?
+
+## Pendientes (después de W7)
+
+- **Turno de 22:30 a 07:00:** hoy es «pendiente» (botón inactivo). Cuando se defina, se agrega en `turno()`.
+- **«Última estación»** solo funciona con el reporte WIP por orden (trae `GROUP_NAME`).
+- **Las 61 piezas en «Sin etapa»** son de modelos que el reporte de yield no tiene. Se ubican al cargar una estructura de flujo que los incluya.
+- **Espacio:** cada corte con piezas ocupa unos 51 KB. Si un día hace falta, se puede borrar el detalle de los cortes viejos y dejar solo su resumen.
+- **Carga inteligente (ML):** ver `ML.md`, en pausa.
