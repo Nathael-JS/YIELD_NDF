@@ -8,6 +8,16 @@ Un cambio de componente se publica primero en el artefacto y después se copia a
 
 Los errores encontrados y cómo se corrigieron están en [ERRORES.md](ERRORES.md); las mejoras y cómo se hicieron, en [MEJORAS.md](MEJORAS.md).
 
+## [0.48.0] — 2026-11-27
+
+### Agregado
+- **Histórico de WIP (W5)**, una vista nueva en el riel derecho:
+  - **Tendencia por turno o por semana:** usa el último corte de cada uno y muestra las piezas en proceso (barras) y las bloqueadas (línea).
+  - **Filtro de turno:** Ambos, T1 (07:00–15:00) y T2 (15:00–22:30). El botón de **22:30–07:00** se ve pero está inactivo (pendiente), y esos cortes no entran en la tendencia por turno.
+  - **Comparativa de dos cortes:** eliges «Antes» y «Después» y ves el total, el cambio y una tabla por estación con el cambio y las bloqueadas.
+- `GET /api/wip/cortes` también trae las **bloqueadas** de cada corte.
+- `tendencia()` y `cambioPorEstacion()`, con prueba.
+
 ## [0.47.0] — 2026-11-27
 
 ### Agregado

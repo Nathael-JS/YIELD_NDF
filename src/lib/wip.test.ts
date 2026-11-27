@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { agrupar, cruce, desde, estadoOf, nivel, ordenes, readWip, stations, urgente, detalleWip, flujoDe, readFlujo, resumenWip, semana, turno, ubicar } from './wip.ts';
+import { agrupar, cambioPorEstacion, cruce, desde, estadoOf, nivel, ordenes, readWip, stations, urgente, detalleWip, flujoDe, readFlujo, resumenWip, semana, tendencia, turno, ubicar } from './wip.ts';
 import type { Rec } from './tcqs.ts';
 
 const H = ['SERIAL_NUMBER', 'MODEL_NAME', 'MO_NUMBER', 'TARGET_QTY', 'SECTION_NAME', 'WIP_GROUP', 'IN_STATION_TIME', 'HOUR', 'ERROR_FLAG'];
@@ -122,4 +122,19 @@ test('agrupar: por campo de mayor a menor, por rango de tiempo en orden, y seria
   assert.deepEqual(agrupar(ps, 'tiempo').filter((g) => g.value).map((g) => g.label), ['< 2 h', '20–48 h', '> 2 sem']);
   assert.equal(agrupar(ps, 'tiempo').length, 8);
   assert.deepEqual(agrupar(ps, 'serial').map((g) => [g.label, g.value]), [['C', 400], ['B', 30], ['A', 1]]);
+});
+
+test('tendencia: por turno (sin el pendiente) con el último corte de cada uno, filtro T1/T2, y por semana', () => {
+  const c = (corte: string, piezas: number) => ({ corte, piezas, bloqueadas: 0 });
+  const cs = [c('2026-11-27 16:00', 30), c('2026-11-27 08:00', 10), c('2026-11-27 14:00', 12), c('2026-11-27 23:00', 99), c('2026-11-20 09:00', 5)];
+  assert.deepEqual(tendencia(cs, 'turno').map((x) => [x.label, x.c.piezas]), [['20/11 T1', 5], ['27/11 T1', 12], ['27/11 T2', 30]]);
+  assert.deepEqual(tendencia(cs, 'turno', 'T2').map((x) => x.label), ['27/11 T2']);
+  assert.deepEqual(tendencia(cs, 'semana').map((x) => [x.label, x.c.piezas]), [['Sem 47', 5], ['Sem 48', 99]]);
+});
+
+test('cambioPorEstacion: suma modelos por estación y ordena por el cambio más grande', () => {
+  const r = (estacion: string, piezas: number, bloqueadas = 0) => ({ estacion, piezas, bloqueadas });
+  const x = cambioPorEstacion([r('FT', 10), r('FT', 5), r('ICT', 4, 1)], [r('FT', 3), r('ICT', 4), r('CTO', 2)]);
+  assert.deepEqual(x.map((y) => [y.estacion, y.antes, y.despues, y.cambio]), [['FT', 15, 3, -12], ['CTO', 0, 2, 2], ['ICT', 4, 4, 0]]);
+  assert.equal(x[2].bloqAntes, 1);
 });

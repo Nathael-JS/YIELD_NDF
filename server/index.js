@@ -278,7 +278,9 @@ async function wip(req, res, me, url) {
       const { rows: [c] } = await db.query('select resumen, detalle from wip_cortes where id = $1', [id]);
       return c ? json(res, 200, c) : json(res, 404, { error: 'Corte no encontrado' });
     }
-    const { rows } = await db.query('select id, archivo, usuario, corte, piezas, terminadas, subida from wip_cortes order by subida desc limit 500');
+    // bloqueadas = suma del resumen (para la tendencia del Histórico)
+    const { rows } = await db.query(`select id, archivo, usuario, corte, piezas, terminadas, subida,
+      (select coalesce(sum((r->>'bloqueadas')::int), 0) from jsonb_array_elements(resumen) r)::int bloqueadas from wip_cortes order by subida desc limit 500`);
     return json(res, 200, { cortes: rows });
   }
   if (req.method === 'POST') {

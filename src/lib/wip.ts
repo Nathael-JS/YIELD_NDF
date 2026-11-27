@@ -277,3 +277,26 @@ export function agrupar<P extends { serial: string; model: string; mo: string; s
   for (const p of ps) { const k = p[dim] || '(sin dato)'; (m.get(k) ?? m.set(k, []).get(k)!).push(p); }
   return [...m].map(([label, xs]) => ({ label, value: xs.length, ps: xs })).sort((a, b) => b.value - a.value || a.label.localeCompare(b.label));
 }
+
+/** Histórico: un punto por turno (día + T1/T2) o por semana, con el último corte de cada uno (cómo cerró). Los cortes vienen de más nuevo a más viejo. */
+export function tendencia<C extends { corte: string; piezas: number; bloqueadas: number }>(cortes: C[], por: 'turno' | 'semana', solo?: 'T1' | 'T2') {
+  const m = new Map<string, { label: string; c: C }>();
+  for (const c of [...cortes].sort((a, b) => a.corte.localeCompare(b.corte))) {
+    const t = turno(c.corte);
+    if (por === 'turno' && (t === 'pendiente' || (solo && t !== solo))) continue; // 22:30–07:00 aún sin definir
+    const [k, label] = por === 'semana' ? semana(c.corte) : [`${c.corte.slice(0, 10)} ${t}`, `${+c.corte.slice(8, 10)}/${+c.corte.slice(5, 7)} ${t}`];
+    m.set(k, { label, c }); // el último del grupo gana
+  }
+  return [...m.values()];
+}
+
+/** Comparativa de dos cortes: piezas y bloqueadas por estación (sumando modelos), y el cambio; de mayor a menor cambio. */
+export function cambioPorEstacion(antes: { estacion: string; piezas: number; bloqueadas: number }[], despues: typeof antes) {
+  const m = new Map<string, { estacion: string; antes: number; despues: number; bloqAntes: number; bloqDespues: number }>();
+  const add = (r: (typeof antes)[number], cual: 'antes' | 'despues') => {
+    const x = m.get(r.estacion) ?? m.set(r.estacion, { estacion: r.estacion, antes: 0, despues: 0, bloqAntes: 0, bloqDespues: 0 }).get(r.estacion)!;
+    x[cual] += r.piezas; if (cual === 'antes') x.bloqAntes += r.bloqueadas; else x.bloqDespues += r.bloqueadas;
+  };
+  antes.forEach((r) => add(r, 'antes')); despues.forEach((r) => add(r, 'despues'));
+  return [...m.values()].map((x) => ({ ...x, cambio: x.despues - x.antes })).sort((a, b) => Math.abs(b.cambio) - Math.abs(a.cambio) || a.estacion.localeCompare(b.estacion));
+}

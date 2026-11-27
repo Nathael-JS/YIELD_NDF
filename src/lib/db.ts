@@ -74,7 +74,7 @@ export const loadItems = () => call<{ items: Omit<Item, 'price'>[] }>('/api/pall
 export const saveItems = (items: Item[]) => post<{ guardados: number }>('/api/pallets/items', { items: items.map(({ price: _, ...x }) => x) });
 
 // ── WIP ──
-export interface WipCorte { id: number; archivo: string; usuario: string; corte: string; piezas: number; terminadas: number; subida: string }
+export interface WipCorte { id: number; archivo: string; usuario: string; corte: string; piezas: number; terminadas: number; subida: string; bloqueadas: number }
 export type WipResumen = { estacion: string; modelo: string; piezas: number; bloqueadas: number; horas: number; max: number }[];
 /** Piezas en proceso del corte (desde 0.45; los cortes anteriores vienen vacíos). */
 export type WipDetalle = { serial: string; model: string; mo: string; station: string; prev: string; at: string; hours: number; blocked: boolean }[];
