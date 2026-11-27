@@ -108,7 +108,7 @@ function WipCard() {
   });
   const pdf = run('el PDF', async () => {
     const { wipPdf } = await import('./pdf.tsx');
-    download(`${name}.pdf`, await wipPdf({ title, sub, kpis: kpisOf(ps), stations: st, criticas: crit, ordenes: os, nota }));
+    download(`${name}.pdf`, await wipPdf({ title, sub, kpis: kpisOf(ps).map((k) => ({ label: k.label, value: k.ps.length })), stations: st, criticas: crit, ordenes: os, nota }));
   });
 
   return (

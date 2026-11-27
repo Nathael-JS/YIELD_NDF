@@ -227,7 +227,8 @@
 /* WIP: filtros en una fila, flujo por estación agrupado por sección; color por tiempo en la estación */
 .app-wip-filters > * { min-width: 0; }
 .app-wip-filters select, .app-wip-filters input { width: 100%; min-width: 0; }
-.app-wip-filters { display: grid; grid-template-columns: repeat(3, minmax(140px, 1fr)) minmax(280px, 1.4fr); gap: var(--space-4); align-items: end; }
+.app-wip-filters { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: var(--space-4); align-items: end; }
+.app-wip-filters .app-wip-win { grid-column: span 2; }
 @media (max-width: 900px) { .app-wip-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); } .app-wip-filters > :last-child { grid-column: 1 / -1; } }
 .app-wip { display: grid; gap: var(--space-3); min-width: 0; }
 .app-wip, .app-wip-filters { padding: var(--space-4); }
@@ -260,21 +261,13 @@
 .app-wip { --wip-ok-bg: color-mix(in srgb, var(--sem-ok) 9%, transparent); --wip-warn-bg: color-mix(in srgb, var(--sem-warn) 10%, transparent);
   --wip-bad-bg: color-mix(in srgb, var(--sem-bad) 9%, transparent); --wip-urgent-bg: color-mix(in srgb, var(--sem-bad) 17%, transparent); }
 .app-tl-wrap { overflow: hidden; }
-.app-tl { display: grid; gap: 2px; padding-bottom: var(--space-3); }
-.app-tl-axis, .app-tl-lane { display: grid; grid-template-columns: minmax(150px, 220px) minmax(0, 1fr); align-items: center; gap: var(--space-3); }
-.app-tl-ticks { position: relative; height: 18px; font: 400 11px var(--font-mono); color: var(--ink-muted); }
-.app-tl-ticks span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
-.app-tl-ticks span:first-child { transform: none; }
-.app-tl-sec { grid-column: 1 / -1; margin-top: var(--space-2); font: 600 11px/16px var(--font-sans); letter-spacing: .6px; text-transform: uppercase; color: var(--brand); }
-.app-tl-name { display: flex; justify-content: space-between; gap: var(--space-2); min-width: 0; height: 30px; padding: 0 var(--space-2); border: 0; border-radius: var(--radius-md); background: none; color: var(--ink); font: inherit; font-size: 13px; text-align: left; cursor: pointer; }
-.app-tl-name .code { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.app-tl-name:hover, .app-tl-lane.is-open .app-tl-name { background: var(--brand-tint); }
-.app-tl-track { position: relative; height: 30px; border-radius: var(--radius-sm); }
-.app-tl-dot { position: absolute; top: 50%; translate: -50% -50%; border-radius: 50%; border: 1.5px solid var(--surface-000); box-shadow: 0 1px 2px rgba(0, 0, 0, .18); }
-.app-tl-dot.is-ok { background: var(--sem-ok); } .app-tl-dot.is-warn { background: var(--sem-warn); } .app-tl-dot.is-bad { background: var(--sem-bad); }
-@media (prefers-reduced-motion: no-preference) { .app-tl-dot.is-urgent { animation: app-tl-ring 1.6s ease-out infinite; } }
-@keyframes app-tl-ring { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--sem-bad) 55%, transparent); } 100% { box-shadow: 0 0 0 8px transparent; } }
-@media (max-width: 640px) { .app-tl-axis, .app-tl-lane { grid-template-columns: 110px minmax(0, 1fr); } }
+/* línea de tiempo: estación × rango de tiempo, un ícono de semáforo por celda */
+.app-tl { margin-bottom: var(--space-3); }
+.app-tl-t th.app-tl-h { min-width: 64px; text-align: center; border-bottom: 2px solid var(--line-strong); }
+.app-tl-t th.app-tl-h.is-ok { border-bottom-color: var(--sem-ok); } .app-tl-t th.app-tl-h.is-warn { border-bottom-color: var(--sem-warn); } .app-tl-t th.app-tl-h.is-bad { border-bottom-color: var(--sem-bad); }
+.app-tl-c { text-align: center; }
+.app-tl-name { max-width: 200px; overflow: hidden; padding: 2px 6px; border: 0; border-radius: var(--radius-sm); background: none; color: var(--ink); text-align: left; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
+.app-tl-name:hover { background: var(--brand-tint); }
 .app-wip-table tr[id] { scroll-margin-top: 80px; }
 
 /* Descargas: una tarjeta por reporte */
@@ -493,3 +486,25 @@ a.yc-btn { text-decoration: none; display: inline-flex; align-items: center; }
 .app-nov-list header b { font: 600 15px var(--font-mono); }
 .app-nov-list ul { display: grid; gap: 4px; margin: 0; padding-left: var(--space-4); font-size: 13px; }
 @media (max-width: 760px) { .app-nov-list { padding: var(--space-3); } }
+
+/* Dashboard · ruta del modelo debajo del flujo por etapa */
+.app-db-route { display: grid; gap: var(--space-2); margin-top: var(--space-4); padding-top: var(--space-4); border-top: 1px solid var(--line); }
+.app-db-route-leg { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: 12px; }
+.app-db-route-leg span { display: inline-block; width: 22px; height: 0; border-top: 3px solid var(--line-strong); }
+.app-db-route-leg .is-back { border-top: 1.5px dashed var(--ink-muted); }
+.app-db-route-leg .is-skip { height: 8px; border: 1.5px solid var(--ink-muted); border-bottom: 0; border-radius: 10px 10px 0 0; }
+
+/* Base de datos · rutas por modelo */
+.app-rutas { display: grid; gap: var(--space-3); }
+.app-rutas-head { display: flex; flex-wrap: wrap; align-items: end; gap: var(--space-3); }
+.app-rutas-body { display: grid; gap: var(--space-2); }
+.app-rutas-txt { height: auto; min-height: 220px; padding: var(--space-2) var(--space-3); font: 13px/1.5 var(--font-mono); resize: vertical; }
+
+/* WIP · hora por hora: intensidad neutra (no es tiempo de espera, es cuántas llegaron) */
+.app-hh-sec { min-width: 0; } /* sin esto la tabla ancha estira la página en celular */
+.app-hh th, .app-hh td { white-space: nowrap; }
+.app-hh-c { background: color-mix(in srgb, var(--brand) calc(var(--hh, 0) * 28%), transparent); }
+.app-hh-c button { min-width: 28px; padding: 2px 6px; border: 0; border-radius: var(--radius-sm); background: none; color: var(--ink); font: 600 13px var(--font-mono); cursor: pointer; }
+.app-hh-c button:hover { background: var(--surface-000); box-shadow: inset 0 0 0 1px var(--line-strong); }
+.app-hh-corte th, .app-hh-corte td { font-size: 12px; color: var(--ink-muted); }
+.app-hh tfoot th, .app-hh tfoot td { font-weight: 600; border-top: 2px solid var(--line-strong); }

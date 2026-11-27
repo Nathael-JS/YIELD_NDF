@@ -4,6 +4,7 @@ import { Badge, KpiTile, PeriodTabs, Select } from '../../components/ui.tsx';
 import { by, byFpy, countOrders, change, diagnose, DX_HINT, pctText, periodOf, periodsOf, rty, shortDay, totals, type Grain, type Rec } from '../../lib/tcqs.ts';
 import { useApp, useData } from '../../store.ts';
 import { NeedTcqs, PageHead } from '../../pages/Layout.tsx';
+import { useUnidades } from './Ndf.tsx';
 import { slides } from './slides.tsx';
 import { ndfStations } from '../../lib/fails.ts';
 
@@ -22,6 +23,8 @@ export default function Yield() {
   const [model, setModel] = useState(ALL);
   const [pick, setPick] = useState<string>(); // clave del periodo; sin elegir = el último con datos
   const db = useApp((s) => s.db);
+  // las unidades de Yield son las primeras fallas (FirstFail) del periodo elegido
+  const u = useUnidades(model === ALL ? '' : model);
   // estación que llega desde «Dónde mirar primero» (/yield#FT): se resalta y se lleva a la vista
   const focus = decodeURIComponent(useLocation().hash.slice(1));
   useEffect(() => {
@@ -36,7 +39,7 @@ export default function Yield() {
   const { sl, kpiList, table, scope } = view(rs, period, cur?.[0], ps[i - 1]?.[0], model === ALL ? 'todas las estaciones' : model, focus);
   const chart = (id: string) => sl.find((s) => s.id === id)?.content;
   const sub = cur ? `Juliet · ${cur[1]}${i > 0 ? ` · comparado con ${ps[i - 1][1]}` : ''}` : `Juliet · ${shortDay(from!)} – ${shortDay(to!)}`;
-  const kpis = <>{kpiList.map((k) => <KpiTile key={k.label} {...k} />)}</>;
+  const kpis = <>{kpiList.map((k) => <KpiTile key={k.label} {...k} onClick={u.abrir(k.label, (f) => !cur || periodOf(f.date, period)[0] === cur[0])} />)}</>;
   return (
     <>
       <PageHead title="Yield" sub={sub}>
@@ -45,6 +48,7 @@ export default function Yield() {
         <Select label="Modelo" value={model} onChange={setModel} options={[ALL, ...new Set(records.map((r) => r.model))]} />
       </PageHead>
       <div className="yc-grid-kpi">{kpis}</div>
+      {u.aviso}{u.ventana}
       <div className="yc-row">
         <Link className="yc-btn yc-btn-secondary" to="/yield/descargas">Descargar HTML o PDF</Link>
         {/* lo que se ve aquí ya quedó en el historial (se guarda solo al leer el TCQS) */}

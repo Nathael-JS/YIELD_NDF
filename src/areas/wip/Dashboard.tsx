@@ -1,18 +1,19 @@
 // Dashboard de WIP: la vista de entrada del área. Con el último corte guardado en la base (o, sin base, con el WIP cargado aquí):
 // cuánto hay, desde hace cuánto (semáforo) y dónde está, en el flujo Process Stage → Board → Station. Tocar un ícono abre sus seriales.
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Badge, Button, KpiTile, Segmented, Select } from '../../components/ui.tsx';
+import { Badge, Button, KpiTile, Segmented } from '../../components/ui.tsx';
 import { BarChart, ParetoChart } from '../../components/charts.tsx';
-import { FlowMap, UnitIcon } from '../../components/flow.tsx';
-import { loadWipCorte, loadWipCortes, loadWipFlujo, type WipDetalle } from '../../lib/db.ts';
-import { agrupar, detalleWip, flujoDe, local, nivel, readWip, semana, turno, urgente, type Dim, type Paso } from '../../lib/wip.ts';
+import { FlowMap, RouteMap, UnitIcon } from '../../components/flow.tsx';
+import { loadWipCorte, loadWipCortes, loadWipFlujo, loadWipRutas, type WipDetalle, type WipResumen, type WipRuta } from '../../lib/db.ts';
+import { armarRuta, mapaDe, RUTAS_BASE } from '../../lib/ruta.ts';
+import { agrupar, detalleWip, filtrar, flujoDe, local, lugarDe, nivel, readWip, semana, turno, urgente, type Dim, type Filtro, type Paso } from '../../lib/wip.ts';
 import { PageHead } from '../../pages/Layout.tsx';
 import { useApp } from '../../store.ts';
-import { dur, Hours, n, Seriales } from './wipParts.tsx';
+import { dur, FILTRO0, Filtros, Hours, n, QuitarFiltros, Seriales } from './wipParts.tsx';
 
 type P = WipDetalle[number];
-interface Datos { fuente: 'base' | 'archivo'; corte: string; archivo: string; piezas: P[]; terminadas: number; antes?: number; aviso?: string }
+interface Datos { fuente: 'base' | 'archivo'; corte: string; archivo: string; piezas: P[]; terminadas: number; fin: P[]; antes?: { corte: string; resumen: WipResumen }; aviso?: string }
 const ms = (s: string) => Date.parse(`${s.replace(' ', 'T')}Z`); // horas de planta, como local()
 const TURNO = { T1: 'Turno 1 · 07:00–15:00', T2: 'Turno 2 · 15:00–22:30', pendiente: 'Turno pendiente · 22:30–07:00' };
 const SEM = [['ok', 'Menos de 2 h'], ['warn', '2 a 20 h'], ['bad', '20 a 100 h'], ['urg', 'Más de 100 h · urgente']] as const;
@@ -59,28 +60,51 @@ function Graficos({ ps, onVer }: { ps: P[]; onVer: (titulo: string, xs: P[]) => 
 }
 
 /** El último corte de la base; sin base o sin cortes, el WIP cargado en este equipo. */
-function useDatos() {
-  const file = useApp((s) => s.files.WIP), [d, setD] = useState<Datos | null>(), [pasos, setPasos] = useState<Paso[]>([]), [fallo, setFallo] = useState<string>();
+export function useDatos() {
+  const file = useApp((s) => s.files.WIP), [d, setD] = useState<Datos | null>(), [pasos, setPasos] = useState<Paso[]>([]), [fallo, setFallo] = useState<string>(), [rutas, setRutas] = useState<WipRuta[]>([]);
   useEffect(() => {
     const delArchivo = (aviso?: string): Datos | null => {
       if (!file) return null;
       const r = readWip(file, file.cargado);
-      return r.missing.length ? null : { fuente: 'archivo', corte: (r.corte || r.ultimo).slice(0, 16), archivo: file.name, piezas: detalleWip(r.piezas), terminadas: r.terminadas.length, aviso };
+      return r.missing.length ? null : { fuente: 'archivo', corte: (r.corte || r.ultimo).slice(0, 16), archivo: file.name, piezas: detalleWip(r.piezas), terminadas: r.terminadas.length, fin: detalleWip(r.terminadas), aviso };
     };
     loadWipFlujo().then((f) => setPasos(f.pasos), () => {});
+    loadWipRutas().then(setRutas, () => {});
     const sinBase = (e: Error) => { setFallo(e.message); setD(delArchivo(`Sin conexión con la base (${e.message}): se muestra el WIP cargado en este equipo.`)); };
     loadWipCortes().then(async (cs) => {
       if (!cs.length) return setD(delArchivo());
-      const c = await loadWipCorte(cs[0].id, true);
-      setD(c.detalle?.length ? { fuente: 'base', corte: cs[0].corte, archivo: cs[0].archivo, piezas: c.detalle!, terminadas: cs[0].terminadas, antes: cs[1]?.piezas }
-        : delArchivo('El último corte de la base es de antes de 0.45 y no trae sus piezas.') ?? { fuente: 'base', corte: cs[0].corte, archivo: cs[0].archivo, piezas: [], terminadas: cs[0].terminadas, aviso: 'El último corte de la base no trae sus piezas: vuelve a cargar el WIP.' });
+      const [c, a] = await Promise.all([loadWipCorte(cs[0].id, true), cs[1] ? loadWipCorte(cs[1].id).catch(() => undefined) : undefined]);
+      const antes = a && { corte: cs[1].corte, resumen: a.resumen };
+      setD(c.detalle?.length ? { fuente: 'base', corte: cs[0].corte, archivo: cs[0].archivo, piezas: c.detalle!, terminadas: cs[0].terminadas, fin: c.fin ?? [], antes }
+        : delArchivo('El último corte de la base es de antes de 0.45 y no trae sus piezas.') ?? { fuente: 'base', corte: cs[0].corte, archivo: cs[0].archivo, piezas: [], terminadas: cs[0].terminadas, fin: [], aviso: 'El último corte de la base no trae sus piezas: vuelve a cargar el WIP.' });
     }).catch(sinBase); // también si falla leer el corte (dentro del then)
   }, [file]);
-  return { d, pasos, fallo };
+  return { d, pasos, fallo, rutas };
 }
 
 export default function Dashboard() {
-  const { d, pasos, fallo } = useDatos(), [modelo, setModelo] = useState(''), [ver, setVer] = useState<{ titulo: string; ps: P[] }>();
+  const { d, pasos, fallo, rutas } = useDatos(), [f, setF] = useState<Filtro>(FILTRO0), [ver, setVer] = useState<{ titulo: string; ps: P[] }>();
+  const filtrado = useMemo(() => filtrar(d?.piezas ?? [], pasos, f), [d, pasos, f]);
+  // terminadas con los mismos filtros, salvo la estación (todas están en STOCKIN)
+  const fin = useMemo(() => filtrar(d?.fin ?? [], pasos, { ...f, station: '' }).ps, [d, pasos, f]);
+  // el corte anterior con el mismo filtro y solo los modelos de este corte (un WIP de una orden no se compara con el general);
+  // por orden no se puede: el resumen guardado es por estación × modelo
+  // ruta del modelo en vista (elegido, o el único que queda con los filtros): la guardada o la base, más lo que enseñan
+  // la estructura de yield y todas las piezas del corte (sin filtrar, para aprender la ruta completa)
+  const ruta = useMemo(() => {
+    const ms = new Set(filtrado.ps.map((p) => p.model)), model = ms.size === 1 ? [...ms][0] : '';
+    if (!model || !d) return undefined;
+    const guardada = rutas.find((r) => r.model === model), base = RUTAS_BASE.find((r) => r.model === model);
+    const r = armarRuta(model, guardada ?? base, pasos.filter((p) => p.model === model).map((p) => p.station), d.piezas);
+    return { model, r, origen: guardada ? `guardada por ${guardada.usuario}` : base ? 'del diagrama de ruta del MES' : 'aprendida del WIP y la estructura de yield',
+      mapa: mapaDe(r, filtrado.ps, (s) => lugarDe(pasos, model, s)) };
+  }, [filtrado, d, pasos, rutas]);
+  const antes = useMemo(() => {
+    if (!d?.antes || f.mo) return undefined;
+    const modelos = new Set(d.piezas.map((p) => p.model));
+    const filas = d.antes.resumen.filter((r) => modelos.has(r.modelo)).map((r) => ({ model: r.modelo, mo: '', station: r.estacion, piezas: r.piezas }));
+    return filtrar(filas, pasos, f).ps.reduce((t, r) => t + r.piezas, 0);
+  }, [d, pasos, f]);
   if (d === undefined) return <><PageHead title="Dashboard · WIP" /><p className="app-muted">Cargando el último corte…</p></>;
   if (!d) return (
     <>
@@ -89,8 +113,8 @@ export default function Dashboard() {
         : <>Aún no hay un WIP guardado. Carga el reporte en <Link to="/wip/carga">Carga de datos</Link>: se guarda solo y aparece aquí.</>}</p>
     </>
   );
-  const ps = d.piezas.filter((p) => !modelo || p.model === modelo), t = turno(d.corte), edad = (ms(local()) - ms(d.corte)) / 36e5;
-  const { stages, piezasDe } = flujoDe(pasos, ps), urg = ps.filter((p) => urgente(p.hours)).length;
+  const { ps, opciones, activos } = filtrado, t = turno(d.corte), edad = (ms(local()) - ms(d.corte)) / 36e5;
+  const { stages, piezasDe } = flujoDe(pasos, ps), urg = ps.filter((p) => urgente(p.hours)), bloq = ps.filter((p) => p.blocked);
   const prom = ps.length ? ps.reduce((a, p) => a + p.hours, 0) / ps.length : 0;
   return (
     <>
@@ -106,16 +130,21 @@ export default function Dashboard() {
             <Badge tone={edad > 24 ? 'warn' : 'ok'}>{edad < 1 ? 'hace menos de 1 h' : `hace ${dur(edad)}`}</Badge></span>
           <span className="app-muted">{d.archivo} · {d.fuente === 'base' ? 'guardado en la base' : 'cargado en este equipo'}</span>
         </div>
-        <Select label="Modelo" value={modelo} onChange={setModelo} options={[{ value: '', label: 'Todos' }, ...[...new Set(d.piezas.map((p) => p.model))].sort()]} />
+      </section>
+      <section className="yc-card app-wip-filters" aria-label="Filtros">
+        <Filtros f={f} set={setF} opciones={opciones} conFlujo={pasos.length > 0} />
+        <QuitarFiltros n={activos} onClick={() => setF(FILTRO0)} />
       </section>
       {d.aviso && <p className="app-muted" role="status"><Badge tone="warn">Aviso</Badge> {d.aviso}</p>}
 
       <div className="yc-grid-kpi">
-        <KpiTile label="En proceso" value={n(ps.length)} delta={!modelo && d.antes !== undefined ? ps.length - d.antes : undefined} good={false} />
-        <KpiTile label="Bloqueadas" value={n(ps.filter((p) => p.blocked).length)} />
-        <KpiTile label="Urgentes (> 100 h)" value={n(urg)} />
+        <KpiTile label="En proceso" value={n(ps.length)} onClick={ps.length ? () => setVer({ titulo: 'En proceso', ps }) : undefined} delta={antes !== undefined ? ps.length - antes : undefined} deltaLabel={d.antes && `vs. el corte ${d.antes.corte}`} good={false} />
+        <KpiTile label="Bloqueadas" value={n(bloq.length)} onClick={bloq.length ? () => setVer({ titulo: 'Bloqueadas', ps: bloq }) : undefined} />
+        <KpiTile label="Urgentes (> 100 h)" value={n(urg.length)} onClick={urg.length ? () => setVer({ titulo: 'Urgentes · más de 100 h', ps: urg }) : undefined} />
         <KpiTile label="Tiempo promedio" value={dur(prom)} />
-        <KpiTile label="Terminadas en el corte" value={n(d.terminadas)} />
+        {/* los cortes de antes de 0.53 no traen las terminadas: solo el número, sin filtro */}
+        {d.fin.length || !d.terminadas ? <KpiTile label="Terminadas en el corte" value={n(fin.length)} onClick={fin.length ? () => setVer({ titulo: 'Terminadas en el corte (STOCKIN)', ps: fin }) : undefined} />
+          : <KpiTile label="Terminadas en el corte" value={n(d.terminadas)} />}
       </div>
 
       <section className="yc-card yc-pad app-db-sem" aria-labelledby="sem-t">
@@ -139,6 +168,13 @@ export default function Dashboard() {
       <section className="yc-card yc-pad app-db-flow" aria-labelledby="flow-t">
         <h2 id="flow-t" className="app-h3">Dónde están · por etapa {!pasos.length && <span className="app-muted">(sin estructura de flujo: cárgala en <Link to="/base">Base de datos</Link>)</span>}</h2>
         <FlowMap stages={stages} onPick={(stage, board, station) => setVer({ titulo: `${station} · ${board || stage}`, ps: piezasDe(stage, board, station) })} />
+        {ruta ? (
+          <div className="app-db-route">
+            <h3 className="app-h3">Ruta de {ruta.model} <span className="app-muted">· {ruta.origen}</span></h3>
+            <RouteMap title={`Ruta de ${ruta.model}`} {...ruta.mapa} onPick={(s) => setVer({ titulo: `${s} · ${ruta.model}`, ps: ruta.mapa.piezasDe(s) })} />
+            <p className="app-muted app-db-route-leg"><span className="is-rail" /> línea principal <span className="is-back" /> regresa de reparación <span className="is-skip" /> salto de la línea · debajo, la reparación (R_) de cada estación</p>
+          </div>
+        ) : <p className="app-muted">Elige un modelo en los filtros (o carga un WIP de una sola orden) para ver su ruta: la línea de estaciones, sus reparaciones y los retornos.</p>}
       </section>
       <Graficos ps={ps} onVer={(titulo, xs) => setVer({ titulo, ps: xs })} />
       {ver && <Seriales titulo={ver.titulo} ps={ver.ps} onClose={() => setVer(undefined)} />}

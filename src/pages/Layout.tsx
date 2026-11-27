@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, Navigate, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { areaOf, I, type Item } from '../areas.ts';
 import { saveSummary } from '../lib/db.ts';
@@ -108,4 +108,19 @@ function useAutoSave(records: ReturnType<typeof useData>['records']) {
       .then((r) => setDb(['ok', `Guardado en el historial: ${r.guardadas} filas (día × modelo × estación).`]))
       .catch((e) => setDb(['bad', `No se guardó en la base: ${e.message}. Se reintenta al volver a cargar el archivo.`], ''));
   }, [ready, tcqs, bom, records]);
+}
+
+/** Ventana con una lista de unidades (seriales del WIP o primeras fallas): se abre encima, se cierra con Esc, «Cerrar» o clic afuera. */
+export function Ventana({ titulo, cuenta, onClose, children }: { titulo: string; cuenta: string; onClose: () => void; children: ReactNode }) {
+  const ref = useRef<HTMLDialogElement>(null);
+  useEffect(() => { ref.current?.showModal(); }, []);
+  return (
+    <dialog ref={ref} className="yc-card app-det app-ser" aria-labelledby="ser-t" onClose={onClose} onClick={(e) => e.target === ref.current && ref.current?.close()}>
+      <header className="app-det-head">
+        <div><span className="app-item-k">{cuenta}</span><h2 id="ser-t">{titulo}</h2></div>
+        <button type="button" className="yc-btn yc-btn-quiet" onClick={() => ref.current?.close()}>Cerrar</button>
+      </header>
+      {children}
+    </dialog>
+  );
 }

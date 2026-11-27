@@ -69,6 +69,13 @@ test('validateCorte: corte AAAA-MM-DD HH:MM, enteros, resumen acotado y sin camp
   assert.deepEqual(d.detalle, [{ serial: 'S1', model: 'M', mo: 'O', station: 'TEST', prev: 'ASSY', at: '2026-11-27 10:00:00', hours: 2.3, blocked: true }]);
   assert.deepEqual(validateCorte(ok).detalle, []);
   assert.ok(validateCorte({ ...ok, detalle: [{ serial: '', hours: 1 }] }).error);
+  // terminadas: misma forma que el detalle; el tope de 25,000 es entre las dos
+  const f = validateCorte({ ...ok, fin: [{ serial: 'S9', model: 'M', mo: 'O', station: 'STOCKIN', at: '2026-11-27 09:00:00', hours: 1 }] });
+  assert.deepEqual(f.fin, [{ serial: 'S9', model: 'M', mo: 'O', station: 'STOCKIN', prev: '', at: '2026-11-27 09:00:00', hours: 1, blocked: false }]);
+  assert.deepEqual(validateCorte(ok).fin, []);
+  assert.ok(validateCorte({ ...ok, fin: [{ serial: 'S9' }] }).error);
+  const muchas = Array.from({ length: 12501 }, (_, i) => ({ serial: `S${i}`, hours: 0 }));
+  assert.match(validateCorte({ ...ok, detalle: muchas, fin: muchas }).error, /25,000/);
 });
 
 test('validateFlujo: 4 columnas en texto, estación y etapa obligatorias, sin campos extra', async () => {
@@ -78,4 +85,17 @@ test('validateFlujo: 4 columnas en texto, estación y etapa obligatorias, sin ca
   assert.ok(validateFlujo({ archivo: 'y', pasos: [] }).error);
   assert.ok(validateFlujo({ archivo: 'y', pasos: [{ stage: 'SMT', board: '', model: '', station: '' }] }).error);
   assert.ok(validateFlujo({ archivo: 'y', pasos: [{ stage: 'SMT', board: 1, model: '', station: 'X' }] }).error);
+});
+
+test('validateRuta: estaciones únicas, retornos desde una reparación y saltos dentro de la línea', async () => {
+  const { validateRuta } = await import('./validate.js');
+  const ok = { model: ' SA1 ', estaciones: [{ station: 'A', rep: true }, { station: 'B' }, { station: 'C', x: 1 }], retornos: [['R_A', 'C']], saltos: [['A', 'C']] };
+  assert.deepEqual(validateRuta(ok), { model: 'SA1', estaciones: [{ station: 'A', rep: true }, { station: 'B', rep: false }, { station: 'C', rep: false }], retornos: [['R_A', 'C']], saltos: [['A', 'C']] });
+  assert.ok(validateRuta({ ...ok, model: '' }).error);
+  assert.ok(validateRuta({ ...ok, estaciones: [{ station: 'A' }, { station: 'A' }] }).error);
+  assert.ok(validateRuta({ ...ok, estaciones: [{ station: 'R_A' }] }).error);
+  assert.ok(validateRuta({ ...ok, estaciones: [{ station: 'A B' }] }).error);
+  assert.ok(validateRuta({ ...ok, retornos: [['A', 'C']] }).error); // un retorno sale de una reparación
+  assert.ok(validateRuta({ ...ok, saltos: [['A', 'Z']] }).error); // Z no está en la línea
+  assert.ok(validateRuta({ ...ok, saltos: [['R_A', 'C']] }).error);
 });

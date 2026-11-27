@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { agrupar, cambioPorEstacion, cruce, desde, estadoOf, nivel, ordenes, readWip, stations, urgente, detalleWip, flujoDe, readFlujo, resumenWip, semana, tendencia, turno, ubicar } from './wip.ts';
+import { agrupar, cambioPorEstacion, cruce, desde, estadoOf, nivel, ordenes, readWip, stations, urgente, detalleWip, flujoDe, readFlujo, resumenWip, semana, tendencia, turno, ubicar, filtrar, FILTRO0, lugarDe } from './wip.ts';
 import type { Rec } from './tcqs.ts';
 
 const H = ['SERIAL_NUMBER', 'MODEL_NAME', 'MO_NUMBER', 'TARGET_QTY', 'SECTION_NAME', 'WIP_GROUP', 'IN_STATION_TIME', 'HOUR', 'ERROR_FLAG'];
@@ -137,4 +137,38 @@ test('cambioPorEstacion: suma modelos por estación y ordena por el cambio más 
   const x = cambioPorEstacion([r('FT', 10), r('FT', 5), r('ICT', 4, 1)], [r('FT', 3), r('ICT', 4), r('CTO', 2)]);
   assert.deepEqual(x.map((y) => [y.estacion, y.antes, y.despues, y.cambio]), [['FT', 15, 3, -12], ['CTO', 0, 2, 2], ['ICT', 4, 4, 0]]);
   assert.equal(x[2].bloqAntes, 1);
+});
+
+test('filtrar: en cascada etapa → board → modelo → orden → estación, con el orden de la estructura', () => {
+  const pasos = [
+    { stage: 'SMT', board: 'SWB', model: 'M1', station: 'SPI' }, { stage: 'SMT', board: 'SWB', model: 'M1', station: 'AOI' },
+    { stage: 'Sistema', board: 'Final', model: 'M2', station: 'FT' },
+  ];
+  const ps = [
+    { model: 'M1', mo: 'A', station: 'SPI' }, { model: 'M1', mo: 'B', station: 'R_AOI' },
+    { model: 'M2', mo: 'C', station: 'FT' }, { model: 'M2', mo: 'C', station: 'KANBAN_IN' }, { model: 'X9', mo: 'D', station: 'ZZ' },
+  ];
+  assert.deepEqual(lugarDe(pasos, 'M1', 'R_AOI'), { stage: 'SMT', board: 'SWB' }); // la reparación va con su estación
+  assert.deepEqual(lugarDe(pasos, 'M2', 'KANBAN_IN'), { stage: 'Sistema', board: 'Final' }); // fuera del reporte: la de su modelo
+  const todo = filtrar(ps, pasos, FILTRO0);
+  assert.deepEqual(todo.opciones.stage, ['SMT', 'Sistema', 'Sin etapa']);
+  assert.equal(todo.ps.length, 5); assert.equal(todo.activos, 0);
+  const sis = filtrar(ps, pasos, { ...FILTRO0, stage: 'Sistema' });
+  assert.deepEqual(sis.ps.map((p) => p.station), ['FT', 'KANBAN_IN']);
+  assert.deepEqual(sis.opciones.model, ['M2']); assert.deepEqual(sis.opciones.station, ['FT', 'KANBAN_IN']);
+  const uno = filtrar(ps, pasos, { ...FILTRO0, model: 'M1', station: 'R_AOI' });
+  assert.deepEqual(uno.ps.map((p) => p.mo), ['B']); assert.equal(uno.activos, 2);
+  assert.deepEqual(filtrar(ps, [], FILTRO0).opciones.stage, ['Sin etapa']); // sin estructura todo es «Sin etapa»
+});
+
+test('porHora: llegadas por estación en las últimas horas hasta el corte', async () => {
+  const { porHora } = await import('./wip.ts');
+  const ps = [
+    { station: 'FT', at: '2026-11-27 09:59:59' }, { station: 'FT', at: '2026-11-27 10:00:00' }, { station: 'FT', at: '2026-11-27 10:20' },
+    { station: 'ICT', at: '2026-11-27 07:59:00' }, { station: 'ICT', at: '' }, { station: 'ICT', at: '2026-11-27 11:00:00' },
+  ];
+  const r = porHora(ps, '2026-11-27 10:30', 3); // ventana 08:00–11:00
+  assert.deepEqual(r.cols, ['2026-11-27 08', '2026-11-27 09', '2026-11-27 10']);
+  assert.deepEqual(r.filas.get('FT')!.horas.map((h) => h.length), [0, 1, 2]);
+  assert.deepEqual([r.filas.get('ICT')!.antes, r.filas.get('ICT')!.horas.flat().length], [2, 0]); // 07:59 y sin hora: antes; 11:00 queda fuera
 });

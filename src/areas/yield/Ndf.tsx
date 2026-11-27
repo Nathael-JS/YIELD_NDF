@@ -5,7 +5,7 @@ import { ParetoChart } from '../../components/charts.tsx';
 import { byLabel, classify, ndfStations, readFails, top80, type Estado, type Marked } from '../../lib/fails.ts';
 import { modelKey, pctText, type Rec } from '../../lib/tcqs.ts';
 import { useApp, useData } from '../../store.ts';
-import { NeedTcqs, PageHead } from '../../pages/Layout.tsx';
+import { NeedTcqs, PageHead, Ventana } from '../../pages/Layout.tsx';
 
 const n = (v: number) => (Number.isFinite(v) ? v.toLocaleString('es-MX', { maximumFractionDigits: 1 }) : '—');
 const ALL = '';
@@ -22,6 +22,29 @@ const ESTADO: Record<Estado, string> = { NDF: 'NDF', Real: 'Real', Pendiente: 'P
 export const codesOf = (ms: Marked[]) => byLabel(ms, (m) => m.code);
 
 /** Primeras fallas del archivo, del proyecto y marcadas contra el TCQS (lo usa también el HTML descargable). */
+/** Unidades de los paneles de Yield: las primeras fallas (FirstFail) del modelo; `keep` las deja en el periodo.
+ * `abrir('FPY')` abre todas; `abrir('NDF')`, solo las NDF; otro panel, nada. Sin FirstFail cargado, los paneles quedan como números. */
+const MAX_FILAS = 2000; // una ventana con más filas se vuelve lenta
+
+export function useUnidades(model: string) {
+  const { records, models } = useData();
+  const { marked } = useFails(records, models, model);
+  const [ver, setVer] = useState<{ titulo: string; us: Marked[] }>();
+  const abrir = (label: string, keep: (u: Marked) => boolean = () => true) => {
+    const fallas = marked ? marked.marked.filter(keep) : [];
+    const l = label === 'FPY' ? ['Primeras fallas con serial en el FirstFail', fallas] as const : label === 'NDF' ? ['NDF con serial en el FirstFail (fallaron y pasaron al re-probar)', fallas.filter((u) => u.estado === 'NDF')] as const : undefined;
+    return l?.[1].length ? () => setVer({ titulo: l[0], us: l[1] }) : undefined;
+  };
+  const ventana = ver && (
+    <Ventana titulo={ver.titulo} cuenta={`${ver.us.length.toLocaleString('es-MX')} ${ver.us.length === 1 ? 'unidad' : 'unidades'}`} onClose={() => setVer(undefined)}>
+      <UnitTable units={ver.us.slice(0, MAX_FILAS)} code />
+      {ver.us.length > MAX_FILAS && <p className="app-muted">Se muestran las primeras {MAX_FILAS.toLocaleString('es-MX')}; filtra por modelo o periodo para ver otras.</p>}
+    </Ventana>
+  );
+  const aviso = !marked && <p className="app-muted">Carga el reporte de primeras fallas (FirstFail) en <Link to="/yield/carga">Carga de datos</Link> para abrir sus seriales desde los paneles.</p>;
+  return { abrir, ventana, aviso };
+}
+
 export function useFails(records: Rec[], models: Set<string> | null, model = ALL) {
   const file = useApp((s) => s.files.FALLAS);
   const read = useMemo(() => file && readFails(file), [file]);

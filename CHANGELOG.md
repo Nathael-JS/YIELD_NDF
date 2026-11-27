@@ -8,6 +8,106 @@ Un cambio de componente se publica primero en el artefacto y después se copia a
 
 Los errores encontrados y cómo se corrigieron están en [ERRORES.md](ERRORES.md); las mejoras y cómo se hicieron, en [MEJORAS.md](MEJORAS.md).
 
+## [0.56.0] — 2026-11-27
+
+### Agregado
+- **Sistema de diseño, versión 44:**
+  - `RouteMap` nuevo, con README, tipos y vista previa en claro y oscuro.
+  - `KpiTile` acepta `onClick` (abre sus unidades) y `deltaLabel` (contra qué compara).
+  - El README del sistema describe la línea de tiempo nueva y la hora por hora.
+- **WIP · Hora por hora** (`/wip/horas`, en el riel de consulta):
+  - Por estación, en el orden del flujo (etapa → board → ruta), cuántas piezas llegaron en cada una de las últimas 8, 12 o 24 horas y **siguen ahí**, con «Antes» y el total.
+  - La intensidad de la celda es neutra: es cuántas llegaron, no cuánto esperan.
+  - Un clic abre sus seriales.
+  - Arriba, el total en proceso de los cortes guardados en cada hora y su cambio. Al pie, el total de llegadas por hora.
+  - Tiene los mismos filtros que el Dashboard.
+
+### Corregido (revisión de código de la fase 2)
+- **La ruta ya no rompe el Dashboard** cuando una pieza regresa de la reparación de una estación que la ruta no tiene. Los holds (`HOLD-X`) cuentan como su estación; un anterior desconocido no dibuja líneas fuera del mapa.
+- **Un WIP con muchas terminadas se sigue guardando:** si en proceso más terminadas pasan de 25,000, el corte se guarda sin la lista de terminadas.
+- **Hora por hora** ya no repite las piezas de una estación que está en dos boards: cada fila cuenta solo las suyas. La fila de cortes muestra el total de cada uno sin compararlos, porque uno puede ser de una sola orden.
+- **Paneles con unidades:** el lector de pantalla lee el valor y el cambio, más «Ver unidades».
+- **Borrar una ruta** valida el modelo como al guardarla.
+- **Sistema de diseño, versión 45:** `KpiTile` accesible.
+
+## [0.55.0] — 2026-11-27
+
+### Cambiado
+- **WIP · la línea de tiempo es más simple y se puede tocar:**
+  - Una fila por estación y una columna por rango de tiempo en la estación (< 2 h, 2–8 h, 8–20 h, 20–48 h, 2–4 d, 4–7 d, 1–2 sem y > 2 sem).
+  - En cada celda, el **ícono de semáforo con su conteo**; un clic abre esos seriales.
+  - El color del encabezado marca la zona del semáforo.
+  - Antes eran burbujas sin número que no se podían tocar.
+- **WIP · las estaciones se agrupan por Process Stage · Board** (como el Dashboard) en la línea de tiempo y en la tabla, con la estructura de flujo. Sin ella, siguen por sección del MES.
+- La animación de entrada dura como máximo 0.25 s y respeta «reducir movimiento».
+
+## [0.54.0] — 2026-11-27
+
+### Agregado
+- **Ruta del modelo en el Dashboard** («Dónde están · por etapa»), debajo de las columnas por etapa. Aparece al elegir un modelo o con un WIP de una sola orden, y es como el diagrama de ruta del MES:
+  - arriba, las bandas de **Process Stage** y **Board**;
+  - la **línea principal** de estaciones en orden, con el ícono de semáforo y el conteo;
+  - debajo, la **reparación (R_)** de cada estación;
+  - los **retornos** de una reparación a otra estación (punteados) y los **saltos** de la línea (arco), por ejemplo FATP_VI → KANBAN_IN.
+  - Un clic en una estación o reparación abre sus seriales; los holds (HOLD-X) cuentan en su estación.
+- **La ruta se arma sola** con tres fuentes:
+  1. la ruta guardada (o la base de SA029400, tomada del diagrama del MES);
+  2. las estaciones de la estructura de yield en su orden;
+  3. lo que enseña el WIP (`GROUP_NAME` → `WIP_GROUP`): estaciones nuevas, reparaciones, retornos y saltos.
+- **Base de datos → Rutas por modelo:** un administrador ve y edita la ruta de cada modelo como texto, con vista previa. Por ejemplo, `FT R` (estación con reparación), `R_FT > J_TAG` (retorno) y `FATP_VI > KANBAN_IN` (salto). La guarda para todos o quita la guardada.
+- **Sistema de diseño:** componente `RouteMap`.
+- **Base de datos:** tabla `wip_rutas` y `GET/POST /api/wip/rutas` (solo un administrador cambia).
+
+## [0.53.0] — 2026-11-27
+
+### Agregado
+- **Paneles con sus unidades:** al tocar un panel se abre la lista de sus piezas.
+  - **Dashboard:** En proceso, Bloqueadas, Urgentes y Terminadas en el corte.
+  - **WIP:** En proceso, En línea, Hold, Reparación y bonpile, Bloqueadas, Urgentes y **Terminadas** (panel nuevo).
+  - **Yield** (Inicio y Estaciones): FPY abre las primeras fallas con serial del FirstFail y NDF abre las NDF. Se respeta el modelo y el periodo elegidos. Sin FirstFail cargado, los paneles siguen siendo números y un aviso dice qué cargar.
+- **El corte del WIP guarda también las terminadas (STOCKIN),** para abrirlas desde el Dashboard sin el archivo. Los cortes anteriores muestran solo el número.
+
+### Cambiado
+- Una ventana de unidades dibuja hasta 2,000 filas (las de más tiempo). Si hay más, un aviso pide usar los filtros.
+
+## [0.52.0] — 2026-11-27
+
+### Agregado
+- **Filtros por etapa (Process Stage), board, modelo, orden y estación** en el Dashboard y en WIP · piezas.
+  - Etapa y board salen de la estructura de flujo (yield W48), con la misma regla que el Dashboard: reparaciones y holds van con su estación, y una estación fuera del reporte va al board de su modelo.
+  - Los filtros van en cascada: cada lista solo ofrece lo que queda con los anteriores.
+
+### Corregido
+- **El cambio de «En proceso» compara lo comparable:**
+  - Usa el corte anterior con los mismos filtros y solo los modelos del corte actual. Antes, un WIP de una sola orden se comparaba con el general (por ejemplo, «▼ 1,968»).
+  - Dice contra qué corte compara.
+  - Con un filtro de orden no se muestra, porque el resumen guardado es por estación × modelo.
+- **Verificado:** el Dashboard abre un WIP de una sola orden (`wip_unico.xlsx`: 97 piezas, SA029400). El filtro Estación = KANBAN_IN da 30.
+
+## [0.51.0] — 2026-11-27
+
+### Cambiado
+- **Versiones al día:**
+  - React 19 (`react`, `react-dom` y sus tipos);
+  - Vite 8 con `@vitejs/plugin-react` 6;
+  - TypeScript 7;
+  - three 0.187;
+  - motion 14.14;
+  - parches de `@react-pdf/renderer`, `react-router-dom`, `read-excel-file`, `papaparse` y `html-to-image`.
+  El build pasa más rápido (de ~6 s a ~0.7 s).
+- **La app carga más rápido:**
+  - El servidor manda los archivos de la app comprimidos con Brotli: el paquete principal pasa de 360 kB a 100 kB por la red.
+  - Los archivos de `assets/` (llevan su hash en el nombre) se guardan en el navegador un año; `index.html` se revisa siempre.
+  - Las respuestas grandes de la API (el detalle de un corte, el resumen de Yield) van con gzip.
+
+### Documentación
+- **`BASE_DE_DATOS.md`:** cómo crear la base en PostgreSQL desde cero. Cubre:
+  - las variables de entorno y la cuenta principal con su MFA;
+  - las 11 tablas;
+  - Render con Neon o un PostgreSQL propio;
+  - respaldos, el entorno limpio, las comprobaciones y los problemas comunes.
+- **`WIP2.md`:** el plan de la fase 2 de WIP (ruta por modelo, filtros por etapa y board, paneles con unidades, flujo por estación nuevo y hora por hora).
+
 ## [0.50.0] — 2026-11-27
 
 ### Agregado

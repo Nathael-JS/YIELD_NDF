@@ -30,7 +30,7 @@ const consulta = (a: AreaId) => [{ label: 'Historial', to: `/${a}/historial`, ic
 
 export const AREAS: Area[] = [
   { id: 'wip', name: 'WIP', hint: 'Dónde está cada pieza y desde hace cuánto: flujo por estación y línea de tiempo.', icon: I.wip, files: ['WIP'],
-    flow: [...base('wip'), { label: 'WIP · piezas', to: '/wip/piezas', icon: I.wip }], views: [{ label: 'Dashboard', to: '/wip', icon: I.graf }, { label: 'Histórico', to: '/wip/historico', icon: I.comp }, ...consulta('wip')] },
+    flow: [...base('wip'), { label: 'WIP · piezas', to: '/wip/piezas', icon: I.wip }], views: [{ label: 'Dashboard', to: '/wip', icon: I.graf }, { label: 'Hora por hora', to: '/wip/horas', icon: I.tabla }, { label: 'Histórico', to: '/wip/historico', icon: I.comp }, ...consulta('wip')] },
   { id: 'yield', name: 'YIELD', hint: 'FPY, Final Yield y NDF por estación, con gráficas y comparativas.', icon: I.yield, files: ['TCQS', 'FALLAS'],
     flow: [...base('yield'), { label: 'Yield por estación', to: '/yield/estaciones', icon: I.yield }],
     views: [{ label: 'Inicio', to: '/yield', icon: I.inicio }, { label: 'Gráficos', to: '/yield/graficos', icon: I.graf }, { label: 'Comparativas', to: '/yield/comparativas', icon: I.comp },

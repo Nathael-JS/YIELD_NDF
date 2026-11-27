@@ -8,6 +8,7 @@ import { modelsFrom, shortDay } from '../lib/tcqs.ts';
 import { shortDate, useApp } from '../store.ts';
 import { PageHead } from './Layout.tsx';
 import FlujoWip from '../areas/wip/Flujo.tsx';
+import RutasWip from '../areas/wip/Rutas.tsx';
 
 const size = (b: number) => (b < 1024 ** 2 ? `${(b / 1024).toFixed(0)} KB` : `${(b / 1024 ** 2).toFixed(1)} MB`);
 const NEON_FREE = 512 * 1024 ** 2; // espacio del plan gratis de Neon
@@ -84,6 +85,7 @@ export default function Base() {
           meta={busy ? 'Leyendo…' : modelos ? `${modelos.modelos.length.toLocaleString('es-MX')} modelos · ${modelos.archivo} · ${modelos.usuario} · ${shortDate(new Date(modelos.guardado_en!))}` : 'Sin lista: se usan todos los modelos del TCQS'} />
       </section>
       <FlujoWip />
+      <RutasWip />
       {principal && (
         <section className="yc-card yc-pad app-sec">
           <h2 className="app-h3">Limpieza <Badge tone="warn">Super administrador</Badge></h2>

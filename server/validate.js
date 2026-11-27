@@ -89,16 +89,22 @@ export function validateCorte(b) {
     if (!r || !corto(r.estacion, 80) || !corto(r.modelo ?? '', 80) || !entero(r.piezas) || !entero(r.bloqueadas) || !num(r.horas) || !num(r.max)) return { error: 'Fila del resumen inválida' };
     resumen.push({ estacion: r.estacion, modelo: r.modelo ?? '', piezas: r.piezas, bloqueadas: r.bloqueadas, horas: r.horas, max: r.max });
   }
-  // piezas en proceso con su serial (opcional: los cortes de antes de 0.45 no las traen)
-  const det = b.detalle ?? [];
-  // ~170 bytes por pieza: 25,000 caben en los 5 MB del cuerpo (más dan 413 antes de llegar aquí)
-  if (!Array.isArray(det) || det.length > 25000) return { error: 'Demasiadas piezas en proceso para guardar el corte (máximo 25,000)' };
-  const detalle = [];
-  for (const p of det) {
-    if (!p || !corto(p.serial, 60) || !p.serial || !['model', 'mo', 'station', 'prev'].every((k) => corto(p[k] ?? '', 80)) || !corto(p.at ?? '', 20) || !num(p.hours) || typeof (p.blocked ?? false) !== 'boolean') return { error: 'Pieza del detalle inválida' };
-    detalle.push({ serial: p.serial, model: p.model ?? '', mo: p.mo ?? '', station: p.station ?? '', prev: p.prev ?? '', at: p.at ?? '', hours: p.hours, blocked: !!p.blocked });
-  }
-  return { archivo: b.archivo.trim(), corte: b.corte, piezas: b.piezas, terminadas: b.terminadas, resumen, detalle };
+  // piezas en proceso y terminadas con su serial (opcionales: los cortes de antes de 0.45 y 0.53 no las traen)
+  const det = b.detalle ?? [], fin = b.fin ?? [];
+  // ~170 bytes por pieza: 25,000 entre las dos caben en los 5 MB del cuerpo (más dan 413 antes de llegar aquí)
+  if (!Array.isArray(det) || !Array.isArray(fin)) return { error: 'Piezas del corte inválidas' };
+  if (det.length + fin.length > 25000) return { error: 'Demasiadas piezas para guardar el corte (máximo 25,000 entre en proceso y terminadas)' };
+  const piezas = (xs) => {
+    const out = [];
+    for (const p of xs) {
+      if (!p || !corto(p.serial, 60) || !p.serial || !['model', 'mo', 'station', 'prev'].every((k) => corto(p[k] ?? '', 80)) || !corto(p.at ?? '', 20) || !num(p.hours) || typeof (p.blocked ?? false) !== 'boolean') return null;
+      out.push({ serial: p.serial, model: p.model ?? '', mo: p.mo ?? '', station: p.station ?? '', prev: p.prev ?? '', at: p.at ?? '', hours: p.hours, blocked: !!p.blocked });
+    }
+    return out;
+  };
+  const detalle = piezas(det), terminadas = piezas(fin);
+  if (!detalle || !terminadas) return { error: 'Pieza del detalle inválida' };
+  return { archivo: b.archivo.trim(), corte: b.corte, piezas: b.piezas, terminadas: b.terminadas, resumen, detalle, fin: terminadas };
 }
 
 // WIP: estructura de flujo; solo esas cuatro columnas, en orden.
@@ -111,4 +117,30 @@ export function validateFlujo(b) {
     pasos.push({ stage: p.stage, board: p.board, model: p.model, station: p.station });
   }
   return { archivo: b.archivo.trim(), pasos };
+}
+
+// WIP: ruta de un modelo (src/lib/ruta.ts): estaciones en orden, retornos de reparación y saltos; solo nombres de estación.
+const ESTACION = /^[A-Za-z0-9_.\-/]{1,80}$/;
+export function validateRuta(b) {
+  if (!b || !corto(b.model, 80) || !b.model.trim()) return { error: 'Modelo inválido' };
+  if (!Array.isArray(b.estaciones) || !b.estaciones.length || b.estaciones.length > 300) return { error: 'Entre 1 y 300 estaciones' };
+  const estaciones = [];
+  for (const e of b.estaciones) {
+    if (!e || !ESTACION.test(e.station ?? '') || e.station.startsWith('R_') || typeof (e.rep ?? false) !== 'boolean') return { error: 'Estación inválida en la ruta' };
+    if (estaciones.some((x) => x.station === e.station)) return { error: `${e.station} está repetida` };
+    estaciones.push({ station: e.station, rep: !!e.rep });
+  }
+  const en = new Set(estaciones.map((e) => e.station)), pares = (xs, rep) => {
+    if (!Array.isArray(xs) || xs.length > 300) return null;
+    const out = [];
+    for (const x of xs) {
+      if (!Array.isArray(x) || x.length !== 2 || !x.every((s) => typeof s === 'string' && ESTACION.test(s))) return null;
+      if (x[0].startsWith('R_') !== rep || !en.has(x[0].replace(/^R_/, '')) || !en.has(x[1])) return null;
+      out.push([x[0], x[1]]);
+    }
+    return out;
+  };
+  const retornos = pares(b.retornos ?? [], true), saltos = pares(b.saltos ?? [], false);
+  if (!retornos || !saltos) return { error: 'Retorno o salto inválido (deben unir estaciones de la ruta)' };
+  return { model: b.model.trim(), estaciones, retornos, saltos };
 }

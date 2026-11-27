@@ -2,11 +2,12 @@
 // La conexión vive solo aquí (DATABASE_URL en Render), nunca en el navegador. Toda la API de datos exige sesión.
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
+import { brotliCompressSync, gzipSync } from 'node:zlib';
 import { extname, join, normalize, resolve } from 'node:path';
 import pg from 'pg';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { checkPassword, checkTotp, cookieOf, failed, hashPassword, HOURS, limited, newSecret, otpUri, sign, verify } from './auth.js';
-import { validate, validateEntregas, validateTarima, validateItems, validateCorte, validateFlujo } from './validate.js';
+import { validate, validateEntregas, validateTarima, validateItems, validateCorte, validateFlujo, validateRuta } from './validate.js';
 
 const DIST = resolve('dist');
 const TYPES = { '.ico': 'image/x-icon', '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.woff': 'font/woff', '.json': 'application/json' };
@@ -65,7 +66,11 @@ create table if not exists wip_cortes (
 -- WIP: estructura de flujo (Process Stage → Board → Model → Station) del reporte de yield; vale la más reciente
 create table if not exists wip_flujo (id serial primary key, archivo text not null, usuario text not null, pasos jsonb not null, guardado_en timestamptz not null default now());
 -- 0.45: las piezas en proceso del corte (serial, modelo, orden, estación, horas…) para el Dashboard sin el archivo
-alter table wip_cortes add column if not exists detalle jsonb not null default '[]'::jsonb`)
+alter table wip_cortes add column if not exists detalle jsonb not null default '[]'::jsonb;
+-- 0.53: las terminadas del corte (STOCKIN), con la misma forma que el detalle, para abrirlas desde el Dashboard
+alter table wip_cortes add column if not exists fin jsonb not null default '[]'::jsonb;
+-- 0.54: ruta de cada modelo (línea principal, reparaciones, retornos y saltos), como el diagrama de ruta del MES
+create table if not exists wip_rutas (modelo text primary key, ruta jsonb not null, usuario text not null, guardada timestamptz not null default now())`)
   // cuenta principal (super administrador) desde el entorno: ADMIN_USER (y ADMIN_PASSWORD si hay que crearla)
   .then(async () => {
     // si la cuenta ya existe (creada desde «Crear cuenta») se activa como administradora y conserva su contraseña
@@ -89,7 +94,12 @@ const cookie = (value, maxAge) => `yc_sesion=${value}; Path=/; HttpOnly; SameSit
 const PRINCIPAL = process.env.ADMIN_USER?.trim().toLowerCase() || null;
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 
-const json = (res, code, body) => { res.writeHead(code, { 'content-type': 'application/json' }); res.end(JSON.stringify(body)); };
+// respuestas grandes (el detalle de un corte, el resumen de Yield) van comprimidas si el navegador lo acepta
+const json = (res, code, body) => {
+  const s = JSON.stringify(body), gz = res.gzip && s.length > 2048;
+  res.writeHead(code, { 'content-type': 'application/json', vary: 'accept-encoding', ...(gz ? { 'content-encoding': 'gzip' } : {}) });
+  res.end(gz ? gzipSync(s) : s);
+};
 
 async function body(req) {
   let size = 0; const parts = [];
@@ -189,7 +199,7 @@ async function database(req, res, me) {
       db.query('select pg_database_size(current_database())::bigint as bytes'),
       // conteo exacto (n_live_tup de pg_stat se actualiza con retraso); son tablas chicas
       db.query(`select t as tabla, (xpath('/row/c/text()', query_to_xml('select count(*) as c from ' || t, false, true, '')))[1]::text::int as filas,
-        pg_total_relation_size(t::regclass)::bigint as bytes from unnest(array['yield_resumen', 'yield_cargas', 'yield_respaldos', 'yield_modelos', 'yield_comentarios', 'usuarios', 'pallet_items', 'wip_cortes', 'wip_flujo']) as t`),
+        pg_total_relation_size(t::regclass)::bigint as bytes from unnest(array['yield_resumen', 'yield_cargas', 'yield_respaldos', 'yield_modelos', 'yield_comentarios', 'usuarios', 'pallet_items', 'wip_cortes', 'wip_flujo', 'wip_rutas']) as t`),
       db.query(`select to_char(min(fecha), 'YYYY-MM-DD') desde, to_char(max(fecha), 'YYYY-MM-DD') hasta, count(*)::int filas from yield_resumen`),
     ]);
     return json(res, 200, { bytes: Number(g.bytes), tablas: tablas.map((t) => ({ ...t, bytes: Number(t.bytes) })), resumen: r });
@@ -259,6 +269,26 @@ async function comments(req, res, me, url) {
 /** Pallets: listados de entregas (histórico) y tarimas. Todos los usuarios con sesión; los permisos por área vendrán después. */
 /** WIP: historial de cortes. */
 async function wip(req, res, me, url) {
+  if (url.pathname === '/api/wip/rutas') {
+    if (req.method === 'GET') {
+      const { rows } = await db.query('select ruta, usuario, guardada from wip_rutas order by modelo');
+      return json(res, 200, rows.map((r) => ({ ...r.ruta, usuario: r.usuario, guardada: r.guardada })));
+    }
+    if (req.method !== 'POST') return json(res, 405, { error: 'Método no permitido' });
+    if (!me.admin) return json(res, 403, { error: 'Solo un administrador cambia las rutas' });
+    const b = await body(req);
+    // sin estaciones = borrar la guardada (vuelve a valer la base o lo que enseña el WIP)
+    if (typeof b?.model === 'string' && Array.isArray(b.estaciones) && !b.estaciones.length) {
+      if (!b.model.trim() || b.model.length > 80) return json(res, 400, { error: 'Modelo inválido' });
+      await db.query('delete from wip_rutas where modelo = $1', [b.model]);
+      return json(res, 200, { borrada: true });
+    }
+    const v = validateRuta(b);
+    if (v.error) return json(res, 400, { error: v.error });
+    await db.query(`insert into wip_rutas (modelo, ruta, usuario) values ($1, $2, $3)
+      on conflict (modelo) do update set ruta = excluded.ruta, usuario = excluded.usuario, guardada = now()`, [v.model, JSON.stringify(v), me.nombre]);
+    return json(res, 200, { guardada: true });
+  }
   if (url.pathname === '/api/wip/flujo') {
     if (req.method === 'GET') {
       const { rows: [f] } = await db.query('select archivo, usuario, pasos, guardado_en from wip_flujo order by id desc limit 1');
@@ -276,7 +306,7 @@ async function wip(req, res, me, url) {
     const id = Number(url.searchParams.get('id'));
     if (id) {
       // las piezas (seriales) solo cuando se piden (Dashboard); Historial e Histórico usan el resumen
-      const { rows: [c] } = await db.query(`select resumen${url.searchParams.get('detalle') ? ', detalle' : ''} from wip_cortes where id = $1`, [id]);
+      const { rows: [c] } = await db.query(`select resumen${url.searchParams.get('detalle') ? ', detalle, fin' : ''} from wip_cortes where id = $1`, [id]);
       return c ? json(res, 200, c) : json(res, 404, { error: 'Corte no encontrado' });
     }
     // bloqueadas = suma del resumen (para la tendencia del Histórico)
@@ -287,8 +317,8 @@ async function wip(req, res, me, url) {
   if (req.method === 'POST') {
     const v = validateCorte(await body(req));
     if (v.error) return json(res, 400, { error: v.error });
-    const { rows: [c] } = await db.query(`insert into wip_cortes (archivo, usuario, corte, piezas, terminadas, resumen, detalle) values ($1, $2, $3, $4, $5, $6, $7)
-      on conflict (archivo, corte) do nothing returning id`, [v.archivo, me.nombre, v.corte, v.piezas, v.terminadas, JSON.stringify(v.resumen), JSON.stringify(v.detalle)]);
+    const { rows: [c] } = await db.query(`insert into wip_cortes (archivo, usuario, corte, piezas, terminadas, resumen, detalle, fin) values ($1, $2, $3, $4, $5, $6, $7, $8)
+      on conflict (archivo, corte) do nothing returning id`, [v.archivo, me.nombre, v.corte, v.piezas, v.terminadas, JSON.stringify(v.resumen), JSON.stringify(v.detalle), JSON.stringify(v.fin)]);
     return json(res, 200, { id: c?.id ?? null, repetido: !c });
   }
   return json(res, 405, { error: 'Método no permitido' });
@@ -538,21 +568,37 @@ const HEADERS = {
   ...(SECURE ? { 'strict-transport-security': 'max-age=31536000' } : {}),
 };
 
+/** dist/ no cambia mientras corre el servidor: cada archivo se lee y comprime (Brotli, si es texto) una vez. */
+const cache = new Map();
+async function servido(target) {
+  if (cache.has(target)) return cache.get(target);
+  const data = await readFile(target), texto = /\.(html|js|css|svg|json)$/.test(target) && data.length > 1024;
+  const f = { data, br: texto ? brotliCompressSync(data) : null };
+  cache.set(target, f);
+  return f;
+}
+
 async function file(req, res) {
   const path = normalize(decodeURIComponent(new URL(req.url, 'http://x').pathname));
   const full = join(DIST, path);
   // nada fuera de dist/; rutas de la app (/yield, /carga…) devuelven index.html
   const target = full.startsWith(DIST + '/') && extname(full) ? full : join(DIST, 'index.html');
   try {
-    const data = await readFile(target);
-    res.writeHead(200, { ...HEADERS, 'content-type': TYPES[extname(target)] ?? 'application/octet-stream' });
-    res.end(data);
+    const f = await servido(target), br = /\bbr\b/.test(req.headers['accept-encoding'] ?? '') && f.br;
+    res.writeHead(200, {
+      ...HEADERS, 'content-type': TYPES[extname(target)] ?? 'application/octet-stream', vary: 'accept-encoding',
+      // los archivos de assets/ llevan su hash en el nombre: no cambian nunca; index.html se revisa siempre
+      'cache-control': target.startsWith(join(DIST, 'assets') + '/') ? 'public, max-age=31536000, immutable' : 'no-cache',
+      ...(br ? { 'content-encoding': 'br' } : {}),
+    });
+    res.end(br || f.data);
   } catch {
     res.writeHead(404).end('No encontrado');
   }
 }
 
 createServer(async (req, res) => {
+  res.gzip = /\bgzip\b/.test(req.headers['accept-encoding'] ?? '');
   try {
     if (req.url.startsWith('/api/')) await api(req, res);
     else await file(req, res);

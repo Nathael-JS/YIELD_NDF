@@ -1,10 +1,12 @@
 // Piezas del WIP que comparten la página y el reporte HTML (sin Motion: el HTML se dibuja sin JavaScript).
-import { Fragment, useEffect, useMemo, useRef, type ReactNode } from 'react';
-import { Badge, KpiTile } from '../../components/ui.tsx';
+import { Fragment, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { Badge, Button, KpiTile, Select } from '../../components/ui.tsx';
+import { loadWipFlujo } from '../../lib/db.ts';
 import { modelKey, pctText } from '../../lib/tcqs.ts';
-import { estadoOf, nivel, readWip, urgente, type Estado, type ordenes, type Pieza, type stations } from '../../lib/wip.ts';
+import { CAMPOS, estadoOf, FILTRO0, nivel, readWip, urgente, type Estado, type Filtro, type ordenes, type Paso, type Pieza, type stations } from '../../lib/wip.ts';
 import { UnitIcon } from '../../components/flow.tsx';
 import { useApp, useData } from '../../store.ts';
+import { Ventana } from '../../pages/Layout.tsx';
 
 import { num as n } from '../../lib/chart.ts';
 export { n };
@@ -30,14 +32,21 @@ export const Legend = () => (
 );
 const NIVEL = { ok: 'menos de 2 h', warn: 'menos de 20 h', bad: '20 h o más' } as const;
 
-export const kpisOf = (ps: Pieza[]) => {
-  const c = (e: Estado) => ps.filter((p) => p.estado === e).length;
+/** Paneles de la vista WIP, cada uno con sus unidades. `terminadas`: si se pasan, también ese panel. */
+export const kpisOf = (ps: Pieza[], terminadas?: Pieza[]) => {
+  const c = (...es: Estado[]) => ps.filter((p) => es.includes(p.estado));
   return [
-    { label: 'En línea', value: c('Línea') }, { label: 'Hold', value: c('Hold') }, { label: 'Reparación y bonpile', value: c('Reparación') + c('Bonpile') },
-    { label: 'Bloqueadas', value: ps.filter((p) => p.blocked).length }, { label: 'Urgentes (> 100 h)', value: ps.filter((p) => urgente(p.hours)).length },
+    { label: 'En proceso', ps }, { label: 'En línea', ps: c('Línea') }, { label: 'Hold', ps: c('Hold') }, { label: 'Reparación y bonpile', ps: c('Reparación', 'Bonpile') },
+    { label: 'Bloqueadas', ps: ps.filter((p) => p.blocked) }, { label: 'Urgentes (> 100 h)', ps: ps.filter((p) => urgente(p.hours)) },
+    ...(terminadas ? [{ label: 'Terminadas', ps: terminadas }] : []),
   ];
 };
-export const Kpis = ({ ps }: { ps: Pieza[] }) => <div className="yc-grid-kpi">{kpisOf(ps).map((k) => <KpiTile key={k.label} label={k.label} value={n(k.value)} />)}</div>;
+/** Con `onPick`, cada panel es un botón que abre sus unidades (en el HTML descargable son solo números). */
+export const Kpis = ({ ps, terminadas, onPick }: { ps: Pieza[]; terminadas?: Pieza[]; onPick?: (titulo: string, ps: Pieza[]) => void }) => (
+  <div className="yc-grid-kpi">{kpisOf(ps, terminadas).map((k) => (
+    <KpiTile key={k.label} label={k.label} value={n(k.ps.length)} onClick={onPick && k.ps.length ? () => onPick(k.label, k.ps) : undefined} />
+  ))}</div>
+);
 
 /** Flujo por estación agrupado por sección. Con `units` la fila se abre con sus piezas (página); sin él es fija (HTML).
  * `onPick`: clic en el ícono de un nivel de tiempo (abre esos seriales). */
@@ -120,32 +129,51 @@ export function useWip() {
   const file = useApp((s) => s.files.WIP);
   const { records, models } = useData();
   const read = useMemo(() => file && readWip(file, file.cargado), [file]);
-  const mine = (l: Pieza[]) => l.filter((p) => !models || models.has(modelKey(p.model)));
+  const mine = useCallback((l: Pieza[]) => l.filter((p) => !models || models.has(modelKey(p.model))), [models]);
   return { file, read, records, mine };
 }
 
+const MAX_FILAS = 2000; // una ventana con más filas se vuelve lenta
 /** Lo que muestra la ventana de seriales (una pieza del WIP o del corte guardado). */
 type Serial = { serial: string; model: string; mo: string; station: string; hours: number; blocked: boolean };
 /** Lista de seriales con su tiempo (ventana). */
 export function Seriales({ titulo, ps, onClose }: { titulo: string; ps: Serial[]; onClose: () => void }) {
-  const ref = useRef<HTMLDialogElement>(null);
-  useEffect(() => { ref.current?.showModal(); }, []);
   return (
-    <dialog ref={ref} className="yc-card app-det app-ser" aria-labelledby="ser-t" onClose={onClose} onClick={(e) => e.target === ref.current && ref.current?.close()}>
-      <header className="app-det-head">
-        <div><span className="app-item-k">{ps.length} {ps.length === 1 ? 'pieza' : 'piezas'}</span><h2 id="ser-t">{titulo}</h2></div>
-        <button type="button" className="yc-btn yc-btn-quiet" onClick={() => ref.current?.close()}>Cerrar</button>
-      </header>
+    <Ventana titulo={titulo} cuenta={`${n(ps.length)} ${ps.length === 1 ? 'pieza' : 'piezas'}`} onClose={onClose}>
       <div className="yc-table-wrap app-ser-t">
         <table className="yc-table">
           <thead><tr><th>Serial</th><th className="num">Tiempo ahí</th><th>Estación</th><th>Estado</th><th>Modelo</th><th>Orden</th></tr></thead>
-          <tbody>{[...ps].sort((a, b) => b.hours - a.hours).map((p) => (
+          <tbody>{[...ps].sort((a, b) => b.hours - a.hours).slice(0, MAX_FILAS).map((p) => (
             <tr key={p.serial}><td className="code app-ser-sn">{p.serial}</td><td className="num"><Hours h={p.hours} /></td><td className="code">{p.station}</td>
               <td>{p.blocked ? <Badge tone="bad">Bloqueada</Badge> : <Badge tone="neutral">{estadoOf(p.station)}</Badge>}</td><td className="code">{p.model}</td><td className="code">{p.mo}</td></tr>
           ))}</tbody>
         </table>
       </div>
-    </dialog>
+      {ps.length > MAX_FILAS && <p className="app-muted">Se muestran las {n(MAX_FILAS)} con más tiempo de {n(ps.length)}; usa los filtros para ver otras.</p>}
+    </Ventana>
   );
 }
 
+
+/** La estructura de flujo guardada en la base (vacía si no hay base o no se ha cargado). */
+export function useFlujo() {
+  const [pasos, setPasos] = useState<Paso[]>([]);
+  useEffect(() => { loadWipFlujo().then((f) => setPasos(f.pasos), () => {}); }, []);
+  return pasos;
+}
+
+const ETIQUETA: Record<keyof Filtro, [string, string]> = { stage: ['Etapa', 'Todas'], board: ['Board', 'Todos'], model: ['Modelo', 'Todos'], mo: ['Orden', 'Todas'], station: ['Estación', 'Todas'] };
+/** Selects de etapa (Process Stage), board, modelo, orden y estación. Al cambiar uno, los que siguen vuelven a «Todos».
+ * Sin estructura de flujo no se muestran etapa ni board. */
+export function Filtros({ f, set, opciones, conFlujo }: { f: Filtro; set: (f: Filtro) => void; opciones: Record<keyof Filtro, string[]>; conFlujo: boolean }) {
+  return (
+    <>
+      {CAMPOS.filter((k) => conFlujo || (k !== 'stage' && k !== 'board')).map((k) => (
+        <Select key={k} label={ETIQUETA[k][0]} value={f[k]} options={[{ value: '', label: `${ETIQUETA[k][1]} (${opciones[k].length})` }, ...opciones[k]]}
+          onChange={(v) => set({ ...f, [k]: v, ...Object.fromEntries(CAMPOS.slice(CAMPOS.indexOf(k) + 1).map((c) => [c, ''])) })} />
+      ))}
+    </>
+  );
+}
+export const QuitarFiltros = ({ n: k, onClick }: { n: number; onClick: () => void }) => (k > 0 ? <Button variant="quiet" className="app-wip-clear" onClick={onClick}>Quitar filtros ({k})</Button> : null);
+export { FILTRO0 };

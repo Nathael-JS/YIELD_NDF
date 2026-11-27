@@ -13,6 +13,7 @@ const Inicio = lazy(() => import('./areas/yield/Inicio.tsx'));
 import Areas from './pages/Areas.tsx';
 import Layout from './pages/Layout.tsx';
 import Login from './pages/Login.tsx';
+import Seguridad from './pages/Seguridad.tsx'; // ya va en el paquete principal: Layout la muestra si falta el MFA
 // el resto de las páginas se descarga al visitarlas: la app abre más rápido
 const Yield = lazy(() => import('./areas/yield/Yield.tsx'));
 const Wip = lazy(() => import('./areas/wip/Wip.tsx'));
@@ -25,8 +26,8 @@ const Tabla = lazy(() => import('./areas/pallets/Tabla.tsx'));
 const HistorialWip = lazy(() => import('./areas/wip/Historial.tsx'));
 const DashboardWip = lazy(() => import('./areas/wip/Dashboard.tsx'));
 const HistoricoWip = lazy(() => import('./areas/wip/Historico.tsx'));
+const HorasWip = lazy(() => import('./areas/wip/Horas.tsx'));
 const Validacion = lazy(() => import('./pages/Validacion.tsx'));
-const Seguridad = lazy(() => import('./pages/Seguridad.tsx'));
 const Ndf = lazy(() => import('./areas/yield/Ndf.tsx'));
 const Historial = lazy(() => import('./areas/yield/Historial.tsx'));
 const Graficos = lazy(() => import('./areas/yield/Graficos.tsx'));
@@ -55,6 +56,7 @@ const router = createBrowserRouter([
       { path: '/wip', element: <DashboardWip /> },
       { path: '/wip/piezas', element: <Wip /> },
       { path: '/wip/historico', element: <HistoricoWip /> },
+      { path: '/wip/horas', element: <HorasWip /> },
       { path: '/wip/historial', element: <HistorialWip /> },
       // PALLETS
       { path: '/pallets', element: <Pallets /> },
