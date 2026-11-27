@@ -81,7 +81,8 @@ export type WipDetalle = { serial: string; model: string; mo: string; station: s
 /** Guarda un corte; `repetido` = ese archivo con ese corte ya estaba. */
 export const saveWipCorte = (c: { archivo: string; corte: string; piezas: number; terminadas: number; resumen: WipResumen; detalle: WipDetalle }) => post<{ id: number | null; repetido: boolean }>('/api/wip/cortes', c);
 export const loadWipCortes = () => call<{ cortes: WipCorte[] }>('/api/wip/cortes').then((b) => b.cortes);
-export const loadWipCorte = (id: number) => call<{ resumen: WipResumen; detalle: WipDetalle }>(`/api/wip/cortes?id=${id}`);
+/** `detalle`: también las piezas con sus seriales (solo el Dashboard las usa). */
+export const loadWipCorte = (id: number, detalle = false) => call<{ resumen: WipResumen; detalle?: WipDetalle }>(`/api/wip/cortes?id=${id}${detalle ? '&detalle=1' : ''}`);
 export interface WipFlujo { pasos: Paso[]; archivo?: string; usuario?: string; guardado_en?: string }
 export const loadWipFlujo = () => call<WipFlujo>('/api/wip/flujo');
 export const saveWipFlujo = (archivo: string, pasos: Paso[]) => post<{ guardados: number }>('/api/wip/flujo', { archivo, pasos });

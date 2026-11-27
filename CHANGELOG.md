@@ -17,6 +17,13 @@ Los errores encontrados y cómo se corrigieron están en [ERRORES.md](ERRORES.md
   - Sale del mismo `CHANGELOG.md`: no hay otra lista que mantener.
   - El panel se carga solo al abrirlo; la carga inicial casi no cambia (+0.9 kB).
   - La versión que ya viste se guarda en este navegador.
+- **Correcciones de la revisión de código del PR 36:**
+  - El Dashboard y el Historial usan el corte más reciente **por hora del corte**, no por hora de subida. Antes, subir un WIP viejo lo mostraba como el último.
+  - El Dashboard ya no se queda en «Cargando» si falla leer el corte: muestra el WIP del equipo o dice que no se pudo leer.
+  - El Histórico pide cada corte una sola vez y avisa si no lo pudo leer.
+  - Historial e Histórico ya no descargan los seriales del corte (`?detalle=1` solo para el Dashboard).
+  - El corte acepta hasta 25,000 piezas, lo que cabe en los 5 MB, con un mensaje claro si son más.
+  - La campana compara versiones: volver a una versión anterior ya no sale como «nueva».
 - **Cierre de WIP (W7):** el sistema de diseño (versión 43) documenta dónde se usa `UnitIcon`, el patrón «ventana de seriales» y cómo `FlowMap` ubica las piezas. `WIP.md` marca W1–W7 como terminados y deja los pendientes.
 
 ## [0.49.0] — 2026-11-27

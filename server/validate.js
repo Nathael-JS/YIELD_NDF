@@ -91,7 +91,8 @@ export function validateCorte(b) {
   }
   // piezas en proceso con su serial (opcional: los cortes de antes de 0.45 no las traen)
   const det = b.detalle ?? [];
-  if (!Array.isArray(det) || det.length > 30000) return { error: 'Detalle inválido (máximo 30,000 piezas)' };
+  // ~170 bytes por pieza: 25,000 caben en los 5 MB del cuerpo (más dan 413 antes de llegar aquí)
+  if (!Array.isArray(det) || det.length > 25000) return { error: 'Demasiadas piezas en proceso para guardar el corte (máximo 25,000)' };
   const detalle = [];
   for (const p of det) {
     if (!p || !corto(p.serial, 60) || !p.serial || !['model', 'mo', 'station', 'prev'].every((k) => corto(p[k] ?? '', 80)) || !corto(p.at ?? '', 20) || !num(p.hours) || typeof (p.blocked ?? false) !== 'boolean') return { error: 'Pieza del detalle inválida' };
