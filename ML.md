@@ -1,4 +1,4 @@
-# Carga inteligente · plan
+# Carga inteligente · plan (PENDIENTE: en pausa desde el 27 nov, se retoma después de WIP)
 
 **Objetivo:** subir **cualquier Excel o CSV** en un solo lugar y que la app diga **qué es** («esto es un WIP», «esto es un SFC de embarque») y **a dónde va**, sin que el usuario tenga que saber qué casilla usar.
 
