@@ -8,6 +8,18 @@ Un cambio de componente se publica primero en el artefacto y después se copia a
 
 Los errores encontrados y cómo se corrigieron están en [ERRORES.md](ERRORES.md); las mejoras y cómo se hicieron, en [MEJORAS.md](MEJORAS.md).
 
+## [0.49.0] — 2026-11-27
+
+### Cambiado
+- **WIP · piezas (W6):** la barra de colores del tiempo en la estación ahora son **íconos de producto** con su conteo: verde (< 2 h), ámbar (< 20 h) y rojo (≥ 20 h). El rojo late si hay urgentes.
+  - **Cada ícono abre la ventana con los seriales** de ese nivel en esa estación.
+  - El tiempo de cada pieza y la leyenda también usan el ícono, en lugar del punto de color.
+  - El reporte HTML de Descargas lleva los mismos íconos.
+- La ventana de seriales es una sola para el Dashboard y para la vista pieza por pieza.
+
+### Quitado
+- Los puntos de color, la barra de tiempo y sus animaciones de CSS.
+
 ## [0.48.0] — 2026-11-27
 
 ### Agregado

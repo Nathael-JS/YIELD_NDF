@@ -1,15 +1,15 @@
 // Dashboard de WIP: la vista de entrada del área. Con el último corte guardado en la base (o, sin base, con el WIP cargado aquí):
 // cuánto hay, desde hace cuánto (semáforo) y dónde está, en el flujo Process Stage → Board → Station. Tocar un ícono abre sus seriales.
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Badge, Button, KpiTile, Segmented, Select } from '../../components/ui.tsx';
 import { BarChart, ParetoChart } from '../../components/charts.tsx';
 import { FlowMap, UnitIcon } from '../../components/flow.tsx';
 import { loadWipCorte, loadWipCortes, loadWipFlujo, type WipDetalle } from '../../lib/db.ts';
-import { agrupar, detalleWip, estadoOf, flujoDe, local, nivel, readWip, semana, turno, urgente, type Dim, type Paso } from '../../lib/wip.ts';
+import { agrupar, detalleWip, flujoDe, local, nivel, readWip, semana, turno, urgente, type Dim, type Paso } from '../../lib/wip.ts';
 import { PageHead } from '../../pages/Layout.tsx';
 import { useApp } from '../../store.ts';
-import { dur, Hours, n } from './wipParts.tsx';
+import { dur, Hours, n, Seriales } from './wipParts.tsx';
 
 type P = WipDetalle[number];
 interface Datos { fuente: 'base' | 'archivo'; corte: string; archivo: string; piezas: P[]; terminadas: number; antes?: number; aviso?: string }
@@ -76,29 +76,6 @@ function useDatos() {
     }, (e) => setD(delArchivo(`Sin conexión con la base (${e.message}): se muestra el WIP cargado en este equipo.`)));
   }, [file]);
   return { d, pasos };
-}
-
-/** Lista de seriales con su tiempo (ventana). */
-function Seriales({ titulo, ps, onClose }: { titulo: string; ps: P[]; onClose: () => void }) {
-  const ref = useRef<HTMLDialogElement>(null);
-  useEffect(() => { ref.current?.showModal(); }, []);
-  return (
-    <dialog ref={ref} className="yc-card app-det app-ser" aria-labelledby="ser-t" onClose={onClose} onClick={(e) => e.target === ref.current && ref.current?.close()}>
-      <header className="app-det-head">
-        <div><span className="app-item-k">{ps.length} {ps.length === 1 ? 'pieza' : 'piezas'}</span><h2 id="ser-t">{titulo}</h2></div>
-        <button type="button" className="yc-btn yc-btn-quiet" onClick={() => ref.current?.close()}>Cerrar</button>
-      </header>
-      <div className="yc-table-wrap app-ser-t">
-        <table className="yc-table">
-          <thead><tr><th>Serial</th><th className="num">Tiempo ahí</th><th>Estación</th><th>Estado</th><th>Modelo</th><th>Orden</th></tr></thead>
-          <tbody>{[...ps].sort((a, b) => b.hours - a.hours).map((p) => (
-            <tr key={p.serial}><td className="code app-ser-sn">{p.serial}</td><td className="num"><Hours h={p.hours} /></td><td className="code">{p.station}</td>
-              <td>{p.blocked ? <Badge tone="bad">Bloqueada</Badge> : <Badge tone="neutral">{estadoOf(p.station)}</Badge>}</td><td className="code">{p.model}</td><td className="code">{p.mo}</td></tr>
-          ))}</tbody>
-        </table>
-      </div>
-    </dialog>
-  );
 }
 
 export default function Dashboard() {

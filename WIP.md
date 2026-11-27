@@ -56,6 +56,10 @@ Sin aprobación hay un camino interino sin componentes nuevos: `FlowMap` se arma
 
 ## Datos
 
+- **W6 (0.49):** en **WIP · piezas**, la barra de colores de cada estación pasa a ser hasta 3 **íconos de producto** (< 2 h, < 20 h, ≥ 20 h) con su conteo.
+  - El rojo late si hay urgentes, y cada ícono abre la **ventana de seriales** de ese nivel (la misma del Dashboard, ahora en `wipParts.tsx`).
+  - El punto de color del tiempo (`Hours`) y la leyenda también usan el ícono.
+  - El reporte HTML lleva los mismos íconos, sin JavaScript.
 - **W5 (0.48):** nueva vista **Histórico** (`/wip/historico`, botón en el riel derecho).
   - **Tendencia** por **turno** o por **semana**, con el último corte de cada uno (cómo cerró): barras de piezas en proceso y línea de bloqueadas.
   - Filtro de turno **Ambos · T1 · T2**. El de **22:30–07:00** está visible pero inactivo (pendiente), y esos cortes no entran en la tendencia por turno.
@@ -95,7 +99,7 @@ Sin aprobación hay un camino interino sin componentes nuevos: `FlowMap` se arma
 | **W3** ✅ 0.46 | **Dashboard** (primera vista del área): encabezado del último corte, KPIs, semáforo (`SplitBar`) con ventana de seriales y **`FlowMap`** | `src/areas/wip/Dashboard.tsx`, `areas.ts` |
 | **W4** ✅ 0.47 | **Gráficos** del Dashboard: Pareto (estaciones → por estación), barras por modelo y por orden, histograma de tiempo en la estación, y barras por última estación registrada. Cada barra abre los seriales | `Dashboard.tsx` |
 | **W5** ✅ 0.48 | **Histórico:** tendencia por turno o semana (`TrendChart`), lista de cortes y **comparativa** de dos cortes (qué estación subió o bajó) | `src/areas/wip/Historico.tsx` (junta el Historial actual) |
-| **W6** | **Vista WIP:** `UnitIcon` en lugar del semáforo, con la ventana de seriales | `wipParts.tsx` |
+| **W6** ✅ 0.49 | **Vista WIP:** `UnitIcon` en lugar del semáforo, con la ventana de seriales | `wipParts.tsx` |
 | **W7** ✅ 0.46 (parte) | Sistema de diseño: `FlowMap` y `UnitIcon` publicados en la versión 42; falta la ventana de seriales como patrón | artefacto |
 
 ## Por confirmar
