@@ -1,6 +1,6 @@
 # WIP · fase 2: ruta, filtros, unidades y hora por hora (plan, 27 nov)
 
-> **Avance:** R0 (0.51), R1 (0.52) y R2 (0.53) terminados. Sigue R3 (ruta por modelo).
+> **Avance:** R0 (0.51), R1 (0.52), R2 (0.53) y R3 (0.54) terminados. Sigue R4 (flujo por estación).
 
 Sigue a [WIP.md](WIP.md) (W1–W7 terminados). Todo va a **un solo PR**, que se fusiona al final.
 
@@ -46,7 +46,7 @@ Sigue a [WIP.md](WIP.md) (W1–W7 terminados). Todo va a **un solo PR**, que se 
 
 | Pieza | Composición | Del sistema |
 |---|---|---|
-| Mapa de ruta | Bandas de **Process Stage** y **Board** arriba, como encabezados que abarcan sus estaciones. Debajo, el riel con un nodo por estación (`UnitIcon` con su conteo) y la fila de reparaciones. Los retornos son líneas finas en SVG. Con muchas estaciones hay scroll horizontal dentro de la tarjeta, nunca de la página; en celular se muestra como lista vertical. | `UnitIcon`, `--sem-*`, `--line`, `.yc-card` |
+| Mapa de ruta | Bandas de **Process Stage** y **Board** arriba, como encabezados que abarcan sus estaciones. Debajo, el riel con un nodo por estación (`UnitIcon` con su conteo) y la fila de reparaciones. Los retornos son líneas finas en SVG. Con muchas estaciones hay scroll horizontal dentro de la tarjeta, nunca de la página (también en celular). | `UnitIcon`, `--sem-*`, `--line`, `.yc-card` |
 | Vista por etapa | Se queda el `FlowMap` actual (columnas Stage → Board) para **todos los modelos**. Al elegir un modelo, o con un WIP de una sola orden, aparece el **mapa de ruta** de ese modelo debajo: las dos vistas juntas. | `FlowMap` |
 | Flujo por estación | Una fila por estación, agrupada por Stage → Board. Cada fila: nombre, total, 4 `UnitIcon` (menos de 2 h, de 2 a 20 h, de 20 a 100 h, urgente), cada uno con su conteo y que abre sus seriales, y la pieza más vieja. La línea de tiempo de burbujas queda detrás de su botón, más ligera. | `UnitIcon`, `Seriales` |
 | Hora por hora | Tabla de estaciones en orden de ruta × las últimas 12 horas. La celda es cuántas piezas llegaron en esa hora, con intensidad neutra (no semáforo) y el número escrito; un clic abre sus seriales. Con varios cortes en el día se agrega la fila del cambio de un corte a otro. | `.yc-table`, `Seriales` |

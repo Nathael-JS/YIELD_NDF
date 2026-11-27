@@ -8,6 +8,23 @@ Un cambio de componente se publica primero en el artefacto y después se copia a
 
 Los errores encontrados y cómo se corrigieron están en [ERRORES.md](ERRORES.md); las mejoras y cómo se hicieron, en [MEJORAS.md](MEJORAS.md).
 
+## [0.54.0] — 2026-11-27
+
+### Agregado
+- **Ruta del modelo en el Dashboard** («Dónde están · por etapa»), debajo de las columnas por etapa. Aparece al elegir un modelo o con un WIP de una sola orden, y es como el diagrama de ruta del MES:
+  - arriba, las bandas de **Process Stage** y **Board**;
+  - la **línea principal** de estaciones en orden, con el ícono de semáforo y el conteo;
+  - debajo, la **reparación (R_)** de cada estación;
+  - los **retornos** de una reparación a otra estación (punteados) y los **saltos** de la línea (arco), por ejemplo FATP_VI → KANBAN_IN.
+  - Un clic en una estación o reparación abre sus seriales; los holds (HOLD-X) cuentan en su estación.
+- **La ruta se arma sola** con tres fuentes:
+  1. la ruta guardada (o la base de SA029400, tomada del diagrama del MES);
+  2. las estaciones de la estructura de yield en su orden;
+  3. lo que enseña el WIP (`GROUP_NAME` → `WIP_GROUP`): estaciones nuevas, reparaciones, retornos y saltos.
+- **Base de datos → Rutas por modelo:** un administrador ve y edita la ruta de cada modelo como texto, con vista previa. Por ejemplo, `FT R` (estación con reparación), `R_FT > J_TAG` (retorno) y `FATP_VI > KANBAN_IN` (salto). La guarda para todos o quita la guardada.
+- **Sistema de diseño:** componente `RouteMap`.
+- **Base de datos:** tabla `wip_rutas` y `GET/POST /api/wip/rutas` (solo un administrador cambia).
+
 ## [0.53.0] — 2026-11-27
 
 ### Agregado

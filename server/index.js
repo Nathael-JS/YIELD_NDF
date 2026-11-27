@@ -7,7 +7,7 @@ import { extname, join, normalize, resolve } from 'node:path';
 import pg from 'pg';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { checkPassword, checkTotp, cookieOf, failed, hashPassword, HOURS, limited, newSecret, otpUri, sign, verify } from './auth.js';
-import { validate, validateEntregas, validateTarima, validateItems, validateCorte, validateFlujo } from './validate.js';
+import { validate, validateEntregas, validateTarima, validateItems, validateCorte, validateFlujo, validateRuta } from './validate.js';
 
 const DIST = resolve('dist');
 const TYPES = { '.ico': 'image/x-icon', '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.woff': 'font/woff', '.json': 'application/json' };
@@ -68,7 +68,9 @@ create table if not exists wip_flujo (id serial primary key, archivo text not nu
 -- 0.45: las piezas en proceso del corte (serial, modelo, orden, estación, horas…) para el Dashboard sin el archivo
 alter table wip_cortes add column if not exists detalle jsonb not null default '[]'::jsonb;
 -- 0.53: las terminadas del corte (STOCKIN), con la misma forma que el detalle, para abrirlas desde el Dashboard
-alter table wip_cortes add column if not exists fin jsonb not null default '[]'::jsonb`)
+alter table wip_cortes add column if not exists fin jsonb not null default '[]'::jsonb;
+-- 0.54: ruta de cada modelo (línea principal, reparaciones, retornos y saltos), como el diagrama de ruta del MES
+create table if not exists wip_rutas (modelo text primary key, ruta jsonb not null, usuario text not null, guardada timestamptz not null default now())`)
   // cuenta principal (super administrador) desde el entorno: ADMIN_USER (y ADMIN_PASSWORD si hay que crearla)
   .then(async () => {
     // si la cuenta ya existe (creada desde «Crear cuenta») se activa como administradora y conserva su contraseña
@@ -197,7 +199,7 @@ async function database(req, res, me) {
       db.query('select pg_database_size(current_database())::bigint as bytes'),
       // conteo exacto (n_live_tup de pg_stat se actualiza con retraso); son tablas chicas
       db.query(`select t as tabla, (xpath('/row/c/text()', query_to_xml('select count(*) as c from ' || t, false, true, '')))[1]::text::int as filas,
-        pg_total_relation_size(t::regclass)::bigint as bytes from unnest(array['yield_resumen', 'yield_cargas', 'yield_respaldos', 'yield_modelos', 'yield_comentarios', 'usuarios', 'pallet_items', 'wip_cortes', 'wip_flujo']) as t`),
+        pg_total_relation_size(t::regclass)::bigint as bytes from unnest(array['yield_resumen', 'yield_cargas', 'yield_respaldos', 'yield_modelos', 'yield_comentarios', 'usuarios', 'pallet_items', 'wip_cortes', 'wip_flujo', 'wip_rutas']) as t`),
       db.query(`select to_char(min(fecha), 'YYYY-MM-DD') desde, to_char(max(fecha), 'YYYY-MM-DD') hasta, count(*)::int filas from yield_resumen`),
     ]);
     return json(res, 200, { bytes: Number(g.bytes), tablas: tablas.map((t) => ({ ...t, bytes: Number(t.bytes) })), resumen: r });
@@ -267,6 +269,25 @@ async function comments(req, res, me, url) {
 /** Pallets: listados de entregas (histórico) y tarimas. Todos los usuarios con sesión; los permisos por área vendrán después. */
 /** WIP: historial de cortes. */
 async function wip(req, res, me, url) {
+  if (url.pathname === '/api/wip/rutas') {
+    if (req.method === 'GET') {
+      const { rows } = await db.query('select ruta, usuario, guardada from wip_rutas order by modelo');
+      return json(res, 200, rows.map((r) => ({ ...r.ruta, usuario: r.usuario, guardada: r.guardada })));
+    }
+    if (req.method !== 'POST') return json(res, 405, { error: 'Método no permitido' });
+    if (!me.admin) return json(res, 403, { error: 'Solo un administrador cambia las rutas' });
+    const b = await body(req);
+    // sin estaciones = borrar la guardada (vuelve a valer la base o lo que enseña el WIP)
+    if (typeof b?.model === 'string' && Array.isArray(b.estaciones) && !b.estaciones.length) {
+      await db.query('delete from wip_rutas where modelo = $1', [b.model]);
+      return json(res, 200, { borrada: true });
+    }
+    const v = validateRuta(b);
+    if (v.error) return json(res, 400, { error: v.error });
+    await db.query(`insert into wip_rutas (modelo, ruta, usuario) values ($1, $2, $3)
+      on conflict (modelo) do update set ruta = excluded.ruta, usuario = excluded.usuario, guardada = now()`, [v.model, JSON.stringify(v), me.nombre]);
+    return json(res, 200, { guardada: true });
+  }
   if (url.pathname === '/api/wip/flujo') {
     if (req.method === 'GET') {
       const { rows: [f] } = await db.query('select archivo, usuario, pasos, guardado_en from wip_flujo order by id desc limit 1');

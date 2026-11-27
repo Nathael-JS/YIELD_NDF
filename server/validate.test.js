@@ -86,3 +86,16 @@ test('validateFlujo: 4 columnas en texto, estación y etapa obligatorias, sin ca
   assert.ok(validateFlujo({ archivo: 'y', pasos: [{ stage: 'SMT', board: '', model: '', station: '' }] }).error);
   assert.ok(validateFlujo({ archivo: 'y', pasos: [{ stage: 'SMT', board: 1, model: '', station: 'X' }] }).error);
 });
+
+test('validateRuta: estaciones únicas, retornos desde una reparación y saltos dentro de la línea', async () => {
+  const { validateRuta } = await import('./validate.js');
+  const ok = { model: ' SA1 ', estaciones: [{ station: 'A', rep: true }, { station: 'B' }, { station: 'C', x: 1 }], retornos: [['R_A', 'C']], saltos: [['A', 'C']] };
+  assert.deepEqual(validateRuta(ok), { model: 'SA1', estaciones: [{ station: 'A', rep: true }, { station: 'B', rep: false }, { station: 'C', rep: false }], retornos: [['R_A', 'C']], saltos: [['A', 'C']] });
+  assert.ok(validateRuta({ ...ok, model: '' }).error);
+  assert.ok(validateRuta({ ...ok, estaciones: [{ station: 'A' }, { station: 'A' }] }).error);
+  assert.ok(validateRuta({ ...ok, estaciones: [{ station: 'R_A' }] }).error);
+  assert.ok(validateRuta({ ...ok, estaciones: [{ station: 'A B' }] }).error);
+  assert.ok(validateRuta({ ...ok, retornos: [['A', 'C']] }).error); // un retorno sale de una reparación
+  assert.ok(validateRuta({ ...ok, saltos: [['A', 'Z']] }).error); // Z no está en la línea
+  assert.ok(validateRuta({ ...ok, saltos: [['R_A', 'C']] }).error);
+});

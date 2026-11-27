@@ -327,3 +327,24 @@ button.yc-unit:focus-visible { outline: none; box-shadow: var(--focus-ring); }
 .yc-flow-board li.is-empty .yc-flow-name { color: var(--ink-muted); }
 .yc-flow-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 500 12px var(--font-mono); }
 @media (prefers-reduced-motion: reduce) { .yc-unit.is-urgent svg { animation: none; } button.yc-unit { transition: none; } }
+/* Mapa de ruta (RouteMap): línea principal, reparaciones debajo, retornos punteados y saltos en arco. Solo el ícono lleva color (el tiempo). */
+.yc-route { overflow-x: auto; padding-bottom: var(--space-2); }
+.yc-route-inner { display: grid; gap: 4px; }
+.yc-route-bands { display: grid; gap: 0; }
+.yc-route-bands span { overflow: hidden; margin: 0 4px; padding: 3px 8px; border-radius: var(--radius-sm); text-overflow: ellipsis; white-space: nowrap; font: 600 11px var(--font-sans); letter-spacing: .5px; text-transform: uppercase; }
+.yc-route-bands span > b { position: sticky; left: 8px; font: inherit; } /* el nombre se queda a la vista al desplazar una banda larga */
+.yc-route-bands.is-top span { background: var(--brand-tint); color: var(--brand); }
+.yc-route-bands.is-sub span { background: var(--surface-100); color: var(--ink-muted); }
+.yc-route-track { position: relative; }
+.yc-route-track > svg { position: absolute; inset: 0; overflow: visible; }
+.yc-route-rail { stroke: var(--line-strong); stroke-width: 4; stroke-linecap: round; }
+.yc-route-drop { stroke: var(--line-strong); stroke-width: 1.5; }
+.yc-route-back { stroke: var(--ink-muted); stroke-width: 1.2; stroke-dasharray: 4 4; opacity: .7; }
+.yc-route-skip { fill: none; stroke: var(--ink-muted); stroke-width: 1.5; }
+.yc-route-track ol { margin: 0; padding: 0; list-style: none; }
+.yc-route-track li { position: absolute; top: 0; bottom: 0; }
+.yc-route-stop { position: absolute; left: 50%; transform: translate(-50%, -50%); }
+.yc-route-stop .yc-unit { background-color: var(--surface-000); background-image: linear-gradient(color-mix(in srgb, var(--u) 14%, transparent), color-mix(in srgb, var(--u) 14%, transparent)); border-color: var(--line); }
+.yc-route-stop .yc-unit.is-idle { background: var(--surface-000); }
+.yc-route-name { position: absolute; left: 4px; right: 4px; background: var(--surface-000); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center; font: 500 11px var(--font-mono); }
+.yc-route-name.is-rep, .yc-route-track li.is-empty .yc-route-name { color: var(--ink-muted); }

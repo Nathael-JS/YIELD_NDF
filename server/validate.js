@@ -118,3 +118,29 @@ export function validateFlujo(b) {
   }
   return { archivo: b.archivo.trim(), pasos };
 }
+
+// WIP: ruta de un modelo (src/lib/ruta.ts): estaciones en orden, retornos de reparación y saltos; solo nombres de estación.
+const ESTACION = /^[A-Za-z0-9_.\-/]{1,80}$/;
+export function validateRuta(b) {
+  if (!b || !corto(b.model, 80) || !b.model.trim()) return { error: 'Modelo inválido' };
+  if (!Array.isArray(b.estaciones) || !b.estaciones.length || b.estaciones.length > 300) return { error: 'Entre 1 y 300 estaciones' };
+  const estaciones = [];
+  for (const e of b.estaciones) {
+    if (!e || !ESTACION.test(e.station ?? '') || e.station.startsWith('R_') || typeof (e.rep ?? false) !== 'boolean') return { error: 'Estación inválida en la ruta' };
+    if (estaciones.some((x) => x.station === e.station)) return { error: `${e.station} está repetida` };
+    estaciones.push({ station: e.station, rep: !!e.rep });
+  }
+  const en = new Set(estaciones.map((e) => e.station)), pares = (xs, rep) => {
+    if (!Array.isArray(xs) || xs.length > 300) return null;
+    const out = [];
+    for (const x of xs) {
+      if (!Array.isArray(x) || x.length !== 2 || !x.every((s) => typeof s === 'string' && ESTACION.test(s))) return null;
+      if (x[0].startsWith('R_') !== rep || !en.has(x[0].replace(/^R_/, '')) || !en.has(x[1])) return null;
+      out.push([x[0], x[1]]);
+    }
+    return out;
+  };
+  const retornos = pares(b.retornos ?? [], true), saltos = pares(b.saltos ?? [], false);
+  if (!retornos || !saltos) return { error: 'Retorno o salto inválido (deben unir estaciones de la ruta)' };
+  return { model: b.model.trim(), estaciones, retornos, saltos };
+}

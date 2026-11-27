@@ -86,3 +86,9 @@ export const loadWipCorte = (id: number, detalle = false) => call<{ resumen: Wip
 export interface WipFlujo { pasos: Paso[]; archivo?: string; usuario?: string; guardado_en?: string }
 export const loadWipFlujo = () => call<WipFlujo>('/api/wip/flujo');
 export const saveWipFlujo = (archivo: string, pasos: Paso[]) => post<{ guardados: number }>('/api/wip/flujo', { archivo, pasos });
+
+/** Rutas por modelo guardadas por un administrador (src/lib/ruta.ts). */
+export type WipRuta = import('./ruta.ts').Ruta & { usuario?: string; guardada?: string };
+export const loadWipRutas = () => call<WipRuta[]>('/api/wip/rutas');
+/** Sin estaciones borra la guardada del modelo. */
+export const saveWipRuta = (r: import('./ruta.ts').Ruta) => post<{ guardada?: boolean; borrada?: boolean }>('/api/wip/rutas', r);
