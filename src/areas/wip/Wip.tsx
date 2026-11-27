@@ -2,7 +2,7 @@ import { lazy, Suspense, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { Link } from 'react-router-dom';
 import { Badge, Button, Segmented } from '../../components/ui.tsx';
-import { cruce, desde, filtrar, nivel, ordenes, stations, type Filtro, type Pieza, type Ventana } from '../../lib/wip.ts';
+import { cruce, desde, filtrar, lugarDe, nivel, ordenes, stations, type Filtro, type Paso, type Pieza, type Ventana } from '../../lib/wip.ts';
 import { useApp } from '../../store.ts';
 import { PageHead } from '../../pages/Layout.tsx';
 import { FILTRO0, Filtros, FlowTable, Kpis, Legend, n, OrderTable, QuitarFiltros, Seriales, UnitTable, useFlujo, useWip } from './wipParts.tsx';
@@ -14,6 +14,15 @@ const VENTANAS: { value: Ventana; label: string }[] = [
 const VISTAS = [{ value: 'estacion' as const, label: 'Por estación' }, { value: 'orden' as const, label: 'Por orden' }];
 const MAX_UNITS = 100; // piezas por estación a la vista (las más antiguas primero)
 const FUENTE = { archivo: 'según el reporte', carga: 'hora de carga del archivo', movimiento: 'último movimiento (archivo cargado antes de 0.27)' };
+
+/** Con estructura de flujo, las estaciones se agrupan por etapa · board (como el Dashboard) en lugar de la sección del MES;
+ * dentro de cada grupo siguen en el orden de la ruta. El grupo sale del modelo de su primera pieza. */
+function porEtapa<S extends { name: string; section: string; piezas: Pieza[] }>(st: S[], pasos: Paso[]) {
+  if (!pasos.length) return st;
+  const orden = (l: { stage: string; board: string }) => { const i = pasos.findIndex((x) => x.stage === l.stage && x.board === l.board); return i < 0 ? Infinity : i; };
+  return st.map((s) => { const l = lugarDe(pasos, s.piezas[0].model, s.name); return { s: { ...s, section: l.board ? `${l.stage} · ${l.board}` : l.stage }, k: orden(l) }; })
+    .sort((a, b) => a.k - b.k).map((x) => x.s);
+}
 
 /** Con otro archivo los filtros vuelven a empezar (la orden o el modelo elegidos pueden no existir en él). */
 export default function Wip() {
@@ -44,7 +53,7 @@ function WipView() {
 
   const from = desde(read.corte, win), term = q.trim().toUpperCase();
   const otros = (p: Pieza) => (!term || p.serial.toUpperCase().includes(term)) && p.at >= from;
-  const ps = filtrado.ps.filter(otros), st = stations(ps, records), x = cruce(all, records);
+  const ps = filtrado.ps.filter(otros), st = porEtapa(stations(ps, records), pasos), x = cruce(all, records);
   // terminadas y empaque: con los mismos filtros (su estación no se filtra: STOCKIN, PACK_CTN…)
   const fin = (xs: Pieza[]) => filtrar(xs, pasos, { ...f, station: '' }).ps.filter(otros);
   const term2 = fin(mine(read.terminadas)), ocultas = fin(mine(read.ocultas));
@@ -85,7 +94,7 @@ function WipView() {
         <AnimatePresence initial={false}>
           {tl && st.length > 0 && (
             <motion.div id="wip-tl" key="tl" className="app-tl-wrap" initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.35, ease: [0.2, 0.7, 0.2, 1] }}>
-              <Suspense fallback={<p className="app-muted">Cargando línea de tiempo…</p>}><WipTimeline st={st} open={open} onPick={pick} /></Suspense>
+              <Suspense fallback={<p className="app-muted">Cargando línea de tiempo…</p>}><WipTimeline st={st} open={open} onPick={pick} onVer={(titulo, xs) => setVer({ titulo, ps: xs })} /></Suspense>
             </motion.div>
           )}
         </AnimatePresence>

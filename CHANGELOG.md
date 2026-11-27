@@ -8,6 +8,17 @@ Un cambio de componente se publica primero en el artefacto y después se copia a
 
 Los errores encontrados y cómo se corrigieron están en [ERRORES.md](ERRORES.md); las mejoras y cómo se hicieron, en [MEJORAS.md](MEJORAS.md).
 
+## [0.55.0] — 2026-11-27
+
+### Cambiado
+- **WIP · la línea de tiempo es más simple y se puede tocar:**
+  - Una fila por estación y una columna por rango de tiempo en la estación (< 2 h, 2–8 h, 8–20 h, 20–48 h, 2–4 d, 4–7 d, 1–2 sem y > 2 sem).
+  - En cada celda, el **ícono de semáforo con su conteo**; un clic abre esos seriales.
+  - El color del encabezado marca la zona del semáforo.
+  - Antes eran burbujas sin número que no se podían tocar.
+- **WIP · las estaciones se agrupan por Process Stage · Board** (como el Dashboard) en la línea de tiempo y en la tabla, con la estructura de flujo. Sin ella, siguen por sección del MES.
+- La animación de entrada dura como máximo 0.25 s y respeta «reducir movimiento».
+
 ## [0.54.0] — 2026-11-27
 
 ### Agregado

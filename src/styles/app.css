@@ -261,21 +261,13 @@
 .app-wip { --wip-ok-bg: color-mix(in srgb, var(--sem-ok) 9%, transparent); --wip-warn-bg: color-mix(in srgb, var(--sem-warn) 10%, transparent);
   --wip-bad-bg: color-mix(in srgb, var(--sem-bad) 9%, transparent); --wip-urgent-bg: color-mix(in srgb, var(--sem-bad) 17%, transparent); }
 .app-tl-wrap { overflow: hidden; }
-.app-tl { display: grid; gap: 2px; padding-bottom: var(--space-3); }
-.app-tl-axis, .app-tl-lane { display: grid; grid-template-columns: minmax(150px, 220px) minmax(0, 1fr); align-items: center; gap: var(--space-3); }
-.app-tl-ticks { position: relative; height: 18px; font: 400 11px var(--font-mono); color: var(--ink-muted); }
-.app-tl-ticks span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
-.app-tl-ticks span:first-child { transform: none; }
-.app-tl-sec { grid-column: 1 / -1; margin-top: var(--space-2); font: 600 11px/16px var(--font-sans); letter-spacing: .6px; text-transform: uppercase; color: var(--brand); }
-.app-tl-name { display: flex; justify-content: space-between; gap: var(--space-2); min-width: 0; height: 30px; padding: 0 var(--space-2); border: 0; border-radius: var(--radius-md); background: none; color: var(--ink); font: inherit; font-size: 13px; text-align: left; cursor: pointer; }
-.app-tl-name .code { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.app-tl-name:hover, .app-tl-lane.is-open .app-tl-name { background: var(--brand-tint); }
-.app-tl-track { position: relative; height: 30px; border-radius: var(--radius-sm); }
-.app-tl-dot { position: absolute; top: 50%; translate: -50% -50%; border-radius: 50%; border: 1.5px solid var(--surface-000); box-shadow: 0 1px 2px rgba(0, 0, 0, .18); }
-.app-tl-dot.is-ok { background: var(--sem-ok); } .app-tl-dot.is-warn { background: var(--sem-warn); } .app-tl-dot.is-bad { background: var(--sem-bad); }
-@media (prefers-reduced-motion: no-preference) { .app-tl-dot.is-urgent { animation: app-tl-ring 1.6s ease-out infinite; } }
-@keyframes app-tl-ring { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--sem-bad) 55%, transparent); } 100% { box-shadow: 0 0 0 8px transparent; } }
-@media (max-width: 640px) { .app-tl-axis, .app-tl-lane { grid-template-columns: 110px minmax(0, 1fr); } }
+/* línea de tiempo: estación × rango de tiempo, un ícono de semáforo por celda */
+.app-tl { margin-bottom: var(--space-3); }
+.app-tl-t th.app-tl-h { min-width: 64px; text-align: center; border-bottom: 2px solid var(--line-strong); }
+.app-tl-t th.app-tl-h.is-ok { border-bottom-color: var(--sem-ok); } .app-tl-t th.app-tl-h.is-warn { border-bottom-color: var(--sem-warn); } .app-tl-t th.app-tl-h.is-bad { border-bottom-color: var(--sem-bad); }
+.app-tl-c { text-align: center; }
+.app-tl-name { max-width: 200px; overflow: hidden; padding: 2px 6px; border: 0; border-radius: var(--radius-sm); background: none; color: var(--ink); text-align: left; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
+.app-tl-name:hover { background: var(--brand-tint); }
 .app-wip-table tr[id] { scroll-margin-top: 80px; }
 
 /* Descargas: una tarjeta por reporte */
